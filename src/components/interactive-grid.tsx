@@ -14,15 +14,20 @@ export function InteractiveGrid({ forceDark }: { forceDark?: boolean } = {}) {
   const cellsRef = useRef<{ x: number; y: number; char: string; activeChar: string; brightness: number }[]>([]);
   const animRef = useRef<number>(0);
   const exclusionRef = useRef<DOMRect[]>([]);
+  const dprRef = useRef(1);
   const forceDarkRef = useRef(forceDark);
 
   const init = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
     const w = canvas.parentElement?.clientWidth ?? window.innerWidth;
     const h = canvas.parentElement?.clientHeight ?? window.innerHeight;
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    dprRef.current = dpr;
 
     const cols = Math.ceil(w / CELL);
     const rows = Math.ceil(h / CELL);
@@ -76,6 +81,8 @@ export function InteractiveGrid({ forceDark }: { forceDark?: boolean } = {}) {
     const isDark = forceDarkRef.current || window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     const animate = () => {
+      const dpr = dprRef.current;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
