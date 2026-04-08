@@ -115,6 +115,14 @@ a, button {
   animation: fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+@keyframes slowSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-slow-spin {
+  animation: slowSpin 60s linear infinite;
+}
+
 /* Stagger children animation */
 .stagger-children > * {
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
