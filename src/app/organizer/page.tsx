@@ -1,252 +1,331 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
-  Plus, Heart, CheckCircle2, CalendarDays, TrendingUp, ArrowRight,
-  ImageOff, Users, BarChart3, Clock, Percent,
+  Plus, Search, X, CalendarDays, Radio, Clock, ImageOff,
+  Heart, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight,
+  Users, BarChart3, Lock, Eye, TrendingUp,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
-export default function OrganizerDashboard() {
+type EventTab = 'upcoming' | 'live' | 'past' | 'private';
+
+export default function OrganizerHomePage() {
   const { user, organization } = useAuth();
+  const supabase = createClient();
+
   const [events, setEvents] = useState<Event[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
-  const [followerGrowth, setFollowerGrowth] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
-  const today = new Date().toISOString().split('T')[0];
+  const [tab, setTab] = useState<EventTab>('upcoming');
+  const [search, setSearch] = useState('');
+
+  const now = useMemo(() => new Date(), []);
+  const today = now.toISOString().split('T')[0];
 
   useEffect(() => {
-    if (user) fetchData();
+    if (user) void fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, organization?.id]);
 
   async function fetchData() {
+    setLoading(true);
     const orgId = organization?.id;
 
-    // Events
-    let query = supabase.from('events').select('*').order('date', { ascending: false });
+    // Events owned by this org/user
+    let query = supabase.from('events').select('*').order('date', { ascending: true });
     if (orgId) query = query.eq('organizer_org_id', orgId);
     else query = query.eq('organizer_profile_id', user!.id);
     const { data: evts } = await query;
     setEvents(evts ?? []);
 
-    // Followers
-    let fQuery = supabase.from('organizer_follows').select('id, created_at');
+    // Follower count
+    let fQuery = supabase
+      .from('organizer_follows')
+      .select('id', { count: 'exact', head: true });
     if (orgId) fQuery = fQuery.eq('organizer_org_id', orgId);
     else fQuery = fQuery.eq('organizer_profile_id', user!.id);
-    const { data: follows } = await fQuery;
-    setFollowerCount(follows?.length ?? 0);
-
-    // Follower growth (last 6 weeks)
-    const weeks: number[] = [];
-    for (let w = 5; w >= 0; w--) {
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - (w + 1) * 7);
-      const weekEnd = new Date();
-      weekEnd.setDate(weekEnd.getDate() - w * 7);
-      const count = (follows ?? []).filter((f) => {
-        const d = new Date(f.created_at);
-        return d >= weekStart && d < weekEnd;
-      }).length;
-      weeks.push(count);
-    }
-    setFollowerGrowth(weeks);
+    const { count } = await fQuery;
+    setFollowerCount(count ?? 0);
 
     setLoading(false);
   }
 
-  const stats = useMemo(() => {
-    const all = events;
-    const upcoming = all.filter((e) => e.date >= today);
-    const totalInterested = all.reduce((s, e) => s + (e.interested_count || 0), 0);
-    const totalConfirmed = all.reduce((s, e) => s + (e.confirmed_count || 0), 0);
-    const avgInterested = all.length ? Math.round(totalInterested / all.length) : 0;
-    const avgConfirmed = all.length ? Math.round(totalConfirmed / all.length) : 0;
-    const conversionRate = totalInterested ? Math.round((totalConfirmed / totalInterested) * 100) : 0;
-    return { total: all.length, upcoming: upcoming.length, totalInterested, totalConfirmed, avgInterested, avgConfirmed, conversionRate };
-  }, [events, today]);
+  // ── Live = today between start and end (inclusive) ──────────────
+  const isLive = (e: Event) => {
+    const startKey = e.date;
+    const endKey = e.end_date ?? e.date;
+    return startKey <= today && today <= endKey;
+  };
 
-  const nextEvent = events.find((e) => e.date >= today);
-  const daysUntilNext = nextEvent ? Math.ceil((new Date(nextEvent.date).getTime() - Date.now()) / 86400000) : null;
+  const upcoming = events.filter((e) => (e.end_date ?? e.date) >= today && !isLive(e) && e.visibility === 'public');
+  const live = events.filter((e) => isLive(e) && e.visibility === 'public');
+  const past = events.filter((e) => (e.end_date ?? e.date) < today && e.visibility === 'public').sort((a, b) => b.date.localeCompare(a.date));
+  const privateEvents = events.filter((e) => e.visibility === 'private');
 
-  // Category breakdown
-  const categoryBreakdown = useMemo(() => {
-    const map: Record<string, number> = {};
-    events.forEach((e) => { map[e.category] = (map[e.category] || 0) + 1; });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  }, [events]);
+  const currentEvents =
+    tab === 'live' ? live
+    : tab === 'past' ? past
+    : tab === 'private' ? privateEvents
+    : upcoming;
 
-  const maxGrowth = Math.max(...followerGrowth, 1);
+  const filtered = search
+    ? currentEvents.filter((e) =>
+        e.title.toLowerCase().includes(search.toLowerCase()) ||
+        e.location.toLowerCase().includes(search.toLowerCase()) ||
+        e.category.toLowerCase().includes(search.toLowerCase())
+      )
+    : currentEvents;
+
+  // ── Aggregate stats for header strip ────────────────────────────
+  const totalInterested = events.reduce((s, e) => s + (e.interested_count || 0), 0);
+  const totalConfirmed = events.reduce((s, e) => s + (e.confirmed_count || 0), 0);
+
+  const isVerified = organization?.verified ?? false;
+
+  const tabs: { key: EventTab; label: string; count: number; icon: typeof CalendarDays; liveBg?: boolean }[] = [
+    { key: 'upcoming', label: 'Anstehend', count: upcoming.length, icon: CalendarDays },
+    { key: 'live', label: 'Live', count: live.length, icon: Radio, liveBg: live.length > 0 },
+    { key: 'past', label: 'Vergangen', count: past.length, icon: Clock },
+    { key: 'private', label: 'Privat', count: privateEvents.length, icon: Lock },
+  ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
+      {/* ─── Welcome header ─── */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-fg mt-1">Willkommen, {organization?.name ?? 'Veranstalter'}</p>
+          <h1 className="text-3xl font-heading font-bold tracking-tight">
+            Hallo, {organization?.name ?? 'Veranstalter'}
+          </h1>
+          <p className="text-sm text-muted-fg mt-1">
+            Verwalte deine Events und sieh, wie deine Community wächst.
+          </p>
         </div>
-        <Link href="/organizer/events/create" className="flex items-center gap-2 px-6 py-3 rounded-full text-[13px] font-semibold bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm">
-          <Plus size={16} strokeWidth={2.2} /> Event erstellen
-        </Link>
-      </div>
-
-      {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => <div key={i} className="h-28 rounded-2xl bg-surface border border-border-subtle animate-pulse" />)}
-        </div>
-      ) : events.length === 0 ? (
-        <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
-          <CalendarDays size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
-          <p className="text-base font-medium">Noch keine Events</p>
-          <Link href="/organizer/events/create" className="inline-flex items-center gap-1 mt-3 text-[13px] font-medium text-foreground hover:opacity-70 transition-opacity">
-            Erstelle dein erstes Event <ArrowRight size={14} />
+        <div className="flex gap-2">
+          <Link
+            href="/organizer/dashboard"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-medium border border-border-subtle bg-surface hover:bg-elevated transition-colors"
+          >
+            <BarChart3 size={15} /> Statistiken
+          </Link>
+          <Link
+            href="/organizer/events/create"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+          >
+            <Plus size={15} strokeWidth={2.2} /> Event erstellen
           </Link>
         </div>
-      ) : (
-        <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 stagger-children">
-            <StatCard label="Follower" value={followerCount} icon={Users} />
-            <StatCard label="Avg. Interessiert" value={stats.avgInterested} icon={Heart} />
-            <StatCard label="Avg. Bestätigt" value={stats.avgConfirmed} icon={CheckCircle2} />
+      </div>
+
+      {/* ─── Quick stats strip ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <QuickStat
+          label="Follower"
+          value={followerCount}
+          icon={Users}
+          href="/organizer/followers"
+        />
+        <QuickStat
+          label="Events gesamt"
+          value={events.length}
+          icon={CalendarDays}
+        />
+        <QuickStat
+          label="Interessenten"
+          value={totalInterested}
+          icon={Heart}
+        />
+        <QuickStat
+          label="Bestätigungen"
+          value={totalConfirmed}
+          icon={CheckCircle2}
+        />
+      </div>
+
+      {/* ─── Verification alert ─── */}
+      {!isVerified && organization && (
+        <div className="flex items-center gap-3 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5">
+          <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle size={18} className="text-amber-500" />
           </div>
-
-          {/* Conversion Rate + Follower Growth */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Conversion */}
-            <div className="p-5 rounded-2xl border border-border-subtle bg-surface">
-              <div className="flex items-center gap-2 mb-4">
-                <Percent size={16} className="text-muted-fg/50" />
-                <p className="text-[12px] font-medium text-muted-fg uppercase tracking-wide">Conversion Rate</p>
-              </div>
-              <div className="flex items-end gap-3">
-                <p className="text-4xl font-heading font-bold tracking-tight">{stats.conversionRate}%</p>
-                <p className="text-[12px] text-muted-fg mb-1.5">Interessiert → Bestätigt</p>
-              </div>
-              <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${stats.conversionRate}%` }} />
-              </div>
-            </div>
-
-            {/* Follower Growth */}
-            <div className="p-5 rounded-2xl border border-border-subtle bg-surface">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp size={16} className="text-muted-fg/50" />
-                <p className="text-[12px] font-medium text-muted-fg uppercase tracking-wide">Follower-Wachstum</p>
-                <span className="text-[11px] text-muted-fg ml-auto">Letzte 6 Wochen</span>
-              </div>
-              <div className="flex items-end gap-1.5 h-20">
-                {followerGrowth.map((val, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className="w-full bg-violet-500/80 rounded-t transition-all duration-300 min-h-[2px]"
-                      style={{ height: `${(val / maxGrowth) * 100}%` }}
-                    />
-                    <span className="text-[9px] text-muted-fg">W{i + 1}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-amber-200">Organisation noch nicht verifiziert</p>
+            <p className="text-[12px] text-amber-200/70 mt-0.5">
+              Verifiziere deine Organisation in der mobilen App, um mehr Vertrauen aufzubauen.
+            </p>
           </div>
+          <ShieldCheck size={16} className="text-amber-400 flex-shrink-0" />
+        </div>
+      )}
 
-          {/* Timeline: Next Event */}
-          {nextEvent && (
-            <Link
-              href={`/organizer/events/${nextEvent.id}`}
-              className="group flex items-center gap-5 p-5 rounded-2xl border border-violet-200 bg-violet-50/50 hover:bg-violet-50 dark:border-violet-800 dark:bg-violet-900/20 dark:hover:bg-violet-900/30 transition-all duration-200"
+      {/* ─── Tabs ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {tabs.map((t) => {
+          const Icon = t.icon;
+          const active = tab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => { setTab(t.key); setSearch(''); }}
+              className={`flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-medium transition-all duration-200 ${
+                active
+                  ? t.liveBg && t.key === 'live'
+                    ? 'bg-green-600 text-white shadow-sm'
+                    : 'bg-violet-600 text-white shadow-sm'
+                  : 'bg-surface border border-border-subtle text-muted-fg hover:text-foreground hover:border-border-strong'
+              }`}
             >
-              <div className="w-14 h-14 rounded-xl bg-violet-100 dark:bg-violet-800/40 flex flex-col items-center justify-center flex-shrink-0">
-                <span className="text-xl font-heading font-bold text-violet-700 dark:text-violet-300">{daysUntilNext}</span>
-                <span className="text-[9px] font-medium text-violet-500 uppercase">Tage</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-violet-500 uppercase tracking-wider">Nächstes Event</p>
-                <h3 className="font-semibold text-[15px] truncate mt-0.5">{nextEvent.title}</h3>
-                <p className="text-[12px] text-muted-fg mt-0.5">{formatDate(nextEvent.date)} · {formatTime(nextEvent.time)}</p>
-              </div>
-              <ArrowRight size={18} className="text-muted-fg group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+              <Icon size={15} strokeWidth={active ? 2.2 : 1.8} />
+              {t.label}
+              <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                active ? 'bg-white/20' : 'bg-muted'
+              }`}>{t.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ─── Search ─── */}
+      <div className="relative">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-fg" />
+        <input
+          type="text"
+          placeholder="Events filtern..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/30 transition-all"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-fg hover:text-foreground"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
+      {/* ─── Events list ─── */}
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-20 rounded-xl bg-surface border border-border-subtle animate-pulse" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
+          <CalendarDays size={36} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />
+          <p className="text-sm font-medium">
+            {search ? 'Keine Events gefunden'
+            : tab === 'upcoming' ? 'Keine anstehenden Events'
+            : tab === 'live' ? 'Aktuell läuft kein Event'
+            : tab === 'private' ? 'Keine privaten Events'
+            : 'Noch keine vergangenen Events'}
+          </p>
+          {!search && events.length === 0 && (
+            <Link
+              href="/organizer/events/create"
+              className="inline-flex items-center gap-1 mt-3 text-[13px] font-medium text-foreground hover:text-violet-400 transition-colors"
+            >
+              Erstelle dein erstes Event <ArrowRight size={14} />
             </Link>
           )}
-
-          {/* Per Event Breakdown */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-heading font-semibold">Event-Übersicht</h2>
-              <Link href="/organizer/events" className="flex items-center gap-1 text-[13px] text-muted-fg hover:text-foreground transition-colors">
-                Alle <ArrowRight size={14} />
-              </Link>
-            </div>
-            <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border-subtle text-[11px] text-muted-fg uppercase tracking-wider">
-                    <th className="text-left px-5 py-3 font-medium">Event</th>
-                    <th className="text-right px-5 py-3 font-medium"><Heart size={12} className="inline" /></th>
-                    <th className="text-right px-5 py-3 font-medium"><CheckCircle2 size={12} className="inline" /></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.slice(0, 8).map((e) => (
-                    <tr key={e.id} className="border-b border-border-subtle last:border-0 hover:bg-elevated/30 transition-colors">
-                      <td className="px-5 py-3">
-                        <p className="text-[13px] font-medium truncate max-w-[250px]">{e.title}</p>
-                        <p className="text-[11px] text-muted-fg">{formatDate(e.date)}</p>
-                      </td>
-                      <td className="px-5 py-3 text-right text-[13px]">{e.interested_count}</td>
-                      <td className="px-5 py-3 text-right text-[13px]">{e.confirmed_count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Category Overview */}
-          {categoryBreakdown.length > 0 && (
-            <div>
-              <h2 className="text-base font-heading font-semibold mb-4">Kategorien</h2>
-              <div className="space-y-2.5">
-                {categoryBreakdown.map(([cat, count]) => {
-                  const maxCount = categoryBreakdown[0][1] as number;
-                  return (
-                    <div key={cat} className="flex items-center gap-3">
-                      <span className="text-[13px] font-medium w-24 truncate">{cat}</span>
-                      <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${(count / (maxCount as number)) * 100}%`,
-                            backgroundColor: getCategoryColor(cat),
-                          }}
-                        />
-                      </div>
-                      <span className="text-[12px] text-muted-fg w-8 text-right">{count}</span>
-                    </div>
-                  );
-                })}
+        </div>
+      ) : (
+        <div className="space-y-2 stagger-children">
+          {filtered.map((event) => (
+            <Link
+              key={event.id}
+              href={`/app/event/${event.id}`}
+              className={`group flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-all duration-200 ${
+                tab === 'past' ? 'opacity-70' : ''
+              }`}
+            >
+              {isLive(event) && (
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+              )}
+              <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                {event.banner_url || event.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={event.banner_url ?? event.image_url ?? ''} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageOff size={16} strokeWidth={1.4} className="text-muted-fg/30" />
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
+                  {event.visibility === 'private' && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 flex-shrink-0">
+                      <Lock size={9} /> Privat
+                    </span>
+                  )}
+                </div>
+                <p className="text-[12px] text-muted-fg mt-0.5">
+                  {formatDate(event.date)} · {formatTime(event.time)} · {event.location}
+                </p>
+              </div>
+              <span
+                className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-white flex-shrink-0"
+                style={{ backgroundColor: getCategoryColor(event.category) }}
+              >
+                {event.category}
+              </span>
+              <div className="text-right text-[12px] text-muted-fg flex-shrink-0 space-y-0.5 hidden sm:block">
+                <p className="flex items-center justify-end gap-1"><Heart size={11} />{event.interested_count}</p>
+                <p className="flex items-center justify-end gap-1"><CheckCircle2 size={11} />{event.confirmed_count}</p>
+              </div>
+              <ArrowRight size={16} className="text-muted-fg group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: number; icon: LucideIcon }) {
-  return (
-    <div className="p-5 rounded-2xl border border-border-subtle bg-surface hover:border-border-strong hover:shadow-[var(--shadow-sm)] transition-all duration-200">
-      <div className="flex items-center justify-between">
-        <p className="text-[12px] font-medium text-muted-fg uppercase tracking-wide">{label}</p>
-        <Icon size={16} strokeWidth={1.6} className="text-muted-fg/50" />
+// ────────────────────────────────────────────────────────────────────
+// Quick stat tile
+// ────────────────────────────────────────────────────────────────────
+
+interface QuickStatProps {
+  label: string;
+  value: number;
+  icon: typeof Heart;
+  href?: string;
+}
+
+function QuickStat({ label, value, icon: Icon, href }: QuickStatProps) {
+  const inner = (
+    <>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[11px] font-medium text-muted-fg uppercase tracking-wide">{label}</p>
+        <Icon size={14} strokeWidth={1.8} className="text-violet-500/60" />
       </div>
-      <p className="text-3xl font-heading font-bold mt-2 tracking-tight">{value}</p>
+      <p className="text-2xl font-heading font-bold tracking-tight">{value.toLocaleString('de-DE')}</p>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block p-4 rounded-2xl border border-border-subtle bg-surface hover:border-violet-500/30 hover:bg-elevated/30 transition-all"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div className="p-4 rounded-2xl border border-border-subtle bg-surface">
+      {inner}
     </div>
   );
 }
