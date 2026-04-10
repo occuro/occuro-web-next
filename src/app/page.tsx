@@ -74,13 +74,13 @@ export default function LandingPage() {
               href="/auth/register"
               className="px-8 py-3.5 rounded-full text-sm font-semibold bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm"
             >
-              Jetzt starten
+              Registrieren
             </Link>
             <Link
-              href="/auth/login?type=organizer"
+              href="/auth/login"
               className="px-8 py-3.5 rounded-full text-sm font-semibold border border-border-strong text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all"
             >
-              Veranstalter-Login
+              Anmelden
             </Link>
           </div>
         </div>
