@@ -14,11 +14,18 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // mapbox token requirement.
 import { Map as MapLibreMap, Marker, NavigationControl, Popup, type MapRef } from 'react-map-gl/maplibre';
 
-// MapLibre style — we use the OpenFreeMap "liberty" style which is a
-// professional vector-tile basemap, free, no API key required, and looks
-// great in both light and dark mode. If we ever outgrow it we can swap to
-// MapTiler with an API key by changing this URL.
-const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+// MapLibre style. We support multiple basemap providers — pick one based
+// on whether NEXT_PUBLIC_MAPTILER_KEY is set:
+//   1. MapTiler Streets — Google-Maps-style design, sharp labels, clear
+//      buildings. Free tier: 100k requests/month. Requires API key. Best
+//      look-and-feel for production. Sign up at maptiler.com.
+//   2. OpenFreeMap "Bright" — fully free, no API key, OSM-based, decent
+//      Mapbox-Streets-style look. Used as fallback so the map always
+//      renders even before the env var is configured.
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
+const MAP_STYLE_URL = MAPTILER_KEY
+  ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`
+  : 'https://tiles.openfreemap.org/styles/bright';
 
 const CATEGORIES = ['Music', 'Business', 'Health', 'Sports', 'Education', 'Art', 'Food', 'Technology', 'Community', 'Outdoor'];
 
