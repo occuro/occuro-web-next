@@ -70,17 +70,20 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="flex gap-3 justify-center">
-            <Link
-              href="/auth/register"
-              className="px-8 py-3.5 rounded-full text-sm font-semibold bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm"
-            >
-              Registrieren
-            </Link>
+            {/* Order matches the header nav: Anmelden first (secondary),
+                Registrieren second (primary CTA) — visually consistent
+                across the whole landing page. */}
             <Link
               href="/auth/login"
               className="px-8 py-3.5 rounded-full text-sm font-semibold border border-border-strong text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all"
             >
               Anmelden
+            </Link>
+            <Link
+              href="/auth/register"
+              className="px-8 py-3.5 rounded-full text-sm font-semibold bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm"
+            >
+              Registrieren
             </Link>
           </div>
         </div>
