@@ -9,7 +9,7 @@ import Link from 'next/link';
 import {
   Plus, Search, X, CalendarDays, Radio, Clock, ImageOff,
   Heart, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight,
-  Users, BarChart3, Lock, Eye, TrendingUp,
+  Users, BarChart3, Lock, TrendingUp, Pencil,
 } from 'lucide-react';
 
 type EventTab = 'upcoming' | 'live' | 'past' | 'private';
@@ -239,51 +239,63 @@ export default function OrganizerHomePage() {
       ) : (
         <div className="space-y-2 stagger-children">
           {filtered.map((event) => (
-            <Link
+            <div
               key={event.id}
-              href={`/app/event/${event.id}`}
-              className={`group flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-all duration-200 ${
+              className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-all duration-200 ${
                 tab === 'past' ? 'opacity-70' : ''
               }`}
             >
               {isLive(event) && (
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
               )}
-              <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                {event.banner_url || event.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={event.banner_url ?? event.image_url ?? ''} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageOff size={16} strokeWidth={1.4} className="text-muted-fg/30" />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
-                  {event.visibility === 'private' && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 flex-shrink-0">
-                      <Lock size={9} /> Privat
-                    </span>
+              <Link
+                href={`/app/event/${event.id}`}
+                className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0"
+              >
+                <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                  {event.banner_url || event.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={event.banner_url ?? event.image_url ?? ''} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageOff size={16} strokeWidth={1.4} className="text-muted-fg/30" />
+                    </div>
                   )}
                 </div>
-                <p className="text-[12px] text-muted-fg mt-0.5">
-                  {formatDate(event.date)} · {formatTime(event.time)} · {event.location}
-                </p>
-              </div>
-              <span
-                className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-white flex-shrink-0"
-                style={{ backgroundColor: getCategoryColor(event.category) }}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
+                    {event.visibility === 'private' && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 flex-shrink-0">
+                        <Lock size={9} /> Privat
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[12px] text-muted-fg mt-0.5 truncate">
+                    {formatDate(event.date)} · {formatTime(event.time)} · {event.location}
+                  </p>
+                </div>
+                <span
+                  className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-white flex-shrink-0"
+                  style={{ backgroundColor: getCategoryColor(event.category) }}
+                >
+                  {event.category}
+                </span>
+                <div className="text-right text-[12px] text-muted-fg flex-shrink-0 space-y-0.5 hidden sm:block">
+                  <p className="flex items-center justify-end gap-1"><Heart size={11} />{event.interested_count}</p>
+                  <p className="flex items-center justify-end gap-1"><CheckCircle2 size={11} />{event.confirmed_count}</p>
+                </div>
+              </Link>
+              {/* Edit button — separate Link so it doesn't trigger the row navigation */}
+              <Link
+                href={`/organizer/events/${event.id}/edit`}
+                className="p-2 rounded-lg text-muted-fg hover:text-violet-400 hover:bg-violet-500/10 transition-colors flex-shrink-0"
+                aria-label="Bearbeiten"
+                title="Bearbeiten"
               >
-                {event.category}
-              </span>
-              <div className="text-right text-[12px] text-muted-fg flex-shrink-0 space-y-0.5 hidden sm:block">
-                <p className="flex items-center justify-end gap-1"><Heart size={11} />{event.interested_count}</p>
-                <p className="flex items-center justify-end gap-1"><CheckCircle2 size={11} />{event.confirmed_count}</p>
-              </div>
-              <ArrowRight size={16} className="text-muted-fg group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
-            </Link>
+                <Pencil size={15} />
+              </Link>
+            </div>
           ))}
         </div>
       )}
