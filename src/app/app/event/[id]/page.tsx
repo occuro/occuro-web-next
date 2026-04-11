@@ -10,7 +10,7 @@ import {
   ArrowLeft, Calendar, Clock, MapPin, Heart, CheckCircle2,
   Users, Globe, Ticket, ImageOff, ExternalLink, Lock,
   Gift, Award, Sparkles, Loader2, MessageCircle, Send,
-  Trophy, Trash2, Flag, Mail, X as XIcon,
+  Trophy, Trash2, Flag, X as XIcon,
 } from 'lucide-react';
 import { ReportModal } from '@/components/report-modal';
 import { OrganizerProfileModal } from '@/components/organizer-profile-modal';
@@ -260,48 +260,12 @@ export default function EventDetailPage({
     }
   }
 
-  // ── Invitation accept / decline ──────────────────────────────────
-  // Mirrors the mobile app's useInvitations.acceptInvitation /
-  // declineInvitation: accepting writes status='accepted' on the
-  // invitation row AND upserts an event_status='confirmed' (which the
-  // DB trigger uses to add the user to the event chat). Declining
-  // writes status='declined' and clears any existing event_status row
-  // so the user vanishes from participation lists.
-  async function acceptInvitation() {
-    if (!user || !event || !pendingInvite || inviteBusy) return;
-    setInviteBusy(true);
-    try {
-      const { error: invErr } = await supabase
-        .from('event_invitations')
-        .update({ status: 'accepted' })
-        .eq('id', pendingInvite.id);
-      if (invErr) {
-        alert(`Annehmen fehlgeschlagen: ${invErr.message}`);
-        return;
-      }
-      const { error: statusErr } = await supabase
-        .from('event_statuses')
-        .upsert(
-          { event_id: event.id, user_id: user.id, status: 'confirmed' },
-          { onConflict: 'event_id,user_id' },
-        );
-      if (statusErr) {
-        console.warn('[event] event_statuses upsert after accept failed:', statusErr.message);
-      }
-      setPendingInvite(null);
-      setStatus('confirmed');
-      // Refresh counts
-      const { data } = await supabase
-        .from('events')
-        .select('interested_count, confirmed_count')
-        .eq('id', event.id)
-        .single();
-      if (data) setEvent((prev) => prev ? { ...prev, ...data } : prev);
-    } finally {
-      setInviteBusy(false);
-    }
-  }
-
+  // ── Invitation decline ────────────────────────────────────────────
+  // The "accept" path is no longer a separate function — clicking
+  // Zusagen on a private event already calls updateStatus('confirmed')
+  // which auto-accepts the pending invitation via the side-effect at
+  // the bottom of updateStatus. Decline stays as its own function so
+  // the Absagen button can call it cleanly.
   async function declineInvitation() {
     if (!user || !event || !pendingInvite || inviteBusy) return;
     setInviteBusy(true);
@@ -524,77 +488,83 @@ export default function EventDetailPage({
         </div>
       </div>
 
-      {/* Pending invitation banner — shows when the current user has a
-          pending event_invitation row for this event. Mirrors the
-          mobile app's accept/decline CTA. */}
-      {pendingInvite && !isPast && (
-        <div className="rounded-2xl border border-violet-500/30 bg-violet-500/[0.06] p-4 sm:p-5 flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-            <Mail size={18} className="text-violet-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-semibold">Du wurdest zu diesem Event eingeladen</p>
-            <p className="text-[12px] text-muted-fg mt-0.5">
-              Sag zu oder lehne ab. Beim Annehmen kommst du automatisch in den Event-Chat.
-            </p>
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={acceptInvitation}
-                disabled={inviteBusy}
-                className="px-4 py-2 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {inviteBusy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                Annehmen
-              </button>
-              <button
-                onClick={declineInvitation}
-                disabled={inviteBusy}
-                className="px-4 py-2 rounded-full text-[12px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5 disabled:opacity-50"
-              >
-                <XIcon size={12} />
-                Ablehnen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* RSVP buttons */}
+      {/* RSVP buttons — visibility-dependent layout
+          • Private events: Zusagen + Absagen (no Interessiert — you're
+            either coming to a friend's event or not). The pending
+            invitation banner is intentionally NOT rendered separately
+            because Zusagen here also accepts the invite, and Absagen
+            here also declines it.
+          • Public events: Interessiert + Zusagen + Speichern. */}
       {!isPast && user && !isOwnEvent && (
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          <button
-            onClick={() => updateStatus('interested')}
-            className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
-              status === 'interested'
-                ? 'bg-pink-500 text-white shadow-sm'
-                : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
-            }`}
-          >
-            <Heart size={16} strokeWidth={status === 'interested' ? 2.5 : 1.8} />
-            Interessiert
-          </button>
-          <button
-            onClick={() => updateStatus('confirmed')}
-            className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
-              status === 'confirmed' || status === 'attended'
-                ? 'bg-green-500 text-white shadow-sm'
-                : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
-            }`}
-          >
-            <CheckCircle2 size={16} strokeWidth={status === 'confirmed' ? 2.5 : 1.8} />
-            Zusagen
-          </button>
-          <button
-            onClick={() => updateStatus('saved')}
-            className={`py-3 px-4 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
-              status === 'saved'
-                ? 'bg-violet-500 text-white shadow-sm'
-                : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
-            }`}
-          >
-            Speichern
-          </button>
-        </div>
+        event.visibility === 'private' ? (
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <button
+              onClick={() => updateStatus('confirmed')}
+              disabled={inviteBusy}
+              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 disabled:opacity-50 ${
+                status === 'confirmed' || status === 'attended'
+                  ? 'bg-green-500 text-white shadow-sm'
+                  : 'bg-violet-600 text-white hover:bg-violet-500 shadow-sm'
+              }`}
+            >
+              {inviteBusy ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} strokeWidth={2.2} />}
+              {status === 'confirmed' || status === 'attended' ? 'Zugesagt' : 'Zusagen'}
+            </button>
+            <button
+              onClick={async () => {
+                // Absagen: decline the invitation if there's a pending one,
+                // and clear any RSVP status. Both paths together cover
+                // "I was invited" and "I previously confirmed and now
+                // changed my mind".
+                if (pendingInvite) {
+                  await declineInvitation();
+                } else if (status) {
+                  await updateStatus(status); // toggle off (delete row)
+                }
+              }}
+              disabled={inviteBusy}
+              className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold border border-border-subtle bg-surface text-foreground hover:border-red-500/40 hover:text-red-400 transition-colors disabled:opacity-50"
+            >
+              <XIcon size={16} strokeWidth={2.2} />
+              Absagen
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <button
+              onClick={() => updateStatus('interested')}
+              className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
+                status === 'interested'
+                  ? 'bg-pink-500 text-white shadow-sm'
+                  : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
+              }`}
+            >
+              <Heart size={16} strokeWidth={status === 'interested' ? 2.5 : 1.8} />
+              Interessiert
+            </button>
+            <button
+              onClick={() => updateStatus('confirmed')}
+              className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
+                status === 'confirmed' || status === 'attended'
+                  ? 'bg-green-500 text-white shadow-sm'
+                  : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
+              }`}
+            >
+              <CheckCircle2 size={16} strokeWidth={status === 'confirmed' ? 2.5 : 1.8} />
+              Zusagen
+            </button>
+            <button
+              onClick={() => updateStatus('saved')}
+              className={`py-3 px-4 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
+                status === 'saved'
+                  ? 'bg-violet-500 text-white shadow-sm'
+                  : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
+              }`}
+            >
+              Speichern
+            </button>
+          </div>
+        )
       )}
 
       {/* ─── GIVEAWAY ─────────────────────────────────────────────── */}
