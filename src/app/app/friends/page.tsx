@@ -9,7 +9,6 @@ import {
   Search, Users, X, BadgeCheck, UserPlus, UserCheck, Building2,
   Check, Loader2, UserX, Clock,
 } from 'lucide-react';
-import { OrganizerProfileModal } from '@/components/organizer-profile-modal';
 
 type Tab = 'friends' | 'requests' | 'discover';
 
@@ -55,15 +54,16 @@ export default function FriendsPage() {
   // Action busy states (per-id)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
-  // Org preview still uses a modal (orgs don't have a public profile
-  // page on the webapp yet — friends do).
-  const [previewOrg, setPreviewOrg] = useState<OrgResult | null>(null);
-
   // Helper: navigate to the public profile page using username when
   // available (cleaner URL) and falling back to the user id.
   const openProfile = useCallback((person: PersonResult) => {
     const slug = person.username?.trim() || person.id;
     router.push(`/app/profile/${slug}`);
+  }, [router]);
+
+  // Helper: navigate to the organizer profile page (always by id).
+  const openOrgProfile = useCallback((org: OrgResult) => {
+    router.push(`/app/organizer/${org.id}`);
   }, [router]);
 
   const setBusy = (id: string, busy: boolean) => {
@@ -410,7 +410,7 @@ export default function FriendsPage() {
                       <button
                         key={org.id}
                         type="button"
-                        onClick={() => setPreviewOrg(org)}
+                        onClick={() => openOrgProfile(org)}
                         className="flex flex-col items-center gap-2 min-w-[72px] group"
                       >
                         <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all">
@@ -558,7 +558,7 @@ export default function FriendsPage() {
                         Veranstalter
                       </h2>
                       <div className="space-y-2">
-                        {orgSearchResults.map((org) => <OrgRow key={org.id} org={org} onPreview={setPreviewOrg} />)}
+                        {orgSearchResults.map((org) => <OrgRow key={org.id} org={org} onPreview={openOrgProfile} />)}
                       </div>
                     </div>
                   )}
@@ -607,13 +607,6 @@ export default function FriendsPage() {
         </>
       )}
 
-      {/* Organizer profile preview modal — opens on org card tap */}
-      {previewOrg && (
-        <OrganizerProfileModal
-          org={{ id: previewOrg.id, name: previewOrg.name, avatar_url: previewOrg.avatar_url }}
-          onClose={() => setPreviewOrg(null)}
-        />
-      )}
     </div>
   );
 }

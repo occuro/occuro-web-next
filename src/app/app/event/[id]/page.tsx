@@ -13,7 +13,6 @@ import {
   Trophy, Trash2, Flag, X as XIcon,
 } from 'lucide-react';
 import { ReportModal } from '@/components/report-modal';
-import { OrganizerProfileModal } from '@/components/organizer-profile-modal';
 
 type UserStatus = 'interested' | 'confirmed' | 'attended' | 'not-interested' | 'saved' | null;
 
@@ -66,7 +65,6 @@ export default function EventDetailPage({
   const [status, setStatus] = useState<UserStatus>(null);
   const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
-  const [orgPreviewOpen, setOrgPreviewOpen] = useState(false);
   // Pending invitation row for the current user, if any. Drives the
   // accept/decline banner at the top of the page (mirrors the mobile
   // app's behaviour where a private invite shows up as an inline CTA).
@@ -619,15 +617,14 @@ export default function EventDetailPage({
           a private user-created event). */}
       {event.organizer_name && (
         event.organizer_org_id ? (
-          <button
-            type="button"
-            onClick={() => setOrgPreviewOpen(true)}
-            className="w-full text-left rounded-2xl border border-border-subtle bg-surface p-5 hover:border-violet-500/30 hover:bg-elevated/30 transition-colors"
+          <Link
+            href={`/app/organizer/${event.organizer_org_id}`}
+            className="block rounded-2xl border border-border-subtle bg-surface p-5 hover:border-violet-500/30 hover:bg-elevated/30 transition-colors"
           >
             <p className="text-[12px] text-muted-fg uppercase tracking-wide mb-2">Veranstalter</p>
             <p className="font-semibold">{event.organizer_name}</p>
             <p className="text-[11px] text-muted-fg mt-0.5">Antippen für Profil</p>
-          </button>
+          </Link>
         ) : (
           <div className="rounded-2xl border border-border-subtle bg-surface p-5">
             <p className="text-[12px] text-muted-fg uppercase tracking-wide mb-2">Veranstalter</p>
@@ -668,17 +665,6 @@ export default function EventDetailPage({
         targetName={event.title}
       />
 
-      {/* Organizer profile preview */}
-      {orgPreviewOpen && event.organizer_org_id && (
-        <OrganizerProfileModal
-          org={{
-            id: event.organizer_org_id,
-            name: event.organizer_name ?? 'Veranstalter',
-            avatar_url: null,
-          }}
-          onClose={() => setOrgPreviewOpen(false)}
-        />
-      )}
     </div>
   );
 }

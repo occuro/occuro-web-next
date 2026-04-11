@@ -36,8 +36,9 @@ type EventGroup = 'attending' | 'hosting';
  * share the URL.
  */
 export default function PublicProfilePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  const { user } = useAuth();
+  const { slug: rawSlug } = use(params);
+  const slug = rawSlug.trim();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const supabase = createClient();
 
@@ -57,28 +58,41 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   // ── Load everything ──────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
-    // Resolve slug → real user id. Try username first, fall back to id.
+    console.info(`[profile] resolving slug=${slug}`);
+    // Resolve slug → real user id. UUIDs go through .eq('id', ...);
+    // anything else is treated as a username. The previous version
+    // tried `eq('username', slug)` first which failed for UUID slugs
+    // because Postgres rejects the implicit-text-cast comparison
+    // when RLS is involved.
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
     let resolved: FullProfile | null = null;
-    const byUsername = await supabase
-      .from('profiles')
-      .select('id, full_name, username, avatar_url, banner_url, bio, location, website, instagram, interests')
-      .eq('username', slug)
-      .maybeSingle();
-    if (byUsername.data) {
-      resolved = byUsername.data as FullProfile;
+    const cols = 'id, full_name, username, avatar_url, banner_url, bio, location, website, instagram, interests';
+    if (isUuid) {
+      const { data, error } = await supabase
+        .from('profiles').select(cols).eq('id', slug).maybeSingle();
+      if (error) console.warn('[profile] id lookup failed:', error.message);
+      resolved = (data as FullProfile | null) ?? null;
     } else {
-      const byId = await supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url, banner_url, bio, location, website, instagram, interests')
-        .eq('id', slug)
-        .maybeSingle();
-      resolved = (byId.data as FullProfile | null) ?? null;
+      const { data, error } = await supabase
+        .from('profiles').select(cols).eq('username', slug).maybeSingle();
+      if (error) console.warn('[profile] username lookup failed:', error.message);
+      resolved = (data as FullProfile | null) ?? null;
+      // If username didn't match, fall back to id in case the slug
+      // happens to be a non-UUID id format.
+      if (!resolved) {
+        const fallback = await supabase
+          .from('profiles').select(cols).eq('id', slug).maybeSingle();
+        if (fallback.error) console.warn('[profile] fallback id lookup failed:', fallback.error.message);
+        resolved = (fallback.data as FullProfile | null) ?? null;
+      }
     }
     if (!resolved) {
+      console.warn(`[profile] no row matched slug=${slug}`);
       setProfile(null);
       setLoading(false);
       return;
     }
+    console.info(`[profile] resolved to`, resolved.id);
     setProfile(resolved);
 
     const today = new Date().toISOString().split('T')[0];
@@ -149,8 +163,14 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   }, [slug, supabase, user]);
 
   useEffect(() => {
+    // Wait for the auth context to finish initialising before kicking
+    // off the profile fetch — the profiles RLS policy is `to
+    // authenticated using (true)`, so an anon-role query during the
+    // brief window before the session cookie is hydrated would silently
+    // return null and surface as "Profil nicht gefunden".
+    if (authLoading) return;
     void load();
-  }, [load]);
+  }, [authLoading, load]);
 
   // Close menu on outside click / Escape
   useEffect(() => {
