@@ -163,7 +163,7 @@ export function FriendProfileModal({ friend, isFriend, onRemoveFriend, onClose }
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in p-3 sm:p-4">
       {/* Backdrop click to close */}
       <button
         type="button"
@@ -172,7 +172,7 @@ export function FriendProfileModal({ friend, isFriend, onRemoveFriend, onClose }
         className="absolute inset-0 cursor-default"
       />
 
-      <div className="relative w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl border border-border-subtle max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-fade-in">
+      <div className="relative w-full sm:max-w-lg bg-surface rounded-3xl border border-border-subtle max-h-[88vh] flex flex-col overflow-hidden animate-fade-in shadow-2xl shadow-black/50">
         {/* ── Compact header: avatar + identity on a single row ──
             No more centered avatar with mountain of whitespace beneath
             it — push the identity left, the close button right, and the

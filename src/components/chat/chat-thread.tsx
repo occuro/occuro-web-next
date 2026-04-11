@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -185,24 +185,46 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
 
     setLoading(false);
 
-    // Mark this room as read for the current user.
-    void supabase
-      .from('chat_participants')
-      .update({ last_read_at: new Date().toISOString() })
-      .eq('room_id', roomId)
-      .eq('user_id', user.id);
+    // Mark this room as read for the current user. Awaited so a
+    // failure (RLS / network) is logged instead of being lost — without
+    // this, the conversation list kept showing unread badges forever.
+    try {
+      const { error: readErr } = await supabase
+        .from('chat_participants')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('room_id', roomId)
+        .eq('user_id', user.id);
+      if (readErr) console.warn('[chat-thread] mark-as-read failed:', readErr.message);
+    } catch (e) {
+      console.warn('[chat-thread] mark-as-read threw:', e);
+    }
   }, [supabase, user, roomId]);
 
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
 
-  // Scroll to bottom whenever the message list changes
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+  // Scroll to bottom whenever the message list changes. useLayoutEffect
+  // (not useEffect) makes the jump synchronous *before* the browser
+  // paints — without it, the user briefly saw the chat scrolled to the
+  // top before snapping down. We also re-run on `loading` flipping to
+  // false because the messages container only mounts at that point and
+  // the scroll height isn't measurable until then.
+  useLayoutEffect(() => {
+    if (loading) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    // Two scrolls: one immediate, one in the next frame. The first
+    // covers the synchronous case; the second covers any late layout
+    // shifts (avatars, message images) that change the height after
+    // the initial commit.
+    el.scrollTop = el.scrollHeight;
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
+  }, [messages, loading]);
 
   // Realtime: append new messages as they arrive
   useEffect(() => {

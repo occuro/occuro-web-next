@@ -233,28 +233,58 @@ export function useChatRooms(userId: string | null | undefined) {
     void loadRooms();
   }, [loadRooms]);
 
-  // Realtime: refetch on any new message in the user's rooms.
-  // We can't filter on the message INSERT by room_id directly (we don't
-  // know the IDs at subscription time), so we subscribe to the broad
-  // chat_messages table and re-load when something arrives. The
-  // re-load is debounced via a microtask so multiple rapid inserts
-  // collapse into one fetch.
+  // Reload whenever the tab regains focus / becomes visible. Without
+  // this the conversation list keeps its cached unread counts when the
+  // user navigates back from a chat detail page (Next.js client-side
+  // navigation doesn't unmount the list), so messages they just read
+  // stay highlighted as unread until a manual reload.
+  useEffect(() => {
+    if (!userId) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void loadRooms();
+    };
+    const onFocus = () => { void loadRooms(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [userId, loadRooms]);
+
+  // Realtime: refetch on any new message in the user's rooms AND on
+  // any update to the current user's chat_participants row (which is
+  // how last_read_at gets cleared when they open a chat). The
+  // participants subscription is what causes the unread badge to
+  // disappear after the user reads a thread, even if Next.js client
+  // navigation kept the list page mounted in the background.
   useEffect(() => {
     if (!userId) return;
     let pending = false;
+    const trigger = () => {
+      if (pending) return;
+      pending = true;
+      queueMicrotask(() => {
+        pending = false;
+        void loadRooms();
+      });
+    };
     const channel = supabase
       .channel(`chat-rooms-${userId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-        () => {
-          if (pending) return;
-          pending = true;
-          queueMicrotask(() => {
-            pending = false;
-            void loadRooms();
-          });
+        trigger,
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chat_participants',
+          filter: `user_id=eq.${userId}`,
         },
+        trigger,
       )
       .subscribe();
     return () => {

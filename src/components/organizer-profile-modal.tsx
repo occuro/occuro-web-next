@@ -134,7 +134,7 @@ export function OrganizerProfileModal({ org, onClose }: OrganizerProfileModalPro
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in p-3 sm:p-4">
       <button
         type="button"
         aria-label="Schließen"
@@ -142,7 +142,7 @@ export function OrganizerProfileModal({ org, onClose }: OrganizerProfileModalPro
         className="absolute inset-0 cursor-default"
       />
 
-      <div className="relative w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl border border-border-subtle max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-fade-in">
+      <div className="relative w-full sm:max-w-lg bg-surface rounded-3xl border border-border-subtle max-h-[88vh] flex flex-col overflow-hidden animate-fade-in shadow-2xl shadow-black/50">
         {/* Compact header — avatar + name + stats on one row */}
         <div className="flex items-start gap-3 px-5 pt-5 pb-3 flex-shrink-0">
           <div className="w-16 h-16 rounded-full bg-elevated ring-2 ring-border-subtle flex items-center justify-center text-xl font-bold overflow-hidden flex-shrink-0">
