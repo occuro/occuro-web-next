@@ -199,6 +199,16 @@ function DeployBouncer() {
       if (bouncing) return;
       bouncing = true;
       console.warn(`[robustness] new deployment detected (${newDeploymentId}) — signing out and bouncing`);
+      // Tell every other tab in this browser to bounce too. Without
+      // this, only the focused tab would log out and the rest would
+      // keep their stale session.
+      try {
+        if ('BroadcastChannel' in window) {
+          const ch = new BroadcastChannel('occuro-deploy-bouncer');
+          ch.postMessage({ type: 'bounce', deploymentId: newDeploymentId });
+          ch.close();
+        }
+      } catch {}
       try {
         const supabase = createClient();
         await supabase.auth.signOut();
@@ -240,7 +250,7 @@ function DeployBouncer() {
       }
     }
 
-    // First check immediately, then poll every 30s.
+    // First check immediately, then poll every 15s.
     void check();
     const schedule = () => {
       pollTimer = setTimeout(async () => {
@@ -250,18 +260,41 @@ function DeployBouncer() {
     };
     schedule();
 
-    // Also check on tab focus + on click anywhere (most common moments
-    // a user would notice a stale build).
+    // Multi-trigger check: focus, click, AND visibilitychange catch
+    // every realistic moment a user might come back to a stale tab.
+    // visibilitychange in particular fires when the tab becomes
+    // foreground after being backgrounded (browser throttles setTimeout
+    // in background tabs so polling alone can miss this).
     const onFocus = () => { void check(); };
     const onClick = () => { void check(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void check();
+    };
     window.addEventListener('focus', onFocus);
     window.addEventListener('click', onClick, { capture: true });
+    document.addEventListener('visibilitychange', onVisible);
+
+    // Cross-tab broadcast: if ANY tab successfully bounces, tell every
+    // other tab to bounce too. Otherwise the user could have 5 tabs
+    // open and only the active one would log out.
+    const channel = 'BroadcastChannel' in window
+      ? new BroadcastChannel('occuro-deploy-bouncer')
+      : null;
+    if (channel) {
+      channel.onmessage = (e) => {
+        if (e.data?.type === 'bounce') {
+          void bounce(e.data.deploymentId ?? 'unknown');
+        }
+      };
+    }
 
     return () => {
       cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('click', onClick, { capture: true } as EventListenerOptions);
+      document.removeEventListener('visibilitychange', onVisible);
+      if (channel) channel.close();
     };
   }, []);
 
