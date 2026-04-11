@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useNotifications } from '@/lib/hooks/useNotifications';
 import { cn } from '@/lib/utils';
-import { NotificationsBell } from '@/components/notifications-bell';
 import {
-  Search, Map, CalendarDays, Users, MessageCircle,
+  Search, Map, CalendarDays, Users, MessageCircle, Bell,
   Settings, LayoutDashboard, CalendarPlus, BarChart3,
   UserCheck, LogOut, Home, ChevronRight, Menu, X,
 } from 'lucide-react';
@@ -17,6 +17,8 @@ interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Special key the sidebar uses to inject a live unread badge. */
+  badgeKey?: 'notifications';
 }
 
 // Note: Profile is intentionally NOT in the nav. The footer profile card
@@ -29,6 +31,7 @@ const userNav: NavItem[] = [
   { label: 'Kalender', href: '/app/calendar', icon: CalendarDays },
   { label: 'Freunde', href: '/app/friends', icon: Users },
   { label: 'Nachrichten', href: '/app/chat', icon: MessageCircle },
+  { label: 'Benachrichtigungen', href: '/app/notifications', icon: Bell, badgeKey: 'notifications' },
   { label: 'Einstellungen', href: '/app/settings', icon: Settings },
 ];
 
@@ -39,12 +42,14 @@ const organizerNav: NavItem[] = [
   { label: 'Reichweite', href: '/organizer/reach', icon: BarChart3 },
   { label: 'Follower', href: '/organizer/followers', icon: UserCheck },
   { label: 'Nachrichten', href: '/organizer/chat', icon: MessageCircle },
+  { label: 'Benachrichtigungen', href: '/organizer/notifications', icon: Bell, badgeKey: 'notifications' },
   { label: 'Einstellungen', href: '/organizer/settings', icon: Settings },
 ];
 
 export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
   const pathname = usePathname();
-  const { profile, organization, signOut } = useAuth();
+  const { user, profile, organization, signOut } = useAuth();
+  const { unreadCount } = useNotifications(user?.id);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const items = variant === 'organizer' ? organizerNav : userNav;
@@ -76,25 +81,16 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
 
   const navContent = (
     <>
-      {/* Logo + bell row */}
+      {/* Logo */}
       <div className="px-6 py-6">
-        <div className="flex items-start justify-between gap-2">
-          <Link href="/" className="group flex flex-col">
-            <span className="text-xl font-heading font-bold tracking-tight group-hover:opacity-70 transition-opacity">
-              occuro
-            </span>
-            <p className="text-[11px] font-medium text-muted-fg mt-1 uppercase tracking-widest">
-              {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
-            </p>
-          </Link>
-          {/* Bell visible only inside the desktop sidebar variant —
-              the mobile drawer also uses this navContent block but the
-              mobile top bar already has its own bell, so we hide it
-              here on small screens to avoid duplication. */}
-          <div className="hidden lg:block -mt-1">
-            <NotificationsBell />
-          </div>
-        </div>
+        <Link href="/" className="group flex flex-col">
+          <span className="text-xl font-heading font-bold tracking-tight group-hover:opacity-70 transition-opacity">
+            occuro
+          </span>
+          <p className="text-[11px] font-medium text-muted-fg mt-1 uppercase tracking-widest">
+            {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
+          </p>
+        </Link>
       </div>
 
       {/* Navigation */}
@@ -103,6 +99,7 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
           const Icon = item.icon;
           const isActive = pathname === item.href ||
             (item.href !== '/app' && item.href !== '/organizer' && pathname.startsWith(item.href));
+          const showBadge = item.badgeKey === 'notifications' && unreadCount > 0;
           return (
             <Link
               key={item.href}
@@ -122,7 +119,14 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
                   !isActive && 'group-hover:scale-110',
                 )}
               />
-              {item.label}
+              <span className="flex-1 truncate">{item.label}</span>
+              {showBadge && (
+                <span className="min-w-[20px] h-[20px] px-1 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[10px] font-bold text-white leading-none">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                </span>
+              )}
             </Link>
           );
         })}
@@ -177,15 +181,19 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
       <header className="lg:hidden sticky top-0 z-30 flex items-center gap-2 h-14 px-3 bg-surface/95 backdrop-blur border-b border-border-subtle">
         <button
           onClick={() => setDrawerOpen(true)}
-          className="p-2 -ml-1 rounded-xl active:bg-muted transition-colors"
+          className="relative p-2 -ml-1 rounded-xl active:bg-muted transition-colors"
           aria-label="Menü öffnen"
         >
           <Menu size={22} />
+          {/* Mobile unread indicator on the menu button — so users see
+              a notification arrived without needing to open the drawer. */}
+          {unreadCount > 0 && (
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-violet-500 ring-2 ring-surface" />
+          )}
         </button>
         <Link href="/" className="flex-1 flex items-center justify-center">
           <span className="text-lg font-heading font-bold tracking-tight">occuro</span>
         </Link>
-        <NotificationsBell />
         <Link
           href={profileHref}
           className="w-9 h-9 rounded-full bg-muted flex items-center justify-center overflow-hidden ring-2 ring-border-subtle"
