@@ -159,6 +159,51 @@ export default function FriendsPage() {
     void reload();
   }, [reload]);
 
+  // ── Realtime: friendships table ────────────────────────────────
+  // Subscribe to any change on the friendships table that touches the
+  // current user (either as user_id or friend_id). When a friend
+  // request comes in, gets accepted, declined, or removed, we just
+  // re-run the loader. Cheap because postgres_changes only fires for
+  // rows that match the filter.
+  useEffect(() => {
+    if (!user?.id) return;
+    let pending = false;
+    const trigger = () => {
+      if (pending) return;
+      pending = true;
+      queueMicrotask(() => {
+        pending = false;
+        void reload();
+      });
+    };
+
+    // We listen on TWO filters because postgres_changes doesn't support
+    // OR conditions inline. Both filters target the same table so we
+    // get notified for incoming requests (friend_id=us) AND outgoing
+    // ones (user_id=us).
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`friendships:${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'friendships', filter: `user_id=eq.${user.id}` },
+          trigger,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'friendships', filter: `friend_id=eq.${user.id}` },
+          trigger,
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('[friends] realtime subscribe failed:', e);
+    }
+    return () => {
+      try { if (channel) void supabase.removeChannel(channel); } catch {}
+    };
+  }, [supabase, user?.id, reload]);
+
   // ── Search (debounced) ─────────────────────────────────────────
   useEffect(() => {
     if (search.trim().length < 2) {
