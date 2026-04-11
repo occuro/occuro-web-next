@@ -15,9 +15,11 @@ interface ImageUploadProps {
   /** Storage bucket name — must already exist in Supabase. */
   bucket: Bucket;
   /**
-   * Subfolder under the bucket. Files end up at
-   *   <bucket>/<pathPrefix>/<userId>/<timestamp>-<random>.<ext>
-   * which keeps writes RLS-friendly (one folder per user).
+   * Subfolder UNDER the user's folder. Files end up at
+   *   <bucket>/<userId>/<pathPrefix>/<timestamp>-<random>.<ext>
+   * The userId comes first so the standard Supabase RLS pattern
+   *   (storage.foldername(name))[1] = auth.uid()::text
+   * still matches — putting the prefix before the userId would break it.
    */
   pathPrefix?: string;
   /** Max file size in bytes. Default 5 MB. */
@@ -40,8 +42,9 @@ const DEFAULT_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
  * Reusable image upload component.
  *
  * Uploads to Supabase Storage and returns the public URL via onChange.
- * Files go to <bucket>/<pathPrefix>/<userId>/<filename> so the standard
- * "users can write into their own folder" RLS pattern works.
+ * Files go to <bucket>/<userId>/<pathPrefix>/<filename> so the standard
+ * "users can write into their own folder" RLS pattern works (the userId
+ * MUST be the first folder segment, otherwise RLS denies the upload).
  *
  * Renders a clickable area with the current image (or a placeholder),
  * a hover overlay with an upload icon, and a small clear (X) button.
@@ -74,11 +77,12 @@ export function ImageUpload({
 
     setUploading(true);
 
-    // Build a unique path under the user's folder
+    // Build a unique path under the user's folder. userId comes first
+    // so RLS rule (storage.foldername(name))[1] = auth.uid() matches.
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const folder = pathPrefix
-      ? `${pathPrefix}/${user.id}`
+      ? `${user.id}/${pathPrefix}`
       : `${user.id}`;
     const path = `${folder}/${fileName}`;
 

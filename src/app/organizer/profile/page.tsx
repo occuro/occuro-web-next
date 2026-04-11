@@ -8,7 +8,7 @@ import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
   MapPin, BadgeCheck, Users, Pencil, Settings, Clock, Calendar,
-  CheckCircle2, ImageOff, Lock, Plus, X, Save, Loader2, Tag,
+  ImageOff, Plus, X, Save, Loader2, Tag,
   CalendarRange, TrendingUp,
 } from 'lucide-react';
 import { ImageUpload } from '@/components/image-upload';
@@ -39,6 +39,7 @@ export default function OrganizerProfilePage() {
       .from('events')
       .select('*')
       .eq('organizer_org_id', organization.id)
+      .neq('visibility', 'private') // organizers only have public events
       .order('date', { ascending: true });
     setEvents(data ?? []);
     setLoading(false);
@@ -235,14 +236,7 @@ export default function OrganizerProfilePage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
-                  {event.visibility === 'private' && (
-                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 flex-shrink-0">
-                      <Lock size={9} /> Privat
-                    </span>
-                  )}
-                </div>
+                <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
                 <div className="flex items-center gap-3 text-[12px] text-muted-fg mt-0.5">
                   <span className="flex items-center gap-1"><Calendar size={11} />{formatDate(event.date)}</span>
                   <span className="flex items-center gap-1"><Clock size={11} />{formatTime(event.time)}</span>
@@ -252,22 +246,12 @@ export default function OrganizerProfilePage() {
                   </span>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                <span
-                  className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white"
-                  style={{ backgroundColor: getCategoryColor(event.category) }}
-                >
-                  {event.category}
-                </span>
-                <div className="flex items-center gap-2 text-[10px] text-muted-fg">
-                  {event.interested_count > 0 && (
-                    <span className="flex items-center gap-0.5">{event.interested_count} interessiert</span>
-                  )}
-                  {event.confirmed_count > 0 && (
-                    <span className="flex items-center gap-0.5"><CheckCircle2 size={9} /> {event.confirmed_count}</span>
-                  )}
-                </div>
-              </div>
+              <span
+                className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white flex-shrink-0"
+                style={{ backgroundColor: getCategoryColor(event.category) }}
+              >
+                {event.category}
+              </span>
             </Link>
           ))}
         </div>

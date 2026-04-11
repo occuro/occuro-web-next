@@ -43,7 +43,13 @@ export default function ProfilePage() {
     setLoading(true);
     const [statusesRes, friendsRes, savedRes] = await Promise.all([
       supabase.from('event_statuses').select('event_id, status').eq('user_id', user!.id),
-      supabase.from('friendships').select('id', { count: 'exact', head: true })
+      // Fetch accepted friendship rows then dedupe in JS — a `count`
+      // query with .or().eq() was returning the wrong number because
+      // some pairs exist as duplicate bidirectional rows. Counting
+      // distinct *friend ids* is the only safe approach.
+      supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
         .or(`user_id.eq.${user!.id},friend_id.eq.${user!.id}`)
         .eq('status', 'accepted'),
       supabase.from('saved_events').select('event_id').eq('user_id', user!.id),
@@ -55,7 +61,12 @@ export default function ProfilePage() {
       map[s.event_id] = s.status;
     });
     setStatuses(map);
-    setFriendCount(friendsRes.count ?? 0);
+    const friendIds = new Set<string>();
+    ((friendsRes.data ?? []) as Array<{ user_id: string; friend_id: string }>).forEach((f) => {
+      const otherId = f.user_id === user!.id ? f.friend_id : f.user_id;
+      if (otherId) friendIds.add(otherId);
+    });
+    setFriendCount(friendIds.size);
 
     const savedIds = (savedRes.data ?? []).map((r: { event_id: string }) => r.event_id);
     setSavedEventIds(savedIds);
@@ -222,10 +233,9 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Stat + actions row.
-                Interessiert/Bestätigt sind unten als Pills im Events-Tab,
-                hier oben würden sie doppelt erscheinen. Stattdessen:
-                Freunde-Count + Profil bearbeiten + Profil teilen. */}
+            {/* Action row: Freunde + Teilen.
+                Bearbeiten + Einstellungen sitzen schon oben rechts auf
+                dem Banner — hier nochmal wäre Doppelmoppel. */}
             <div className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap">
               <Link
                 href="/app/friends"
@@ -235,13 +245,6 @@ export default function ProfilePage() {
                 <span className="text-[13px] font-semibold">{friendCount}</span>
                 <span className="text-[12px] text-muted-fg">Freunde</span>
               </Link>
-              <button
-                onClick={() => setEditOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
-              >
-                <Pencil size={13} />
-                <span className="text-[12px] font-medium">Bearbeiten</span>
-              </button>
               <ShareProfileButton profile={profile} />
             </div>
 
