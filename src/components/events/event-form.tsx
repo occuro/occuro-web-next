@@ -1,15 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { ImageUpload } from '@/components/image-upload';
 import { LocationAutocomplete } from '@/components/location-autocomplete';
 import {
-  Save, Loader2, AlertTriangle, Check, Trash2, Calendar, Clock,
+  Save, Loader2, AlertTriangle, Check, Trash2, Calendar, UserPlus, Users,
 } from 'lucide-react';
 import type { Event } from '@/types/occuro';
+
+interface FriendOption {
+  id: string;
+  full_name: string;
+  username: string | null;
+  avatar_url: string | null;
+}
 
 const CATEGORIES = [
   'Music', 'Business', 'Health', 'Sports', 'Education',
@@ -76,6 +83,58 @@ export function EventForm({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // ── Friend invitation state (individual mode only) ──────────────────
+  const [friends, setFriends] = useState<FriendOption[]>([]);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<Set<string>>(new Set());
+  const [friendSearch, setFriendSearch] = useState('');
+
+  useEffect(() => {
+    if (!isIndividual || !user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq('status', 'accepted');
+      if (cancelled || !data) return;
+      const ids = new Set<string>();
+      data.forEach((f: { user_id: string; friend_id: string }) => {
+        const other = f.user_id === user.id ? f.friend_id : f.user_id;
+        if (other) ids.add(other);
+      });
+      if (ids.size === 0) { setFriends([]); return; }
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url')
+        .in('id', Array.from(ids));
+      if (cancelled) return;
+      setFriends(((profs ?? []) as FriendOption[]).sort((a, b) =>
+        (a.full_name ?? '').localeCompare(b.full_name ?? '', 'de', { sensitivity: 'base' }),
+      ));
+    })();
+    return () => { cancelled = true; };
+  }, [isIndividual, user, supabase]);
+
+  function toggleFriend(id: string) {
+    setSelectedFriendIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const filteredFriends = friendSearch.trim()
+    ? friends.filter((f) => {
+        const q = friendSearch.trim().toLowerCase();
+        return (
+          (f.full_name ?? '').toLowerCase().includes(q) ||
+          (f.username ?? '').toLowerCase().includes(q)
+        );
+      })
+    : friends;
 
   function update<K extends keyof typeof form>(key: K, value: typeof form[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -152,13 +211,32 @@ export function EventForm({
       savedId = (data as { id: string } | null)?.id ?? null;
     }
 
-    setSaving(false);
-
     if (saveError) {
+      setSaving(false);
       setError(saveError.message);
       return;
     }
 
+    // ── Send out invitations for newly created private events ────────
+    // Only on CREATE (not edit) and only when in individual mode and the
+    // user actually picked some friends. We insert them in one batch
+    // and intentionally swallow per-row errors so the event itself
+    // still counts as created — the user can still invite later from
+    // the event detail page if a row fails.
+    if (!isEdit && isIndividual && savedId && selectedFriendIds.size > 0) {
+      const rows = Array.from(selectedFriendIds).map((friendId) => ({
+        event_id: savedId!,
+        invited_user_id: friendId,
+        invited_by: user.id,
+        status: 'pending' as const,
+      }));
+      const { error: invErr } = await supabase.from('event_invitations').insert(rows);
+      if (invErr) {
+        console.warn('[event-form] invitation insert failed:', invErr.message);
+      }
+    }
+
+    setSaving(false);
     setSuccess(true);
     // Redirect after a brief success indication
     setTimeout(() => {
@@ -285,6 +363,99 @@ export function EventForm({
           required
         />
       </Field>
+
+      {/* Friends invitation — only on create + only for individual mode.
+          Edit mode hides it because invitations are managed from the
+          event detail page once it exists. */}
+      {isIndividual && !isEdit && (
+        <div className="rounded-2xl border border-border-subtle bg-elevated/30 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground/80">
+              <UserPlus size={13} className="text-violet-400" /> Freunde einladen
+              {selectedFriendIds.size > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-600 text-white">
+                  {selectedFriendIds.size}
+                </span>
+              )}
+            </div>
+            <span className="text-[11px] text-muted-fg">Optional</span>
+          </div>
+
+          {friends.length === 0 ? (
+            <p className="text-[12px] text-muted-fg italic py-3 text-center">
+              Du hast noch keine Freunde hinzugefügt.
+            </p>
+          ) : (
+            <>
+              {friends.length > 6 && (
+                <input
+                  type="text"
+                  value={friendSearch}
+                  onChange={(e) => setFriendSearch(e.target.value)}
+                  placeholder="Freunde suchen…"
+                  className="w-full px-3 py-2 rounded-xl border border-border-subtle bg-surface text-[12px] placeholder:text-muted-fg/60 focus:outline-none focus:border-violet-500/40"
+                />
+              )}
+              <div className="max-h-60 overflow-y-auto space-y-1.5 -mx-1 px-1">
+                {filteredFriends.length === 0 ? (
+                  <p className="text-[12px] text-muted-fg italic py-3 text-center">
+                    Keine Freunde gefunden.
+                  </p>
+                ) : (
+                  filteredFriends.map((friend) => {
+                    const checked = selectedFriendIds.has(friend.id);
+                    return (
+                      <button
+                        key={friend.id}
+                        type="button"
+                        onClick={() => toggleFriend(friend.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors text-left ${
+                          checked
+                            ? 'bg-violet-500/10 border-violet-500/40'
+                            : 'bg-surface border-border-subtle hover:bg-elevated'
+                        }`}
+                      >
+                        <div className="w-9 h-9 rounded-full bg-muted overflow-hidden flex items-center justify-center flex-shrink-0">
+                          {friend.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[11px] font-semibold text-foreground/70">
+                              {friend.full_name?.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-medium truncate">{friend.full_name}</p>
+                          {friend.username && (
+                            <p className="text-[10px] text-muted-fg truncate">@{friend.username}</p>
+                          )}
+                        </div>
+                        <div
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
+                            checked
+                              ? 'bg-violet-600 border-violet-600 text-white'
+                              : 'border-border-strong'
+                          }`}
+                        >
+                          {checked && <Check size={12} strokeWidth={3} />}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {selectedFriendIds.size > 0 && (
+                <p className="text-[11px] text-muted-fg text-center pt-1">
+                  <Users size={10} className="inline mb-0.5" /> {selectedFriendIds.size}{' '}
+                  {selectedFriendIds.size === 1 ? 'Freund wird' : 'Freunde werden'} nach dem
+                  Erstellen eingeladen.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Category + type */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
