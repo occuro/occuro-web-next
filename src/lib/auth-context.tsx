@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { purgeOldSchemas } from '@/lib/versioned-storage';
 import type { Profile, Organization, UserType } from '@/types/occuro';
 import type { User } from '@supabase/supabase-js';
 
@@ -31,6 +32,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createClient());
 
   useEffect(() => {
+    // Drop any stored prefs from older schema versions before we read
+    // anything else — guarantees no stale localStorage shape can crash
+    // a downstream component this session.
+    purgeOldSchemas();
+
     // Immediately set loading false after a short delay no matter what
     const forceReady = setTimeout(() => setLoading(false), 1500);
 

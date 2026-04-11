@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
+import { RobustnessShell } from '@/components/robustness-shell';
 
 export const metadata: Metadata = {
   title: 'occuro — Entdecke Events in deiner Nähe',
@@ -47,7 +48,14 @@ export default function RootLayout({
   return (
     <html lang="de" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <AuthProvider>{children}</AuthProvider>
+        {/* RobustnessShell wraps the whole app so it survives deploys
+            without leaving users stuck. Provides:
+              - ChunkLoadError auto-recovery (hard reload on stale JS)
+              - "Update verfügbar" banner via /api/version polling
+              - ErrorBoundary with reset button as last-line fallback */}
+        <RobustnessShell>
+          <AuthProvider>{children}</AuthProvider>
+        </RobustnessShell>
       </body>
     </html>
   );
