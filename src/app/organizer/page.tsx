@@ -8,11 +8,11 @@ import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
   Plus, Search, X, CalendarDays, Radio, Clock, ImageOff,
-  Heart, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight,
-  Users, BarChart3, Lock, TrendingUp, Pencil,
+  AlertTriangle, ShieldCheck, ArrowRight,
+  Users, Lock, Pencil,
 } from 'lucide-react';
 
-type EventTab = 'upcoming' | 'live' | 'past' | 'private';
+type EventTab = 'upcoming' | 'live' | 'past';
 
 export default function OrganizerHomePage() {
   const { user, organization } = useAuth();
@@ -64,18 +64,21 @@ export default function OrganizerHomePage() {
 
   // Defensive null guards on date — a single bad row in the database
   // would otherwise crash localeCompare and bring down the whole page
-  // via the ErrorBoundary.
-  const upcoming = events.filter((e) => (e.end_date ?? e.date ?? '') >= today && !isLive(e) && e.visibility === 'public');
-  const live = events.filter((e) => isLive(e) && e.visibility === 'public');
-  const past = events
-    .filter((e) => (e.end_date ?? e.date ?? '') < today && e.visibility === 'public')
+  // via the ErrorBoundary. Organizers only have public events; the
+  // visibility filter is intentionally permissive to also surface
+  // legacy rows that might be missing the visibility column.
+  // Organizers shouldn't have private events anyway, but filter as a
+  // safety net for legacy data so a stray private row doesn't sneak in.
+  const publicOnly = events.filter((e) => e.visibility !== 'private');
+  const upcoming = publicOnly.filter((e) => (e.end_date ?? e.date ?? '') >= today && !isLive(e));
+  const live = publicOnly.filter((e) => isLive(e));
+  const past = publicOnly
+    .filter((e) => (e.end_date ?? e.date ?? '') < today)
     .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
-  const privateEvents = events.filter((e) => e.visibility === 'private');
 
   const currentEvents =
     tab === 'live' ? live
     : tab === 'past' ? past
-    : tab === 'private' ? privateEvents
     : upcoming;
 
   const filtered = search
@@ -89,17 +92,12 @@ export default function OrganizerHomePage() {
       })
     : currentEvents;
 
-  // ── Aggregate stats for header strip ────────────────────────────
-  const totalInterested = events.reduce((s, e) => s + (e.interested_count || 0), 0);
-  const totalConfirmed = events.reduce((s, e) => s + (e.confirmed_count || 0), 0);
-
   const isVerified = organization?.verified ?? false;
 
   const tabs: { key: EventTab; label: string; count: number; icon: typeof CalendarDays; liveBg?: boolean }[] = [
     { key: 'upcoming', label: 'Anstehend', count: upcoming.length, icon: CalendarDays },
     { key: 'live', label: 'Live', count: live.length, icon: Radio, liveBg: live.length > 0 },
     { key: 'past', label: 'Vergangen', count: past.length, icon: Clock },
-    { key: 'private', label: 'Privat', count: privateEvents.length, icon: Lock },
   ];
 
   return (
@@ -114,24 +112,17 @@ export default function OrganizerHomePage() {
             Verwalte deine Events und sieh, wie deine Community wächst.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href="/organizer/dashboard"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-medium border border-border-subtle bg-surface hover:bg-elevated transition-colors"
-          >
-            <BarChart3 size={15} /> Statistiken
-          </Link>
-          <Link
-            href="/organizer/events/create"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
-          >
-            <Plus size={15} strokeWidth={2.2} /> Event erstellen
-          </Link>
-        </div>
+        <Link
+          href="/organizer/events/create"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+        >
+          <Plus size={15} strokeWidth={2.2} /> Event erstellen
+        </Link>
       </div>
 
-      {/* ─── Quick stats strip ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* ─── Quick stats strip — only the two that matter at a glance.
+          Engagement metrics live on the Statistiken page in the sidebar. ─── */}
+      <div className="grid grid-cols-2 gap-3">
         <QuickStat
           label="Follower"
           value={followerCount}
@@ -142,16 +133,6 @@ export default function OrganizerHomePage() {
           label="Events gesamt"
           value={events.length}
           icon={CalendarDays}
-        />
-        <QuickStat
-          label="Interessenten"
-          value={totalInterested}
-          icon={Heart}
-        />
-        <QuickStat
-          label="Bestätigungen"
-          value={totalConfirmed}
-          icon={CheckCircle2}
         />
       </div>
 
@@ -172,7 +153,7 @@ export default function OrganizerHomePage() {
       )}
 
       {/* ─── Tabs ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {tabs.map((t) => {
           const Icon = t.icon;
           const active = tab === t.key;
@@ -232,7 +213,6 @@ export default function OrganizerHomePage() {
             {search ? 'Keine Events gefunden'
             : tab === 'upcoming' ? 'Keine anstehenden Events'
             : tab === 'live' ? 'Aktuell läuft kein Event'
-            : tab === 'private' ? 'Keine privaten Events'
             : 'Noch keine vergangenen Events'}
           </p>
           {!search && events.length === 0 && (
@@ -271,14 +251,7 @@ export default function OrganizerHomePage() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
-                    {event.visibility === 'private' && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 flex-shrink-0">
-                        <Lock size={9} /> Privat
-                      </span>
-                    )}
-                  </div>
+                  <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
                   <p className="text-[12px] text-muted-fg mt-0.5 truncate">
                     {formatDate(event.date)} · {formatTime(event.time)} · {event.location}
                   </p>
@@ -289,10 +262,6 @@ export default function OrganizerHomePage() {
                 >
                   {event.category}
                 </span>
-                <div className="text-right text-[12px] text-muted-fg flex-shrink-0 space-y-0.5 hidden sm:block">
-                  <p className="flex items-center justify-end gap-1"><Heart size={11} />{event.interested_count}</p>
-                  <p className="flex items-center justify-end gap-1"><CheckCircle2 size={11} />{event.confirmed_count}</p>
-                </div>
               </Link>
               {/* Edit button — separate Link so it doesn't trigger the row navigation */}
               <Link
@@ -318,7 +287,7 @@ export default function OrganizerHomePage() {
 interface QuickStatProps {
   label: string;
   value: number;
-  icon: typeof Heart;
+  icon: typeof Users;
   href?: string;
 }
 
