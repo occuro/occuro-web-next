@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
@@ -102,6 +102,17 @@ function MapPageInner() {
     setLoading(false);
   }
 
+  // Always render the selected event as a pin, even if it's not in
+  // the filtered events array (e.g. when arriving via a deeplink to
+  // an event that's outside the current category filter or that's
+  // a private event). Without this merge the map opens at the right
+  // location but shows no marker — exactly the bug the user hit.
+  const mergedEvents = useMemo(() => {
+    if (!selected || selected.latitude == null || selected.longitude == null) return events;
+    if (events.some((e) => e.id === selected.id)) return events;
+    return [selected, ...events];
+  }, [events, selected]);
+
   return (
     <div className="max-w-6xl mx-auto space-y-4 animate-fade-in">
       {/* Header */}
@@ -145,14 +156,14 @@ function MapPageInner() {
             </div>
           ) : provider === 'apple' ? (
             <AppleMap
-              events={events}
+              events={mergedEvents}
               selected={selected}
               onSelect={setSelected}
               skipAutoLocate={Boolean(deeplinkEventId)}
             />
           ) : (
             <MapLibreFallback
-              events={events}
+              events={mergedEvents}
               selected={selected}
               onSelect={setSelected}
               skipAutoLocate={Boolean(deeplinkEventId)}
