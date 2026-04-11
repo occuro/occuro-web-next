@@ -62,9 +62,14 @@ export default function OrganizerHomePage() {
     return startKey <= today && today <= endKey;
   };
 
-  const upcoming = events.filter((e) => (e.end_date ?? e.date) >= today && !isLive(e) && e.visibility === 'public');
+  // Defensive null guards on date — a single bad row in the database
+  // would otherwise crash localeCompare and bring down the whole page
+  // via the ErrorBoundary.
+  const upcoming = events.filter((e) => (e.end_date ?? e.date ?? '') >= today && !isLive(e) && e.visibility === 'public');
   const live = events.filter((e) => isLive(e) && e.visibility === 'public');
-  const past = events.filter((e) => (e.end_date ?? e.date) < today && e.visibility === 'public').sort((a, b) => b.date.localeCompare(a.date));
+  const past = events
+    .filter((e) => (e.end_date ?? e.date ?? '') < today && e.visibility === 'public')
+    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
   const privateEvents = events.filter((e) => e.visibility === 'private');
 
   const currentEvents =
@@ -74,11 +79,14 @@ export default function OrganizerHomePage() {
     : upcoming;
 
   const filtered = search
-    ? currentEvents.filter((e) =>
-        e.title.toLowerCase().includes(search.toLowerCase()) ||
-        e.location.toLowerCase().includes(search.toLowerCase()) ||
-        e.category.toLowerCase().includes(search.toLowerCase())
-      )
+    ? currentEvents.filter((e) => {
+        const q = search.toLowerCase();
+        return (
+          (e.title ?? '').toLowerCase().includes(q) ||
+          (e.location ?? '').toLowerCase().includes(q) ||
+          (e.category ?? '').toLowerCase().includes(q)
+        );
+      })
     : currentEvents;
 
   // ── Aggregate stats for header strip ────────────────────────────

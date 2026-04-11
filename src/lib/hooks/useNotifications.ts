@@ -34,15 +34,29 @@ export function useNotifications(userId: string | null | undefined) {
       return;
     }
     setLoading(true);
-    const { data } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .not('type', 'in', '("chat_message","chat_announcement")')
-      .order('created_at', { ascending: false })
-      .limit(50);
-    setNotifications((data ?? []) as AppNotification[]);
-    setLoading(false);
+    // Wrap the whole query in try/catch — a network error or transient
+    // RLS issue must NOT crash the global sidebar bell. Worst case the
+    // bell shows zero notifications until the next reload.
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .not('type', 'in', '("chat_message","chat_announcement")')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) {
+        console.warn('[useNotifications] load failed:', error.message);
+        setNotifications([]);
+      } else {
+        setNotifications((data ?? []) as AppNotification[]);
+      }
+    } catch (e) {
+      console.warn('[useNotifications] load threw:', e);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
   }, [supabase, userId]);
 
   useEffect(() => {
@@ -50,23 +64,33 @@ export function useNotifications(userId: string | null | undefined) {
   }, [load]);
 
   // Realtime — refetch on any insert/update/delete on the user's notifications.
+  // Wrapped in try/catch so a misconfigured channel never crashes the app.
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase
-      .channel(`notifications:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => { void load(); },
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`notifications:${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => { void load(); },
+        )
+        .subscribe();
+    } catch (e) {
+      console.warn('[useNotifications] realtime subscribe failed:', e);
+    }
     return () => {
-      void supabase.removeChannel(channel);
+      try {
+        if (channel) void supabase.removeChannel(channel);
+      } catch {
+        // ignore
+      }
     };
   }, [supabase, userId, load]);
 

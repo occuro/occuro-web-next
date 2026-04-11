@@ -55,18 +55,22 @@ export default function DiscoverPage() {
     let result = events;
     if (search.length >= 2) {
       const q = search.toLowerCase();
+      // Defensive null guards: any event row with a null title/location/
+      // category would otherwise crash the whole filter and bring down
+      // the page via the ErrorBoundary.
       result = result.filter(
         (e) =>
-          e.title.toLowerCase().includes(q) ||
-          e.location.toLowerCase().includes(q) ||
-          e.category.toLowerCase().includes(q) ||
+          (e.title ?? '').toLowerCase().includes(q) ||
+          (e.location ?? '').toLowerCase().includes(q) ||
+          (e.category ?? '').toLowerCase().includes(q) ||
           (e.description ?? '').toLowerCase().includes(q),
       );
     }
-    // Sort
-    if (sort === 'soonest') result = [...result].sort((a, b) => a.date.localeCompare(b.date));
-    if (sort === 'latest') result = [...result].sort((a, b) => b.date.localeCompare(a.date));
-    if (sort === 'relevance') result = [...result].sort((a, b) => (b.interested_count + b.confirmed_count) - (a.interested_count + a.confirmed_count));
+    // Sort — guard date as well so a row with date=null can't crash
+    // localeCompare on the whole list.
+    if (sort === 'soonest') result = [...result].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    if (sort === 'latest') result = [...result].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+    if (sort === 'relevance') result = [...result].sort((a, b) => ((b.interested_count ?? 0) + (b.confirmed_count ?? 0)) - ((a.interested_count ?? 0) + (a.confirmed_count ?? 0)));
     return result;
   })();
 

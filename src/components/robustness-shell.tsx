@@ -230,33 +230,35 @@ function UpdateAvailableBanner() {
 
 interface ErrorBoundaryState {
   error: Error | null;
+  errorInfo: ErrorInfo | null;
+  showDetails: boolean;
 }
 
 class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { error: null };
+  state: ErrorBoundaryState = { error: null, errorInfo: null, showDetails: false };
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log to console in dev so we can debug. In production we let
-    // Vercel/Sentry pick it up via the global error handler.
-    console.error('[ErrorBoundary]', error, errorInfo);
+    // Log to console always so the user can copy + paste from devtools
+    // and we can find production crashes via the network tab.
+    console.error('[ErrorBoundary]', error);
+    console.error('[ErrorBoundary] componentStack:', errorInfo.componentStack);
+    this.setState({ errorInfo });
   }
 
   reset = () => {
     // Nuke ALL local state — auth tokens, prefs, anything that could
     // be in a corrupt state — and hard-reload to a clean slate.
     try {
-      // Preserve nothing: auth, prefs, cached data, all of it.
       Object.keys(localStorage).forEach((k) => {
         if (k.startsWith('sb-') || k.startsWith('@occuro')) {
           localStorage.removeItem(k);
         }
       });
       sessionStorage.clear();
-      // Clear supabase auth cookies as well
       document.cookie.split(';').forEach((c) => {
         const name = c.trim().split('=')[0];
         if (name.startsWith('sb-')) {
@@ -267,16 +269,23 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
     window.location.href = '/';
   };
 
+  // Reload — does NOT clear state, just refetches the page. This is
+  // what most users want and what fixes the chunk-mismatch case.
+  // Importantly: we do NOT just unset the error state, because the
+  // underlying issue would re-throw on the next render and the user
+  // would be stuck in a loop.
   retry = () => {
-    this.setState({ error: null });
+    window.location.reload();
   };
 
   render() {
     if (!this.state.error) return this.props.children;
 
+    const { error, errorInfo, showDetails } = this.state;
+
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-background">
-        <div className="max-w-md w-full text-center space-y-5">
+        <div className="max-w-lg w-full text-center space-y-5">
           <div className="w-16 h-16 rounded-2xl bg-red-500/15 flex items-center justify-center mx-auto">
             <AlertTriangle size={28} className="text-red-400" strokeWidth={1.8} />
           </div>
@@ -286,17 +295,37 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
               Die App ist auf einen unerwarteten Fehler gestoßen. Versuche es mit einem Neuladen — falls das nicht hilft, setz die App zurück.
             </p>
           </div>
-          {process.env.NODE_ENV === 'development' && (
-            <pre className="text-[11px] text-left bg-elevated border border-border-subtle rounded-xl p-3 overflow-auto max-h-32 text-red-400">
-              {this.state.error.message}
-            </pre>
-          )}
+
+          {/* Error details — always available, collapsed by default.
+              Apple Review and our own debugging both rely on being able
+              to see WHAT crashed, not just that something did. */}
+          <div className="text-left">
+            <button
+              onClick={() => this.setState({ showDetails: !showDetails })}
+              className="text-[11px] text-muted-fg hover:text-foreground transition-colors mb-2"
+            >
+              {showDetails ? '▾' : '▸'} Technische Details
+            </button>
+            {showDetails && (
+              <pre className="text-[10px] bg-elevated border border-border-subtle rounded-xl p-3 overflow-auto max-h-48 text-red-400 whitespace-pre-wrap break-words">
+                <strong className="text-red-300">{error.name}: {error.message}</strong>
+                {errorInfo?.componentStack && (
+                  <>
+                    {'\n\n'}
+                    <span className="text-muted-fg">Stack:</span>
+                    {errorInfo.componentStack}
+                  </>
+                )}
+              </pre>
+            )}
+          </div>
+
           <div className="flex gap-2 justify-center">
             <button
               onClick={this.retry}
               className="px-5 py-2.5 rounded-full text-[13px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-2"
             >
-              <RefreshCw size={13} /> Erneut versuchen
+              <RefreshCw size={13} /> Neuladen
             </button>
             <button
               onClick={this.reset}
@@ -305,12 +334,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
               App zurücksetzen
             </button>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-[12px] text-muted-fg hover:text-foreground transition-colors"
-          >
-            Oder einfach neuladen
-          </button>
         </div>
       </div>
     );
