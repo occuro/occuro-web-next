@@ -24,6 +24,7 @@ interface NavItem {
 // matches what most modern web apps (Linear, Notion, Figma) do.
 const userNav: NavItem[] = [
   { label: 'Entdecken', href: '/app', icon: Search },
+  { label: 'Privates Event erstellen', href: '/app/events/create', icon: CalendarPlus },
   { label: 'Karte', href: '/app/map', icon: Map },
   { label: 'Kalender', href: '/app/calendar', icon: CalendarDays },
   { label: 'Freunde', href: '/app/friends', icon: Users },
