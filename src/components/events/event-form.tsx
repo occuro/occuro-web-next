@@ -192,6 +192,35 @@ export function EventForm({
 
     setSaving(true);
 
+    // Belt-and-suspenders geocoding: if the user typed a location but
+    // never picked an autocomplete suggestion (the only thing that
+    // sets lat/lng), do a one-shot Nominatim lookup right before the
+    // insert. Without this the event lands in the DB with NULL coords
+    // and never appears as a pin on the map.
+    let resolvedLat = form.latitude;
+    let resolvedLng = form.longitude;
+    if ((resolvedLat == null || resolvedLng == null) && form.location.trim().length > 1) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(form.location.trim())}&format=json&limit=1`;
+        const res = await fetch(url, { headers: { 'Accept-Language': 'de' } });
+        const json = (await res.json()) as Array<{ lat: string; lon: string }>;
+        const hit = json[0];
+        if (hit) {
+          const lat = parseFloat(hit.lat);
+          const lng = parseFloat(hit.lon);
+          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+            resolvedLat = lat;
+            resolvedLng = lng;
+          }
+        }
+      } catch (err) {
+        // If Nominatim is down or rate-limits, just save without
+        // coordinates rather than blocking the user. The event will
+        // still get geocoded later by the map page's background loop.
+        console.warn('[event-form] geocode-on-submit failed:', err);
+      }
+    }
+
     // Build the payload for both create and update.
     // Organizers always create public events with no participant cap —
     // their capacity is enforced via ticketing systems, not the app.
@@ -204,8 +233,8 @@ export function EventForm({
       time: form.time,
       end_time: form.end_time || null,
       location: form.location.trim(),
-      latitude: form.latitude,
-      longitude: form.longitude,
+      latitude: resolvedLat,
+      longitude: resolvedLng,
       category: form.category,
       subcategory: form.subcategory.trim() || null,
       event_type: form.event_type,
