@@ -10,8 +10,9 @@ import {
   ArrowLeft, Calendar, Clock, MapPin, Heart, CheckCircle2,
   Users, Globe, Ticket, ImageOff, ExternalLink, Lock,
   Gift, Award, Sparkles, Loader2, MessageCircle, Send,
-  Trophy, Trash2,
+  Trophy, Trash2, Flag,
 } from 'lucide-react';
+import { ReportModal } from '@/components/report-modal';
 
 type UserStatus = 'interested' | 'confirmed' | 'attended' | 'not-interested' | 'saved' | null;
 
@@ -63,6 +64,7 @@ export default function EventDetailPage({
   const [event, setEvent] = useState<Event | null>(null);
   const [status, setStatus] = useState<UserStatus>(null);
   const [loading, setLoading] = useState(true);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // Giveaway state
   const [giveaway, setGiveaway] = useState<Giveaway | null>(null);
@@ -294,18 +296,30 @@ export default function EventDetailPage({
             <h1 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight">{event.title}</h1>
             {event.slogan && <p className="text-muted-fg mt-1">{event.slogan}</p>}
           </div>
-          {isOwnEvent && (
-            <Link
-              href={
-                event.visibility === 'private'
-                  ? `/app/events/${event.id}/edit`
-                  : `/organizer/events/${event.id}/edit`
-              }
-              className="px-3 py-1.5 rounded-full text-[12px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex-shrink-0"
-            >
-              Bearbeiten
-            </Link>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {!isOwnEvent && user && (
+              <button
+                onClick={() => setReportOpen(true)}
+                className="p-2 rounded-full text-muted-fg hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                aria-label="Event melden"
+                title="Event melden"
+              >
+                <Flag size={15} />
+              </button>
+            )}
+            {isOwnEvent && (
+              <Link
+                href={
+                  event.visibility === 'private'
+                    ? `/app/events/${event.id}/edit`
+                    : `/organizer/events/${event.id}/edit`
+                }
+                className="px-3 py-1.5 rounded-full text-[12px] font-semibold border border-border-subtle hover:bg-elevated transition-colors"
+              >
+                Bearbeiten
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-muted-fg">
@@ -457,6 +471,15 @@ export default function EventDetailPage({
           <MessageCircle size={15} /> Zum Event-Chat
         </Link>
       )}
+
+      {/* Report modal */}
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType="event"
+        targetId={event.id}
+        targetName={event.title}
+      />
     </div>
   );
 }
