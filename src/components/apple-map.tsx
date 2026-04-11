@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Event } from '@/types/occuro';
 import { getCategoryColor } from '@/lib/utils';
-import { Locate } from 'lucide-react';
+import { MapSearchBar } from '@/components/map-search-bar';
 
 // Single, app-wide mapkit script loader. We resolve a shared promise so
 // multiple <AppleMap> instances mounting at once don't end up loading
@@ -218,6 +218,7 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
     if (!map || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        didLocateUserRef.current = true;
         map.setRegionAnimated(
           new mapkit.CoordinateRegion(
             new mapkit.Coordinate(pos.coords.latitude, pos.coords.longitude),
@@ -227,7 +228,20 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
         );
       },
       () => {},
-      { timeout: 5000 },
+      { timeout: 8000 },
+    );
+  }
+
+  function flyToLocation(lat: number, lng: number) {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    didLocateUserRef.current = true; // suppress auto-fit-to-events
+    map.setRegionAnimated(
+      new mapkit.CoordinateRegion(
+        new mapkit.Coordinate(lat, lng),
+        new mapkit.CoordinateSpan(0.15, 0.15),
+      ),
+      true,
     );
   }
 
@@ -246,13 +260,7 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
   return (
     <>
       <div ref={containerRef} className="w-full h-full" />
-      <button
-        onClick={locateMe}
-        className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-surface border border-border-subtle shadow-lg flex items-center justify-center hover:bg-elevated transition-colors z-10"
-        aria-label="Mein Standort"
-      >
-        <Locate size={17} className="text-foreground" />
-      </button>
+      <MapSearchBar onSelectLocation={flyToLocation} onLocate={locateMe} />
     </>
   );
 }

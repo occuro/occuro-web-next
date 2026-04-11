@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
-import { Calendar, Heart, CheckCircle2, ImageOff, Locate } from 'lucide-react';
+import { Calendar, Heart, CheckCircle2, ImageOff } from 'lucide-react';
 import Link from 'next/link';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Map as MapLibreMap, Marker, NavigationControl, Popup, type MapRef } from 'react-map-gl/maplibre';
+import { MapSearchBar } from '@/components/map-search-bar';
 
 // Tile provider — defaults to OpenFreeMap (zero-config, fully free,
 // OSM-based) and upgrades to MapTiler Streets-v2 when a key is set
@@ -97,6 +98,7 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        didLocateUserRef.current = true;
         mapRef.current?.flyTo({
           center: [pos.coords.longitude, pos.coords.latitude],
           zoom: 12,
@@ -104,8 +106,18 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
         });
       },
       () => {},
-      { timeout: 5000 },
+      { timeout: 8000 },
     );
+  }
+
+  function flyToLocation(lat: number, lng: number) {
+    didLocateUserRef.current = true; // suppress auto-fit-to-events
+    mapRef.current?.flyTo({
+      center: [lng, lat],
+      zoom: 12,
+      duration: 800,
+      essential: true,
+    });
   }
 
   return (
@@ -208,13 +220,7 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
         )}
       </MapLibreMap>
 
-      <button
-        onClick={locateMe}
-        className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-surface border border-border-subtle shadow-lg flex items-center justify-center hover:bg-elevated transition-colors z-10"
-        aria-label="Mein Standort"
-      >
-        <Locate size={17} className="text-foreground" />
-      </button>
+      <MapSearchBar onSelectLocation={flyToLocation} onLocate={locateMe} />
     </>
   );
 }
