@@ -9,7 +9,7 @@ import Link from 'next/link';
 import {
   MapPin, Globe, AtSign, Settings, Heart, CheckCircle2,
   Bookmark, Calendar, Clock, ImageOff, Lock, Pencil,
-  Grid3X3, X, Save, Loader2, Users,
+  Grid3X3, X, Save, Loader2, Users, Share2, Check,
 } from 'lucide-react';
 
 type ProfileTab = 'events' | 'private' | 'saved';
@@ -221,20 +221,27 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-6 pt-2">
-              <Link href="/app/friends" className="text-center group">
-                <p className="text-lg font-heading font-bold group-hover:text-violet-500 transition-colors">{friendCount}</p>
-                <p className="text-[11px] text-muted-fg">Freunde</p>
+            {/* Stat + actions row.
+                Interessiert/Bestätigt sind unten als Pills im Events-Tab,
+                hier oben würden sie doppelt erscheinen. Stattdessen:
+                Freunde-Count + Profil bearbeiten + Profil teilen. */}
+            <div className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap">
+              <Link
+                href="/app/friends"
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+              >
+                <Users size={14} className="text-violet-400" />
+                <span className="text-[13px] font-semibold">{friendCount}</span>
+                <span className="text-[12px] text-muted-fg">Freunde</span>
               </Link>
-              <div className="text-center">
-                <p className="text-lg font-heading font-bold">{interestedCount}</p>
-                <p className="text-[11px] text-muted-fg">Interessiert</p>
-              </div>
-              <div className="text-center">
-                <p className="text-lg font-heading font-bold">{attendingCount}</p>
-                <p className="text-[11px] text-muted-fg">Bestätigt</p>
-              </div>
+              <button
+                onClick={() => setEditOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+              >
+                <Pencil size={13} />
+                <span className="text-[12px] font-medium">Bearbeiten</span>
+              </button>
+              <ShareProfileButton profile={profile} />
             </div>
 
             {profile?.interests && profile.interests.length > 0 && (
@@ -394,6 +401,63 @@ export default function ProfilePage() {
 // ────────────────────────────────────────────────────────────────────
 // Sub-components
 // ────────────────────────────────────────────────────────────────────
+
+function ShareProfileButton({
+  profile,
+}: {
+  profile: ReturnType<typeof useAuth>['profile'];
+}) {
+  const [copied, setCopied] = useState(false);
+
+  // Use the username if set (clean URL), otherwise the user id.
+  const slug = profile?.username?.trim() || profile?.id || '';
+  const profileUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/app/profile/${slug}`
+    : `https://occuroapp.com/profile/${slug}`;
+
+  async function handleShare() {
+    if (typeof navigator !== 'undefined' && 'share' in navigator) {
+      try {
+        await navigator.share({
+          title: profile?.full_name ?? 'occuro Profil',
+          text: `Schau dir ${profile?.full_name ?? 'mein Profil'} auf occuro an`,
+          url: profileUrl,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed → fall through to clipboard
+      }
+    }
+    // Fallback: copy link to clipboard
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Last resort: open share URL in new tab
+      window.open(profileUrl, '_blank');
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+    >
+      {copied ? (
+        <>
+          <Check size={13} className="text-green-400" />
+          <span className="text-[12px] font-medium text-green-400">Kopiert</span>
+        </>
+      ) : (
+        <>
+          <Share2 size={13} />
+          <span className="text-[12px] font-medium">Teilen</span>
+        </>
+      )}
+    </button>
+  );
+}
 
 interface EventsListSectionProps {
   loading: boolean;
