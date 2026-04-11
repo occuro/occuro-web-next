@@ -7,6 +7,7 @@ import {
   Search, Users, X, BadgeCheck, UserPlus, UserCheck, Building2,
   Check, Loader2, UserX, Clock,
 } from 'lucide-react';
+import { FriendProfileModal } from '@/components/friend-profile-modal';
 
 type Tab = 'friends' | 'requests' | 'discover';
 
@@ -50,6 +51,9 @@ export default function FriendsPage() {
 
   // Action busy states (per-id)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+
+  // Currently previewed friend (clicking a row opens the modal)
+  const [previewFriend, setPreviewFriend] = useState<PersonResult | null>(null);
 
   const setBusy = (id: string, busy: boolean) => {
     setBusyIds((prev) => {
@@ -421,9 +425,10 @@ export default function FriendsPage() {
                       key={friend.id}
                       person={friend}
                       busy={busyIds.has(friend.id)}
+                      onPreview={setPreviewFriend}
                       action={
                         <button
-                          onClick={() => void removeFriend(friend.id)}
+                          onClick={(e) => { e.stopPropagation(); void removeFriend(friend.id); }}
                           disabled={busyIds.has(friend.id)}
                           className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
                         >
@@ -504,10 +509,11 @@ export default function FriendsPage() {
                             key={person.id}
                             person={person}
                             busy={busyIds.has(person.id)}
+                            onPreview={setPreviewFriend}
                             action={
                               outgoingIds.has(person.id) ? (
                                 <button
-                                  onClick={() => void cancelRequest(person.id)}
+                                  onClick={(e) => { e.stopPropagation(); void cancelRequest(person.id); }}
                                   disabled={busyIds.has(person.id)}
                                   className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
                                 >
@@ -515,7 +521,7 @@ export default function FriendsPage() {
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => void sendRequest(person.id)}
+                                  onClick={(e) => { e.stopPropagation(); void sendRequest(person.id); }}
                                   disabled={busyIds.has(person.id)}
                                   className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
                                 >
@@ -554,10 +560,11 @@ export default function FriendsPage() {
                         key={person.id}
                         person={person}
                         busy={busyIds.has(person.id)}
+                        onPreview={setPreviewFriend}
                         action={
                           outgoingIds.has(person.id) ? (
                             <button
-                              onClick={() => void cancelRequest(person.id)}
+                              onClick={(e) => { e.stopPropagation(); void cancelRequest(person.id); }}
                               disabled={busyIds.has(person.id)}
                               className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
                             >
@@ -565,7 +572,7 @@ export default function FriendsPage() {
                             </button>
                           ) : (
                             <button
-                              onClick={() => void sendRequest(person.id)}
+                              onClick={(e) => { e.stopPropagation(); void sendRequest(person.id); }}
                               disabled={busyIds.has(person.id)}
                               className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
                             >
@@ -582,6 +589,16 @@ export default function FriendsPage() {
             </>
           )}
         </>
+      )}
+
+      {/* Friend profile preview modal — opens on row tap */}
+      {previewFriend && (
+        <FriendProfileModal
+          friend={previewFriend}
+          isFriend={friends.some((f) => f.id === previewFriend.id)}
+          onRemoveFriend={removeFriend}
+          onClose={() => setPreviewFriend(null)}
+        />
       )}
     </div>
   );
@@ -619,9 +636,17 @@ function TabButton({
   );
 }
 
-function PersonRow({ person, action, busy }: { person: PersonResult; action?: React.ReactNode; busy?: boolean }) {
-  return (
-    <div className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface ${busy ? 'opacity-60' : ''}`}>
+function PersonRow({
+  person, action, busy, onPreview,
+}: {
+  person: PersonResult;
+  action?: React.ReactNode;
+  busy?: boolean;
+  /** When set, the row becomes clickable and triggers a profile preview. */
+  onPreview?: (person: PersonResult) => void;
+}) {
+  const inner = (
+    <>
       <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center text-[13px] font-semibold flex-shrink-0 overflow-hidden">
         {person.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -636,7 +661,25 @@ function PersonRow({ person, action, busy }: { person: PersonResult; action?: Re
           <p className="text-[12px] text-muted-fg truncate">@{person.username}</p>
         )}
       </div>
-      {action && <div className="flex-shrink-0">{action}</div>}
+      {action && <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>{action}</div>}
+    </>
+  );
+
+  if (onPreview) {
+    return (
+      <button
+        type="button"
+        onClick={() => onPreview(person)}
+        className={`w-full text-left flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface hover:bg-elevated/40 hover:border-border-strong transition-colors ${busy ? 'opacity-60' : ''}`}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface ${busy ? 'opacity-60' : ''}`}>
+      {inner}
     </div>
   );
 }
