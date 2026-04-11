@@ -1,7 +1,8 @@
 'use client';
 
-import { Component, useEffect, useState, type ReactNode, type ErrorInfo } from 'react';
-import { AlertTriangle, RefreshCw, X, Sparkles } from 'lucide-react';
+import { Component, useEffect, type ReactNode, type ErrorInfo } from 'react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 /**
  * RobustnessShell wraps the entire app with several layers of protection
@@ -19,10 +20,11 @@ import { AlertTriangle, RefreshCw, X, Sparkles } from 'lucide-react';
  *    the same condition from a different angle — if React/Next surfaces
  *    a ChunkLoadError directly to window.onerror, we hard-reload.
  *
- * 3. **Update-available banner**: polls /api/version every 30s + on
- *    every tab focus + on every click. When a newer deploy is detected,
- *    an unobtrusive bottom-right toast lets the user actively update.
- *    After 5 minutes the banner auto-reloads anyway.
+ * 3. **Deploy-detect-and-bounce**: polls /api/version every 30s + on
+ *    every tab focus + on every click. When a newer deploy is detected
+ *    we IMMEDIATELY sign the user out and bounce them to the landing
+ *    page. Re-login on the new bundle is a clean restart that resolves
+ *    the "stuck app, can't even log out" state we kept seeing.
  *
  * 4. **Error boundary**: if a React component throws, we render a
  *    "something went wrong" screen with a Reset button.
@@ -32,7 +34,7 @@ export function RobustnessShell({ children }: { children: ReactNode }) {
     <ErrorBoundary>
       <ServiceWorkerInstaller />
       <ChunkErrorRecovery />
-      <UpdateAvailableBanner />
+      <DeployBouncer />
       {children}
     </ErrorBoundary>
   );
@@ -156,23 +158,30 @@ function ChunkErrorRecovery() {
 }
 
 // ────────────────────────────────────────────────────────────────────
-// 2. Update available banner
+// 2. Deploy bouncer — sign out + bounce on new deployment
 // ────────────────────────────────────────────────────────────────────
 
-const VERSION_POLL_INTERVAL_MS = 30 * 1000; // 30s — was 60s, now more aggressive
-const FORCE_RELOAD_AFTER_MS = 5 * 60 * 1000; // 5min — auto-reload if user ignores
-const BANNER_DISMISS_KEY = '__occuro_update_dismissed_for';
+const VERSION_POLL_INTERVAL_MS = 30 * 1000; // 30s
 
-function UpdateAvailableBanner() {
-  const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
-  const [dismissed, setDismissed] = useState(false);
-
+/**
+ * Detects when a new deployment is live and forces the current user
+ * out completely. The previous version showed a "Neue Version
+ * verfügbar" banner the user could dismiss — but in practice users
+ * would dismiss it, the old bundle would slowly degrade as APIs
+ * shifted shape, and they'd end up on a screen where they couldn't
+ * even click "Abmelden". So now we don't ask: we sign out and bounce
+ * to the landing page the moment we see a newer deploymentId. The
+ * re-login on the fresh bundle is the clean reset.
+ *
+ * Auth pages are exempt — bouncing someone mid-login would be
+ * confusing and they're already on a fresh bundle anyway.
+ */
+function DeployBouncer() {
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     // Build-time deployment ID baked into the bundle the user is running.
     const myDeploymentId = process.env.NEXT_PUBLIC_DEPLOYMENT_ID;
-    // 'dev' means VERCEL_DEPLOYMENT_ID wasn't set at build time. This
-    // happens locally and SHOULD also happen on Vercel — if it does,
-    // there's a misconfiguration we want to surface.
     const isDev = !myDeploymentId || myDeploymentId === 'dev';
     if (isDev) {
       console.warn('[robustness] NEXT_PUBLIC_DEPLOYMENT_ID is "dev" — skew detection disabled. On Vercel this means VERCEL_DEPLOYMENT_ID was not present at build time.');
@@ -180,43 +189,51 @@ function UpdateAvailableBanner() {
     }
 
     let cancelled = false;
+    let bouncing = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
-    let forceReloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+    async function bounce(newDeploymentId: string) {
+      if (bouncing) return;
+      bouncing = true;
+      console.warn(`[robustness] new deployment detected (${newDeploymentId}) — signing out and bouncing`);
+      try {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.warn('[robustness] supabase signOut failed during bounce:', e);
+      }
+      try {
+        // Belt-and-suspenders cleanup of any leftover storage that
+        // could survive signOut and bind the user to the old bundle.
+        Object.keys(localStorage).forEach((k) => {
+          if (k.startsWith('sb-') || k.startsWith('@occuro')) {
+            localStorage.removeItem(k);
+          }
+        });
+        sessionStorage.clear();
+      } catch {}
+      // Hard navigate (not reload!) to / so we drop ALL React state and
+      // load the new bundle from scratch. The landing page will show
+      // login/register prompts.
+      window.location.href = '/';
+    }
 
     async function check() {
       try {
+        // Skip the check if the user is already on an auth screen — they
+        // shouldn't get yanked mid-login.
+        if (window.location.pathname.startsWith('/auth')) return;
+
         const res = await fetch('/api/version', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json() as { deploymentId: string };
         if (cancelled) return;
         if (data.deploymentId && data.deploymentId !== myDeploymentId) {
-          // A newer build is live!
-          let dismissedFor: string | null = null;
-          try { dismissedFor = sessionStorage.getItem(BANNER_DISMISS_KEY); } catch {}
-
-          // If the user already dismissed THIS specific version, respect
-          // it but still schedule a force-reload after 5 minutes.
-          if (dismissedFor === data.deploymentId) {
-            scheduleForceReload();
-            return;
-          }
-          setUpdateAvailable(data.deploymentId);
-          scheduleForceReload();
+          await bounce(data.deploymentId);
         }
       } catch {
         // Network errors are fine — we just retry on the next tick
       }
-    }
-
-    function scheduleForceReload() {
-      if (forceReloadTimer) return;
-      forceReloadTimer = setTimeout(() => {
-        // After 5 min the user almost certainly wants to be on the
-        // new build. Hard reload — they can always re-dismiss if a
-        // newer-newer build comes after.
-        console.warn('[robustness] auto-reload after 5min — newer build has been live');
-        window.location.reload();
-      }, FORCE_RELOAD_AFTER_MS);
     }
 
     // First check immediately, then poll every 30s.
@@ -239,69 +256,12 @@ function UpdateAvailableBanner() {
     return () => {
       cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
-      if (forceReloadTimer) clearTimeout(forceReloadTimer);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('click', onClick, { capture: true } as EventListenerOptions);
     };
   }, []);
 
-  function applyUpdate() {
-    try { sessionStorage.removeItem(BANNER_DISMISS_KEY); } catch {}
-    window.location.reload();
-  }
-
-  function dismiss() {
-    if (updateAvailable) {
-      try { sessionStorage.setItem(BANNER_DISMISS_KEY, updateAvailable); } catch {}
-    }
-    setDismissed(true);
-  }
-
-  if (!updateAvailable || dismissed) return null;
-
-  return (
-    <div
-      className="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-sm z-[100] animate-fade-in"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="rounded-2xl border border-violet-500/30 bg-surface shadow-2xl shadow-black/40 p-4 backdrop-blur">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-            <Sparkles size={18} className="text-violet-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-[14px] font-semibold">Neue Version verfügbar</h3>
-            <p className="text-[12px] text-muted-fg mt-0.5">
-              Bitte aktualisiere die App, sonst funktionieren manche Aktionen nicht mehr.
-            </p>
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={applyUpdate}
-                className="px-3 py-1.5 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw size={12} />
-                Jetzt aktualisieren
-              </button>
-              <button
-                onClick={dismiss}
-                className="px-3 py-1.5 rounded-full text-[12px] font-medium border border-border-subtle hover:bg-elevated transition-colors"
-              >
-                Später
-              </button>
-            </div>
-          </div>
-          <button
-            onClick={dismiss}
-            className="p-1 -m-1 text-muted-fg hover:text-foreground transition-colors flex-shrink-0"
-            aria-label="Schließen"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 // ────────────────────────────────────────────────────────────────────
