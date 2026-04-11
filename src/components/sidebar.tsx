@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
+import { NotificationsBell } from '@/components/notifications-bell';
 import {
   Search, Map, CalendarDays, Ticket, Users, MessageCircle,
   Settings, LayoutDashboard, CalendarPlus, BarChart3,
@@ -76,16 +77,25 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
 
   const navContent = (
     <>
-      {/* Logo */}
+      {/* Logo + bell row */}
       <div className="px-6 py-6">
-        <Link href="/" className="group flex items-center gap-2">
-          <span className="text-xl font-heading font-bold tracking-tight group-hover:opacity-70 transition-opacity">
-            occuro
-          </span>
-        </Link>
-        <p className="text-[11px] font-medium text-muted-fg mt-1 uppercase tracking-widest">
-          {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <Link href="/" className="group flex flex-col">
+            <span className="text-xl font-heading font-bold tracking-tight group-hover:opacity-70 transition-opacity">
+              occuro
+            </span>
+            <p className="text-[11px] font-medium text-muted-fg mt-1 uppercase tracking-widest">
+              {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
+            </p>
+          </Link>
+          {/* Bell visible only inside the desktop sidebar variant —
+              the mobile drawer also uses this navContent block but the
+              mobile top bar already has its own bell, so we hide it
+              here on small screens to avoid duplication. */}
+          <div className="hidden lg:block -mt-1">
+            <NotificationsBell />
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -165,10 +175,10 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
       </aside>
 
       {/* ─── Mobile top bar (<lg) ──────────────────────────────── */}
-      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 h-14 px-4 bg-surface/95 backdrop-blur border-b border-border-subtle">
+      <header className="lg:hidden sticky top-0 z-30 flex items-center gap-2 h-14 px-3 bg-surface/95 backdrop-blur border-b border-border-subtle">
         <button
           onClick={() => setDrawerOpen(true)}
-          className="p-2 -ml-2 rounded-xl active:bg-muted transition-colors"
+          className="p-2 -ml-1 rounded-xl active:bg-muted transition-colors"
           aria-label="Menü öffnen"
         >
           <Menu size={22} />
@@ -176,6 +186,7 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
         <Link href="/" className="flex-1 flex items-center justify-center">
           <span className="text-lg font-heading font-bold tracking-tight">occuro</span>
         </Link>
+        <NotificationsBell />
         <Link
           href={profileHref}
           className="w-9 h-9 rounded-full bg-muted flex items-center justify-center overflow-hidden ring-2 ring-border-subtle"
