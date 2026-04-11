@@ -160,10 +160,14 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      {/* ─── Profile header card ─── */}
+      {/* ─── Profile header card ───
+          Banner und Avatar sind komplett getrennt — kein Overlap.
+          Banner zuerst (full width), darunter eigene Zeile mit Avatar
+          und Identity. Die Edit/Settings-Buttons leben oben rechts auf
+          dem Banner als kleine Glass-Pills. */}
       <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden">
         {/* Banner */}
-        <div className="h-40 bg-gradient-to-br from-violet-500/20 to-purple-600/20 relative">
+        <div className="h-32 sm:h-40 bg-gradient-to-br from-violet-500/15 to-purple-600/15 relative">
           {profile?.banner_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />
@@ -171,14 +175,14 @@ export default function ProfilePage() {
           <div className="absolute top-3 right-3 flex gap-2">
             <button
               onClick={() => setEditOpen(true)}
-              className="p-2 rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 transition-colors"
+              className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
               aria-label="Profil bearbeiten"
             >
               <Pencil size={15} />
             </button>
             <Link
               href="/app/settings"
-              className="p-2 rounded-full bg-black/30 backdrop-blur-sm text-white hover:bg-black/50 transition-colors"
+              className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
               aria-label="Einstellungen"
             >
               <Settings size={15} />
@@ -186,25 +190,26 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Avatar + identity */}
-        <div className="px-6 pb-6">
-          <div className="w-24 h-24 rounded-full bg-elevated border-4 border-surface -mt-12 relative z-10 flex items-center justify-center text-2xl font-bold overflow-hidden">
-            {profile?.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-muted-fg">{profile?.full_name?.charAt(0).toUpperCase()}</span>
-            )}
-          </div>
-
-          <div className="mt-3 space-y-3">
-            <div>
-              <h1 className="text-xl font-heading font-bold">{profile?.full_name}</h1>
-              {profile?.username && (
-                <p className="text-[13px] text-muted-fg">@{profile.username}</p>
+        {/* Avatar row — sits BELOW the banner, not overlapping it */}
+        <div className="px-6 pt-5 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-elevated ring-2 ring-border-subtle flex items-center justify-center text-2xl font-bold overflow-hidden flex-shrink-0">
+              {profile?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-muted-fg">{profile?.full_name?.charAt(0).toUpperCase()}</span>
               )}
             </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-heading font-bold truncate">{profile?.full_name}</h1>
+              {profile?.username && (
+                <p className="text-[13px] text-muted-fg truncate">@{profile.username}</p>
+              )}
+            </div>
+          </div>
 
+          <div className="mt-4 space-y-3">
             {profile?.bio && <p className="text-sm leading-relaxed">{profile.bio}</p>}
 
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-fg">

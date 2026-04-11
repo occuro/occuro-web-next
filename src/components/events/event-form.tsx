@@ -64,7 +64,6 @@ export function EventForm({
     category: initialEvent?.category ?? 'Music',
     subcategory: initialEvent?.subcategory ?? '',
     event_type: initialEvent?.event_type ?? 'Konzert',
-    max_participants: initialEvent?.max_participants ?? (isIndividual ? 20 : 100),
     visibility: (isIndividual ? 'private' : (initialEvent?.visibility ?? 'public')) as 'public' | 'private',
     website: initialEvent?.website ?? '',
     ticket_shop_url: initialEvent?.ticket_shop_url ?? '',
@@ -115,7 +114,7 @@ export function EventForm({
       category: form.category,
       subcategory: form.subcategory.trim() || null,
       event_type: form.event_type,
-      max_participants: isIndividual ? (Number(form.max_participants) || 0) : 0,
+      max_participants: 0, // No participant cap — invitations / ticketing handle this
       visibility: isIndividual ? 'private' : 'public',
       website: form.website.trim() || null,
       ticket_shop_url: form.ticket_shop_url.trim() || null,
@@ -226,25 +225,23 @@ export function EventForm({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Datum" required>
             <div className="datetime-wrap">
-              <Calendar size={14} className="datetime-icon" />
               <input
                 type="date"
                 value={form.date}
                 onChange={(e) => update('date', e.target.value)}
                 required
-                className="input pl-9"
+                className="input"
               />
             </div>
           </Field>
           <Field label="Uhrzeit" required>
             <div className="datetime-wrap">
-              <Clock size={14} className="datetime-icon" />
               <input
                 type="time"
                 value={form.time}
                 onChange={(e) => update('time', e.target.value)}
                 required
-                className="input pl-9"
+                className="input"
               />
             </div>
           </Field>
@@ -256,23 +253,21 @@ export function EventForm({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Datum">
             <div className="datetime-wrap">
-              <Calendar size={14} className="datetime-icon" />
               <input
                 type="date"
                 value={form.end_date}
                 onChange={(e) => update('end_date', e.target.value)}
-                className="input pl-9"
+                className="input"
               />
             </div>
           </Field>
           <Field label="Uhrzeit">
             <div className="datetime-wrap">
-              <Clock size={14} className="datetime-icon" />
               <input
                 type="time"
                 value={form.end_time}
                 onChange={(e) => update('end_time', e.target.value)}
-                className="input pl-9"
+                className="input"
               />
             </div>
           </Field>
@@ -337,32 +332,20 @@ export function EventForm({
         />
       </Field>
 
-      {/* Participants + chat — organizers don't get a participant cap or
-          a visibility toggle (they always create public events). */}
-      <div className={`grid grid-cols-1 ${isIndividual ? 'md:grid-cols-2' : ''} gap-4`}>
-        {isIndividual && (
-          <Field label="Max. Teilnehmer">
-            <input
-              type="number"
-              value={form.max_participants}
-              onChange={(e) => update('max_participants', parseInt(e.target.value, 10) || 0)}
-              className="input"
-            />
-          </Field>
-        )}
-
-        <Field label="Chat">
-          <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.chat_enabled}
-              onChange={(e) => update('chat_enabled', e.target.checked)}
-              className="w-4 h-4 accent-violet-500"
-            />
-            <span className="text-sm">Event-Chat aktivieren</span>
-          </label>
-        </Field>
-      </div>
+      {/* Chat-Toggle — kein Teilnehmer-Cap mehr (weder Privat noch
+          Veranstalter). Für private Events ist die Einladung der echte
+          „Cap" und für Veranstalter regelt die Ticketing-Plattform das. */}
+      <Field label="Chat">
+        <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.chat_enabled}
+            onChange={(e) => update('chat_enabled', e.target.checked)}
+            className="w-4 h-4 accent-violet-500"
+          />
+          <span className="text-sm">Event-Chat aktivieren</span>
+        </label>
+      </Field>
 
       {/* Links — only for organizers (private events don't have a public website / ticket shop) */}
       {!isIndividual && (
@@ -445,42 +428,30 @@ export function EventForm({
           opacity: 0.6;
         }
 
-        /* Date/time picker — strip the ugly native chrome and style
-           with our own icon overlay. The native picker still appears
-           when the user clicks anywhere on the field (so mobile keeps
-           the system-level wheel pickers). */
+        /* Date/time picker — keep the native chrome (calendar icon on
+           the right) so users get the proper system picker on click.
+           Removed the custom left icon overlay because it was sitting
+           on top of the placeholder text and looking broken. */
         .datetime-wrap {
           position: relative;
           display: block;
         }
-        .datetime-wrap :global(.datetime-icon) {
-          position: absolute;
-          left: 0.7rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: var(--color-muted-fg);
-          pointer-events: none;
-          z-index: 1;
-        }
         .datetime-wrap input[type='date'],
         .datetime-wrap input[type='time'] {
-          appearance: none;
-          -webkit-appearance: none;
           font-family: inherit;
           color-scheme: dark;
           cursor: pointer;
           min-height: 42px;
         }
-        /* Hide the default calendar/clock icon since we render our own */
         .datetime-wrap input[type='date']::-webkit-calendar-picker-indicator,
         .datetime-wrap input[type='time']::-webkit-calendar-picker-indicator {
-          opacity: 0;
-          position: absolute;
-          right: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
+          filter: invert(0.5);
           cursor: pointer;
+          opacity: 0.7;
+        }
+        .datetime-wrap input[type='date']::-webkit-calendar-picker-indicator:hover,
+        .datetime-wrap input[type='time']::-webkit-calendar-picker-indicator:hover {
+          opacity: 1;
         }
       `}</style>
     </form>

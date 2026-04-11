@@ -146,15 +146,12 @@ export function FriendProfileModal({ friend, isFriend, onRemoveFriend, onClose }
       />
 
       <div className="relative w-full sm:max-w-lg bg-surface rounded-t-3xl sm:rounded-3xl border border-border-subtle max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-fade-in">
-        {/* ── Banner ── */}
-        <div className="h-32 bg-gradient-to-br from-violet-500/20 to-purple-600/20 relative flex-shrink-0">
-          {profile?.banner_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />
-          )}
+        {/* ── Header bar with close button (no banner overlap) ── */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle flex-shrink-0">
+          <h2 className="text-[14px] font-semibold text-muted-fg">Profil</h2>
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 backdrop-blur text-white hover:bg-black/60 transition-colors flex items-center justify-center"
+            className="w-8 h-8 rounded-full hover:bg-elevated transition-colors flex items-center justify-center"
             aria-label="Schließen"
           >
             <X size={16} />
@@ -162,20 +159,20 @@ export function FriendProfileModal({ friend, isFriend, onRemoveFriend, onClose }
         </div>
 
         {/* ── Scrollable content ── */}
-        <div className="flex-1 overflow-y-auto px-5 pb-5">
-          {/* Avatar overlapping the banner */}
-          <div className="w-20 h-20 rounded-full bg-elevated border-4 border-surface -mt-10 relative z-10 flex items-center justify-center text-xl font-bold overflow-hidden">
-            {profile?.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-muted-fg">{initial}</span>
-            )}
-          </div>
+        <div className="flex-1 overflow-y-auto px-5 pt-5 pb-5">
+          {/* Avatar — centred on its own row, big and clean */}
+          <div className="flex flex-col items-center text-center">
+            <div className="w-24 h-24 rounded-full bg-elevated ring-2 ring-border-subtle flex items-center justify-center text-2xl font-bold overflow-hidden">
+              {profile?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-muted-fg">{initial}</span>
+              )}
+            </div>
 
-          {/* Identity */}
-          <div className="mt-3 space-y-2">
-            <div>
+            {/* Identity */}
+            <div className="mt-4">
               <h2 className="text-xl font-heading font-bold">{displayName}</h2>
               {profile?.username && (
                 <p className="text-[13px] text-muted-fg">@{profile.username}</p>
@@ -183,11 +180,29 @@ export function FriendProfileModal({ friend, isFriend, onRemoveFriend, onClose }
             </div>
 
             {profile?.bio && (
-              <p className="text-sm leading-relaxed text-foreground/90">{profile.bio}</p>
+              <p className="text-sm leading-relaxed text-foreground/90 mt-3 max-w-md">{profile.bio}</p>
             )}
+          </div>
 
-            {/* Location / Web / Insta row */}
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted-fg pt-1">
+          {/* Stats — centered pills below the identity */}
+          {!loading && (
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
+                <Users size={12} className="text-violet-400" />
+                <span className="text-[12px] font-semibold">{friendCount}</span>
+                <span className="text-[11px] text-muted-fg">Freunde</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
+                <CalendarDays size={12} className="text-violet-400" />
+                <span className="text-[12px] font-semibold">{events.length}</span>
+                <span className="text-[11px] text-muted-fg">Events</span>
+              </div>
+            </div>
+          )}
+
+          {/* Location / Web / Insta row — centered */}
+          {(profile?.location || profile?.website || profile?.instagram) && (
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[12px] text-muted-fg mt-4">
               {profile?.location && (
                 <span className="flex items-center gap-1.5"><MapPin size={12} />{profile.location}</span>
               )}
@@ -212,34 +227,18 @@ export function FriendProfileModal({ friend, isFriend, onRemoveFriend, onClose }
                 </a>
               )}
             </div>
+          )}
 
-            {/* Stats */}
-            {!loading && (
-              <div className="flex items-center gap-2 pt-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
-                  <Users size={12} className="text-violet-400" />
-                  <span className="text-[12px] font-semibold">{friendCount}</span>
-                  <span className="text-[11px] text-muted-fg">Freunde</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
-                  <CalendarDays size={12} className="text-violet-400" />
-                  <span className="text-[12px] font-semibold">{events.length}</span>
-                  <span className="text-[11px] text-muted-fg">Events</span>
-                </div>
-              </div>
-            )}
-
-            {/* Interests */}
-            {profile?.interests && profile.interests.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap pt-2">
-                {profile.interests.slice(0, 8).map((interest) => (
-                  <span key={interest} className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-muted text-foreground/70">
-                    {interest}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Interests — centered */}
+          {profile?.interests && profile.interests.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap justify-center mt-4">
+              {profile.interests.slice(0, 8).map((interest) => (
+                <span key={interest} className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-muted text-foreground/70">
+                  {interest}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Their upcoming events */}
           {!loading && events.length > 0 && (
