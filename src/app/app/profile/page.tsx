@@ -637,6 +637,11 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
     setSaving(true);
     setError(null);
     const trimmedUsername = username.trim().toLowerCase();
+    // Always update the safe set of columns first. Some live DBs are
+    // missing the optional `website` / `instagram` columns and a single
+    // UPDATE that includes them would 400 the whole save. We then try
+    // an optional UPDATE for the extras and swallow any column-not-
+    // found errors.
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -644,17 +649,28 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
         username: trimmedUsername || null,
         bio: bio.trim() || null,
         location: location.trim() || null,
-        website: website.trim() || null,
-        instagram: instagram.trim().replace(/^@/, '') || null,
         avatar_url: avatarUrl.trim() || null,
         banner_url: bannerUrl.trim() || null,
       })
       .eq('id', profile.id);
-    setSaving(false);
     if (updateError) {
+      setSaving(false);
       setError(updateError.message);
       return;
     }
+    // Optional columns — try and swallow.
+    try {
+      await supabase
+        .from('profiles')
+        .update({
+          website: website.trim() || null,
+          instagram: instagram.trim().replace(/^@/, '') || null,
+        })
+        .eq('id', profile.id);
+    } catch {
+      // Optional fields aren't worth blocking the save on.
+    }
+    setSaving(false);
     onSaved();
   }
 

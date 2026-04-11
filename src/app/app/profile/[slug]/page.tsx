@@ -26,6 +26,12 @@ interface FullProfile {
   interests: string[] | null;
 }
 
+// Fields we KNOW exist on the live DB. The optional schema columns
+// (website, instagram, interests) might not be there yet — they're
+// fetched in a second optional select that swallows errors.
+const SAFE_PROFILE_COLS = 'id, full_name, username, avatar_url, banner_url, bio, location';
+const OPTIONAL_PROFILE_COLS = 'website, instagram, interests';
+
 type EventGroup = 'attending' | 'hosting';
 
 /**
@@ -72,27 +78,27 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
     log(`isUuid=${isUuid}`);
-    let resolved: FullProfile | null = null;
-    const cols = 'id, full_name, username, avatar_url, banner_url, bio, location, website, instagram, interests';
+    let resolved: Partial<FullProfile> | null = null;
 
-    // Try BOTH lookups regardless of slug shape — usernames could be
-    // anything, ids are UUIDs, and we'd rather make two cheap queries
-    // than misclassify and silently fail.
+    // Step 1: SAFE columns only — guaranteed to exist on every
+    // profiles deployment. If we asked for `website` here and it
+    // doesn't exist on this user's DB, the WHOLE query 400s and
+    // returns "column does not exist" → "Profil nicht gefunden".
     const idRes = await supabase
-      .from('profiles').select(cols).eq('id', slug).maybeSingle();
+      .from('profiles').select(SAFE_PROFILE_COLS).eq('id', slug).maybeSingle();
     log(`id lookup: ${idRes.data ? 'HIT' : 'miss'}${idRes.error ? ` err=${idRes.error.message}` : ''}`);
     if (idRes.data) {
-      resolved = idRes.data as FullProfile;
+      resolved = idRes.data as Partial<FullProfile>;
     } else {
       const userRes = await supabase
-        .from('profiles').select(cols).ilike('username', slug).maybeSingle();
+        .from('profiles').select(SAFE_PROFILE_COLS).ilike('username', slug).maybeSingle();
       log(`username lookup: ${userRes.data ? 'HIT' : 'miss'}${userRes.error ? ` err=${userRes.error.message}` : ''}`);
       if (userRes.data) {
-        resolved = userRes.data as FullProfile;
+        resolved = userRes.data as Partial<FullProfile>;
       }
     }
 
-    if (!resolved) {
+    if (!resolved || !resolved.id) {
       log('no row matched — giving up');
       setDebugLog(trail);
       setProfile(null);
@@ -100,8 +106,20 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
       return;
     }
     log(`resolved id=${resolved.id} username=${resolved.username ?? 'null'}`);
+
+    // Step 2: optional columns — try once, swallow errors. If the DB
+    // doesn't have them yet the user just sees the safe columns.
+    const optRes = await supabase
+      .from('profiles').select(OPTIONAL_PROFILE_COLS).eq('id', resolved.id).maybeSingle();
+    if (optRes.error) {
+      log(`optional cols: ${optRes.error.message}`);
+    } else if (optRes.data) {
+      resolved = { ...resolved, ...(optRes.data as Partial<FullProfile>) };
+      log('optional cols: merged');
+    }
+
     setDebugLog(trail);
-    setProfile(resolved);
+    setProfile(resolved as FullProfile);
 
     const today = new Date().toISOString().split('T')[0];
     const [hostedRes, statusesRes, friendsRes, friendshipRes] = await Promise.all([
