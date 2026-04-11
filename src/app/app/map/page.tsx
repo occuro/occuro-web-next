@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import type { Event } from '@/types/occuro';
 import { formatDate, getCategoryColor } from '@/lib/utils';
-import { MapPin, X, CalendarDays } from 'lucide-react';
+import { MapPin, X, CalendarRange, Sparkles, Sun, Sunrise, Coffee, CalendarDays } from 'lucide-react';
 
 // Both map providers are heavy (mapkit script / maplibre bundle), so we
 // dynamic-import them client-only to keep them out of the initial bundle.
@@ -15,8 +15,6 @@ const MapLibreFallback = dynamic(
   () => import('@/components/maplibre-map').then((m) => m.MapLibreFallback),
   { ssr: false },
 );
-
-const CATEGORIES = ['Music', 'Business', 'Health', 'Sports', 'Education', 'Art & Culture', 'Food & Drink', 'Technology', 'Community', 'Outdoor'];
 
 type MapProvider = 'probing' | 'apple' | 'maplibre';
 type DateRange = 'all' | 'today' | 'tomorrow' | 'weekend' | 'week';
@@ -95,12 +93,14 @@ function MapPageInner() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selected, setSelected] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>('all');
   const [provider, setProvider] = useState<MapProvider>('probing');
   // Tracks how many events are still being geocoded in the background
   // so we can show a small spinner next to the count.
   const [geocoding, setGeocoding] = useState(0);
+  // Total fetched (with or without coords) so the empty-state can
+  // distinguish "no events at all" from "events exist but no coords yet".
+  const [fetchedCount, setFetchedCount] = useState(0);
 
   // Deeplink: ?event=… — when the user clicks an event's location on
   // the detail page we land here, fetch that event by id, and select
@@ -142,7 +142,7 @@ function MapPageInner() {
   useEffect(() => {
     void fetchEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, dateRange]);
+  }, [dateRange]);
 
   async function fetchEvents() {
     setLoading(true);
@@ -155,9 +155,13 @@ function MapPageInner() {
       .order('date', { ascending: true })
       .limit(200);
     if (bounds.lte) query = query.lte('date', bounds.lte);
-    if (category) query = query.ilike('category', category);
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) {
+      console.warn('[map] events fetch failed:', error.message);
+    }
     const all = (data ?? []) as Event[];
+    setFetchedCount(all.length);
+    console.info(`[map] fetched ${all.length} events for range=${dateRange}`);
 
     // Apply any cached geocodes from a previous visit so the user
     // doesn't see "no pins" while we re-geocode the same events.
@@ -236,62 +240,50 @@ function MapPageInner() {
         <div>
           <h1 className="text-3xl font-heading font-bold tracking-tight">Karte</h1>
           <p className="text-sm text-muted-fg mt-1">
-            {eventsWithCoords.length} Events auf der Karte
-            {geocoding > 0 && (
-              <span className="ml-2 text-violet-400">
-                · {geocoding} werden geladen…
-              </span>
-            )}
+            {fetchedCount === 0
+              ? 'Keine Events in diesem Zeitraum'
+              : (
+                <>
+                  {eventsWithCoords.length} von {fetchedCount} Events auf der Karte
+                  {geocoding > 0 && (
+                    <span className="ml-2 text-violet-400">
+                      · {geocoding} werden geladen…
+                    </span>
+                  )}
+                </>
+              )}
           </p>
         </div>
       </div>
 
-      {/* Date filter — pills, mobile-style */}
-      <div className="flex gap-2 flex-wrap items-center">
-        <CalendarDays size={14} className="text-muted-fg" />
+      {/* Date range — bigger icon-cards instead of plain pills. Each
+          card is square-ish and tappable, mobile-style. Five options
+          fit in one row on desktop and wrap to a 2x3 grid on mobile. */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         {([
-          { key: 'all' as const, label: 'Alle' },
-          { key: 'today' as const, label: 'Heute' },
-          { key: 'tomorrow' as const, label: 'Morgen' },
-          { key: 'weekend' as const, label: 'Wochenende' },
-          { key: 'week' as const, label: 'Diese Woche' },
-        ]).map((d) => (
-          <button
-            key={d.key}
-            onClick={() => setDateRange(d.key)}
-            className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-              dateRange === d.key
-                ? 'bg-violet-600 text-white shadow-sm'
-                : 'bg-surface border border-border-subtle text-foreground/70 hover:border-border-strong'
-            }`}
-          >
-            {d.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Category filter */}
-      <div className="flex gap-2 flex-wrap">
-        <button
-          onClick={() => setCategory(null)}
-          className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-            !category ? 'bg-violet-600 text-white' : 'bg-surface border border-border-subtle text-foreground/70 hover:border-border-strong'
-          }`}
-        >
-          Alle
-        </button>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat === category ? null : cat)}
-            className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
-              category === cat ? 'text-white shadow-sm' : 'bg-surface border border-border-subtle text-foreground/70 hover:border-border-strong'
-            }`}
-            style={category === cat ? { backgroundColor: getCategoryColor(cat) } : undefined}
-          >
-            {cat}
-          </button>
-        ))}
+          { key: 'all' as const, label: 'Alle', icon: Sparkles },
+          { key: 'today' as const, label: 'Heute', icon: Sun },
+          { key: 'tomorrow' as const, label: 'Morgen', icon: Sunrise },
+          { key: 'weekend' as const, label: 'Wochenende', icon: Coffee },
+          { key: 'week' as const, label: 'Diese Woche', icon: CalendarRange },
+        ]).map((d) => {
+          const Icon = d.icon;
+          const active = dateRange === d.key;
+          return (
+            <button
+              key={d.key}
+              onClick={() => setDateRange(d.key)}
+              className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl border transition-all duration-200 ${
+                active
+                  ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-600/20'
+                  : 'bg-surface border-border-subtle text-foreground/70 hover:border-border-strong hover:bg-elevated/50'
+              }`}
+            >
+              <Icon size={16} strokeWidth={active ? 2.4 : 1.8} />
+              <span className="text-[11px] font-semibold">{d.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Map + sidebar */}
@@ -331,30 +323,39 @@ function MapPageInner() {
         <div className="lg:col-span-2 space-y-2 lg:max-h-[640px] lg:overflow-y-auto pr-1">
           {events.length === 0 ? (
             <div className="text-center py-16 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
-              <MapPin size={32} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />
-              <p className="text-sm font-medium">Keine Events mit Standort</p>
+              <CalendarDays size={32} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Keine anstehenden Events</p>
+              <p className="text-[11px] mt-1">Versuche einen anderen Zeitraum.</p>
             </div>
           ) : (
-            events.map((event) => (
-              <button
-                key={event.id}
-                onClick={() => setSelected(event)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
-                  selected?.id === event.id
-                    ? 'bg-violet-500/10 border border-violet-500/30'
-                    : 'border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong'
-                }`}
-              >
-                <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(event.category) }} />
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[13px] font-medium truncate">{event.title}</h4>
-                  <p className="text-[11px] text-muted-fg truncate flex items-center gap-1">
-                    <MapPin size={10} className="flex-shrink-0" />{event.location}
-                  </p>
-                  <p className="text-[11px] text-muted-fg">{formatDate(event.date)}</p>
-                </div>
-              </button>
-            ))
+            events.map((event) => {
+              const hasCoords = event.latitude != null && event.longitude != null;
+              return (
+                <button
+                  key={event.id}
+                  onClick={() => hasCoords && setSelected(event)}
+                  disabled={!hasCoords}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
+                    selected?.id === event.id
+                      ? 'bg-violet-500/10 border border-violet-500/30'
+                      : 'border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong'
+                  } ${!hasCoords ? 'opacity-60 cursor-default' : ''}`}
+                  title={hasCoords ? '' : 'Koordinaten werden geladen…'}
+                >
+                  <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(event.category) }} />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[13px] font-medium truncate">{event.title}</h4>
+                    <p className="text-[11px] text-muted-fg truncate flex items-center gap-1">
+                      <MapPin size={10} className="flex-shrink-0" />{event.location}
+                    </p>
+                    <p className="text-[11px] text-muted-fg">{formatDate(event.date)}</p>
+                  </div>
+                  {!hasCoords && (
+                    <span className="text-[9px] text-muted-fg/70 italic flex-shrink-0">Lädt…</span>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       </div>
