@@ -4,7 +4,7 @@ import { Component, useEffect, useState, type ReactNode, type ErrorInfo } from '
 import { AlertTriangle, RefreshCw, X, Sparkles } from 'lucide-react';
 
 /**
- * RobustnessShell wraps the entire app with three layers of protection
+ * RobustnessShell wraps the entire app with several layers of protection
  * against deploy-time breakage:
  *
  * 1. **ChunkLoadError auto-recovery** (window-level): when Next.js fails
@@ -12,10 +12,12 @@ import { AlertTriangle, RefreshCw, X, Sparkles } from 'lucide-react';
  *    deploy, we trigger a single hard reload (with a cooldown so we
  *    can't get into a reload loop).
  *
- * 2. **Update-available banner**: polls /api/version every 60s and
- *    compares against the build the user is running. When a newer
- *    deploy is detected, an unobtrusive bottom-right toast lets the
- *    user actively update with one tap.
+ * 2. **Update-available banner**: polls /api/version every 30s + on
+ *    every tab focus + on every click. Compares against the build the
+ *    user is running. When a newer deploy is detected, an unobtrusive
+ *    bottom-right toast lets the user actively update with one tap.
+ *    After 5 minutes of being shown, it auto-reloads to prevent stale
+ *    sessions from staying broken indefinitely.
  *
  * 3. **Error boundary**: if a React component throws, we render a
  *    "something went wrong" screen with a Reset button instead of a
@@ -54,8 +56,6 @@ function ChunkErrorRecovery() {
     }
     function recover() {
       if (!shouldReload()) {
-        // Already reloaded recently — show the user the manual fallback
-        // banner instead of looping forever.
         console.error('[robustness] Chunk load failed twice within cooldown — manual reload required');
         return;
       }
@@ -66,8 +66,6 @@ function ChunkErrorRecovery() {
 
     function onError(event: ErrorEvent) {
       const msg = event.message || '';
-      // Catches Next.js (`Loading chunk N failed`) and Vite-style
-      // (`Failed to fetch dynamically imported module`) errors.
       if (
         /loading chunk .* failed/i.test(msg) ||
         /failed to fetch dynamically imported module/i.test(msg) ||
@@ -104,7 +102,8 @@ function ChunkErrorRecovery() {
 // 2. Update available banner
 // ────────────────────────────────────────────────────────────────────
 
-const VERSION_POLL_INTERVAL_MS = 60 * 1000; // 60s
+const VERSION_POLL_INTERVAL_MS = 30 * 1000; // 30s — was 60s, now more aggressive
+const FORCE_RELOAD_AFTER_MS = 5 * 60 * 1000; // 5min — auto-reload if user ignores
 const BANNER_DISMISS_KEY = '__occuro_update_dismissed_for';
 
 function UpdateAvailableBanner() {
@@ -114,10 +113,18 @@ function UpdateAvailableBanner() {
   useEffect(() => {
     // Build-time deployment ID baked into the bundle the user is running.
     const myDeploymentId = process.env.NEXT_PUBLIC_DEPLOYMENT_ID;
-    if (!myDeploymentId || myDeploymentId === 'dev') return;
+    // 'dev' means VERCEL_DEPLOYMENT_ID wasn't set at build time. This
+    // happens locally and SHOULD also happen on Vercel — if it does,
+    // there's a misconfiguration we want to surface.
+    const isDev = !myDeploymentId || myDeploymentId === 'dev';
+    if (isDev) {
+      console.warn('[robustness] NEXT_PUBLIC_DEPLOYMENT_ID is "dev" — skew detection disabled. On Vercel this means VERCEL_DEPLOYMENT_ID was not present at build time.');
+      return;
+    }
 
     let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let forceReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
     async function check() {
       try {
@@ -126,46 +133,62 @@ function UpdateAvailableBanner() {
         const data = await res.json() as { deploymentId: string };
         if (cancelled) return;
         if (data.deploymentId && data.deploymentId !== myDeploymentId) {
-          // Skip the banner if the user dismissed THIS specific version
+          // A newer build is live!
           let dismissedFor: string | null = null;
           try { dismissedFor = sessionStorage.getItem(BANNER_DISMISS_KEY); } catch {}
+
+          // If the user already dismissed THIS specific version, respect
+          // it but still schedule a force-reload after 5 minutes.
           if (dismissedFor === data.deploymentId) {
-            setDismissed(true);
+            scheduleForceReload();
             return;
           }
           setUpdateAvailable(data.deploymentId);
+          scheduleForceReload();
         }
       } catch {
         // Network errors are fine — we just retry on the next tick
       }
     }
 
-    // First check immediately, then poll
+    function scheduleForceReload() {
+      if (forceReloadTimer) return;
+      forceReloadTimer = setTimeout(() => {
+        // After 5 min the user almost certainly wants to be on the
+        // new build. Hard reload — they can always re-dismiss if a
+        // newer-newer build comes after.
+        console.warn('[robustness] auto-reload after 5min — newer build has been live');
+        window.location.reload();
+      }, FORCE_RELOAD_AFTER_MS);
+    }
+
+    // First check immediately, then poll every 30s.
     void check();
     const schedule = () => {
-      timer = setTimeout(async () => {
+      pollTimer = setTimeout(async () => {
         await check();
         if (!cancelled) schedule();
       }, VERSION_POLL_INTERVAL_MS);
     };
     schedule();
 
-    // Also check when the tab regains focus (most common time the user
-    // would notice a stale build is when they come back from another tab).
+    // Also check on tab focus + on click anywhere (most common moments
+    // a user would notice a stale build).
     const onFocus = () => { void check(); };
+    const onClick = () => { void check(); };
     window.addEventListener('focus', onFocus);
+    window.addEventListener('click', onClick, { capture: true });
 
     return () => {
       cancelled = true;
-      if (timer) clearTimeout(timer);
+      if (pollTimer) clearTimeout(pollTimer);
+      if (forceReloadTimer) clearTimeout(forceReloadTimer);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('click', onClick, { capture: true } as EventListenerOptions);
     };
   }, []);
 
   function applyUpdate() {
-    // Hard reload — bypass cache where possible by appending a query
-    // param. The browser will fetch fresh HTML which then references
-    // the new chunks.
     try { sessionStorage.removeItem(BANNER_DISMISS_KEY); } catch {}
     window.location.reload();
   }
@@ -193,7 +216,7 @@ function UpdateAvailableBanner() {
           <div className="flex-1 min-w-0">
             <h3 className="text-[14px] font-semibold">Neue Version verfügbar</h3>
             <p className="text-[12px] text-muted-fg mt-0.5">
-              Lade die App neu, um die neuesten Funktionen zu erhalten.
+              Bitte aktualisiere die App, sonst funktionieren manche Aktionen nicht mehr.
             </p>
             <div className="flex gap-2 mt-3">
               <button
@@ -201,7 +224,7 @@ function UpdateAvailableBanner() {
                 className="px-3 py-1.5 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
               >
                 <RefreshCw size={12} />
-                Aktualisieren
+                Jetzt aktualisieren
               </button>
               <button
                 onClick={dismiss}
@@ -242,16 +265,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log to console always so the user can copy + paste from devtools
-    // and we can find production crashes via the network tab.
     console.error('[ErrorBoundary]', error);
     console.error('[ErrorBoundary] componentStack:', errorInfo.componentStack);
     this.setState({ errorInfo });
   }
 
   reset = () => {
-    // Nuke ALL local state — auth tokens, prefs, anything that could
-    // be in a corrupt state — and hard-reload to a clean slate.
     try {
       Object.keys(localStorage).forEach((k) => {
         if (k.startsWith('sb-') || k.startsWith('@occuro')) {
@@ -269,11 +288,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
     window.location.href = '/';
   };
 
-  // Reload — does NOT clear state, just refetches the page. This is
-  // what most users want and what fixes the chunk-mismatch case.
-  // Importantly: we do NOT just unset the error state, because the
-  // underlying issue would re-throw on the next render and the user
-  // would be stuck in a loop.
   retry = () => {
     window.location.reload();
   };
@@ -296,9 +310,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
             </p>
           </div>
 
-          {/* Error details — always available, collapsed by default.
-              Apple Review and our own debugging both rely on being able
-              to see WHAT crashed, not just that something did. */}
           <div className="text-left">
             <button
               onClick={() => this.setState({ showDetails: !showDetails })}
