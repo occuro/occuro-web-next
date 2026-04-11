@@ -1,6 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Browsers ALWAYS auto-fetch /favicon.ico regardless of what's in
+  // the HTML <link rel="icon">. We don't ship a .ico file (only the
+  // SVG via app/icon.svg), so without this redirect every page load
+  // logs a 404 in the console. Modern browsers happily render SVG
+  // when redirected from /favicon.ico.
+  async redirects() {
+    return [
+      { source: '/favicon.ico', destination: '/icon.svg', permanent: true },
+    ];
+  },
+
+
   // ── Version Skew Protection ────────────────────────────────────
   // When we deploy a new build while a user is mid-session, the user's
   // browser still holds JavaScript chunks from the OLD build. Without
