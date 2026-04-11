@@ -18,14 +18,32 @@ interface FriendOption {
   avatar_url: string | null;
 }
 
+// Canonical list copied from the mobile CreateEventModal so the values
+// written to events.category match across both clients. Mismatching
+// labels would split events across two effective taxonomies and break
+// filtering.
 const CATEGORIES = [
   'Music', 'Business', 'Health', 'Sports', 'Education',
-  'Art', 'Food', 'Technology', 'Community', 'Outdoor',
+  'Art & Culture', 'Food & Drink', 'Technology', 'Community', 'Outdoor',
 ];
 
+const SUBCATEGORIES: Record<string, string[]> = {
+  Music: ['Techno', 'House', 'Rock', 'Pop', 'Jazz', 'Hip Hop', 'Electronic', 'Indie'],
+  Business: ['Networking', 'Workshop', 'Conference', 'Startup', 'Marketing'],
+  Health: ['Yoga', 'Meditation', 'Wellness', 'Fitness', 'Mental Health'],
+  Sports: ['Football', 'Tennis', 'Running', 'Basketball', 'Swimming'],
+  Education: ['Seminar', 'Training', 'Course', 'Lecture', 'Masterclass'],
+  'Art & Culture': ['Exhibition', 'Theater', 'Movie', 'Gallery', 'Comedy'],
+  'Food & Drink': ['Wine Tasting', 'Cooking', 'Food Festival', 'Brunch'],
+  Technology: ['Hackathon', 'Meetup', 'Tech Talk', 'AI & ML', 'Coding'],
+  Community: ['Volunteering', 'Neighborhood', 'Social Gathering'],
+  Outdoor: ['Hiking', 'Camping', 'Picnic', 'BBQ'],
+};
+
 const EVENT_TYPES = [
-  'Festival', 'Konzert', 'Workshop', 'Meetup', 'Party',
-  'Konferenz', 'Messe', 'Ausstellung', 'Sport', 'Kurs',
+  'Festival', 'Concert', 'Party', 'Workshop', 'Conference',
+  'Trade Show', 'Seminar', 'Networking', 'Exhibition', 'Tournament',
+  'Lecture', 'Meetup', 'Retreat', 'Gala', 'Premiere', 'Other',
 ];
 
 interface EventFormProps {
@@ -70,7 +88,7 @@ export function EventForm({
     longitude: initialEvent?.longitude ?? null as number | null,
     category: initialEvent?.category ?? 'Music',
     subcategory: initialEvent?.subcategory ?? '',
-    event_type: initialEvent?.event_type ?? 'Konzert',
+    event_type: initialEvent?.event_type ?? 'Concert',
     visibility: (isIndividual ? 'private' : (initialEvent?.visibility ?? 'public')) as 'public' | 'private',
     website: initialEvent?.website ?? '',
     ticket_shop_url: initialEvent?.ticket_shop_url ?? '',
@@ -151,6 +169,24 @@ export function EventForm({
     }
     if (!form.title.trim() || !form.date || !form.time || !form.location.trim()) {
       setError('Bitte fülle alle Pflichtfelder aus.');
+      return;
+    }
+
+    // Mobile parity: an individual private event must have at least one
+    // invited friend on creation. Without this rule a private event has
+    // no audience and is invisible to everyone — pointless to create.
+    // Edit mode is exempt: invitations are managed from the detail page
+    // once the event exists.
+    if (isIndividual && !isEdit && selectedFriendIds.size === 0) {
+      setError('Lade mindestens eine:n Freund:in ein, sonst sieht niemand das Event.');
+      return;
+    }
+
+    // Mobile parity: organizers must be verified before they can publish
+    // a public event. Without this any newly registered org could
+    // immediately push events to the discovery feed.
+    if (!isIndividual && !organization?.verified) {
+      setError('Deine Organisation ist noch nicht verifiziert. Verifiziere sie zuerst, bevor du Events erstellen kannst.');
       return;
     }
 
@@ -473,12 +509,16 @@ export function EventForm({
         </div>
       )}
 
-      {/* Category + type */}
+      {/* Category + type — subcategory is driven by the chosen category
+          (mobile-parity), changing the category clears it. */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="Kategorie">
           <select
             value={form.category}
-            onChange={(e) => update('category', e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setForm((prev) => ({ ...prev, category: next, subcategory: '' }));
+            }}
             className="input"
           >
             {CATEGORIES.map((c) => (
@@ -487,13 +527,26 @@ export function EventForm({
           </select>
         </Field>
         <Field label="Unterkategorie">
-          <input
-            type="text"
-            value={form.subcategory}
-            onChange={(e) => update('subcategory', e.target.value)}
-            placeholder="z.B. Techno"
-            className="input"
-          />
+          {SUBCATEGORIES[form.category] ? (
+            <select
+              value={form.subcategory}
+              onChange={(e) => update('subcategory', e.target.value)}
+              className="input"
+            >
+              <option value="">— wählen —</option>
+              {SUBCATEGORIES[form.category].map((sub) => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={form.subcategory}
+              onChange={(e) => update('subcategory', e.target.value)}
+              placeholder="Optional"
+              className="input"
+            />
+          )}
         </Field>
         <Field label="Event-Typ">
           <select
