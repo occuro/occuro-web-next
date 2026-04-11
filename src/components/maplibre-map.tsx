@@ -31,6 +31,28 @@ interface MapLibreFallbackProps {
  */
 export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbackProps) {
   const mapRef = useRef<MapRef | null>(null);
+  // Once we've panned to the user's location, suppress the auto-fit-to-
+  // events behavior so the user doesn't get yanked back to the bbox.
+  const didLocateUserRef = useRef(false);
+
+  // Auto-locate on mount — the browser shows its native permission prompt;
+  // if the user accepts we fly to their position, otherwise stay at default.
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        didLocateUserRef.current = true;
+        mapRef.current?.flyTo({
+          center: [pos.coords.longitude, pos.coords.latitude],
+          zoom: 11,
+          duration: 800,
+          essential: true,
+        });
+      },
+      () => {},
+      { timeout: 8000, maximumAge: 60_000 },
+    );
+  }, []);
 
   const initialView = useMemo(() => {
     if (events.length === 0) return DEFAULT_VIEW;
@@ -46,9 +68,11 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
     };
   }, [events]);
 
-  // Auto-fit bounds when events change
+  // Auto-fit bounds when events change — but only if we haven't already
+  // centered on the user's location (otherwise we'd yank them away).
   useEffect(() => {
     if (!mapRef.current || events.length < 2) return;
+    if (didLocateUserRef.current) return;
     const lngs = events.map((e) => e.longitude!);
     const lats = events.map((e) => e.latitude!);
     const bounds: [[number, number], [number, number]] = [

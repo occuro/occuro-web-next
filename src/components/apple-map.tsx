@@ -67,6 +67,10 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
   const mapInstanceRef = useRef<mapkit.Map | null>(null);
   const annotationsRef = useRef<Map<string, mapkit.Annotation>>(new Map());
   const didFitRef = useRef(false);
+  // True once we've centered the map on the user's location — that takes
+  // precedence over the auto-fit-to-events behavior, so the user doesn't
+  // get yanked back to Germany center after their position arrives.
+  const didLocateUserRef = useRef(false);
   const onSelectRef = useRef(onSelect);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,6 +98,32 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
           ),
         });
         mapInstanceRef.current = map;
+
+        // Auto-locate the user as soon as the map is ready. The browser
+        // shows its native permission prompt — if the user accepts we
+        // pan to their position; if they deny we just stay at the
+        // default region. Either way the explicit Locate button below
+        // remains available as a manual retry.
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (cancelled || !mapInstanceRef.current) return;
+              didLocateUserRef.current = true;
+              didFitRef.current = true; // suppress the auto-fit-to-events on first event load
+              mapInstanceRef.current.setRegionAnimated(
+                new mapkit.CoordinateRegion(
+                  new mapkit.Coordinate(pos.coords.latitude, pos.coords.longitude),
+                  new mapkit.CoordinateSpan(0.15, 0.15),
+                ),
+                true,
+              );
+            },
+            () => {
+              // Permission denied or timed out — silently fall back.
+            },
+            { timeout: 8000, maximumAge: 60_000 },
+          );
+        }
       })
       .catch((err) => {
         console.error('[AppleMap] init failed:', err);
