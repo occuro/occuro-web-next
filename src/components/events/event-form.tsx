@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { ImageUpload } from '@/components/image-upload';
+import { LocationAutocomplete } from '@/components/location-autocomplete';
 import {
-  Save, Loader2, AlertTriangle, Check, Trash2,
+  Save, Loader2, AlertTriangle, Check, Trash2, Calendar, Clock,
 } from 'lucide-react';
 import type { Event } from '@/types/occuro';
 
@@ -58,6 +59,8 @@ export function EventForm({
     time: initialEvent?.time ?? '',
     end_time: initialEvent?.end_time ?? '',
     location: initialEvent?.location ?? '',
+    latitude: initialEvent?.latitude ?? null as number | null,
+    longitude: initialEvent?.longitude ?? null as number | null,
     category: initialEvent?.category ?? 'Music',
     subcategory: initialEvent?.subcategory ?? '',
     event_type: initialEvent?.event_type ?? 'Konzert',
@@ -88,7 +91,7 @@ export function EventForm({
       setError('Du musst angemeldet sein.');
       return;
     }
-    if (!form.title.trim() || !form.description.trim() || !form.date || !form.time || !form.location.trim()) {
+    if (!form.title.trim() || !form.date || !form.time || !form.location.trim()) {
       setError('Bitte fülle alle Pflichtfelder aus.');
       return;
     }
@@ -96,20 +99,24 @@ export function EventForm({
     setSaving(true);
 
     // Build the payload for both create and update.
+    // Organizers always create public events with no participant cap —
+    // their capacity is enforced via ticketing systems, not the app.
     const payload = {
       title: form.title.trim(),
       slogan: form.slogan.trim() || null,
-      description: form.description.trim(),
+      description: form.description.trim() || null,
       date: form.date,
       end_date: form.end_date || null,
       time: form.time,
       end_time: form.end_time || null,
       location: form.location.trim(),
+      latitude: form.latitude,
+      longitude: form.longitude,
       category: form.category,
       subcategory: form.subcategory.trim() || null,
       event_type: form.event_type,
-      max_participants: Number(form.max_participants) || 0,
-      visibility: isIndividual ? 'private' : form.visibility,
+      max_participants: isIndividual ? (Number(form.max_participants) || 0) : 0,
+      visibility: isIndividual ? 'private' : 'public',
       website: form.website.trim() || null,
       ticket_shop_url: form.ticket_shop_url.trim() || null,
       requires_ticket: form.requires_ticket,
@@ -200,65 +207,87 @@ export function EventForm({
         </Field>
       </div>
 
-      {/* Description */}
-      <Field label="Beschreibung" required>
+      {/* Description (optional) */}
+      <Field label="Beschreibung" hint="Optional — was sollen Teilnehmer wissen?">
         <textarea
           value={form.description}
           onChange={(e) => update('description', e.target.value)}
-          required
           rows={4}
           placeholder="Worum geht es bei deinem Event?"
           className="input resize-none"
         />
       </Field>
 
-      {/* Date + time */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Field label="Startdatum" required>
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => update('date', e.target.value)}
-            required
-            className="input"
-          />
-        </Field>
-        <Field label="Startzeit" required>
-          <input
-            type="time"
-            value={form.time}
-            onChange={(e) => update('time', e.target.value)}
-            required
-            className="input"
-          />
-        </Field>
-        <Field label="Enddatum">
-          <input
-            type="date"
-            value={form.end_date}
-            onChange={(e) => update('end_date', e.target.value)}
-            className="input"
-          />
-        </Field>
-        <Field label="Endzeit">
-          <input
-            type="time"
-            value={form.end_time}
-            onChange={(e) => update('end_time', e.target.value)}
-            className="input"
-          />
-        </Field>
+      {/* Date + time — wrapped in a labelled group for visual hierarchy */}
+      <div className="rounded-2xl border border-border-subtle bg-elevated/30 p-4 space-y-4">
+        <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground/80">
+          <Calendar size={13} className="text-violet-400" /> Start
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Datum" required>
+            <div className="datetime-wrap">
+              <Calendar size={14} className="datetime-icon" />
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => update('date', e.target.value)}
+                required
+                className="input pl-9"
+              />
+            </div>
+          </Field>
+          <Field label="Uhrzeit" required>
+            <div className="datetime-wrap">
+              <Clock size={14} className="datetime-icon" />
+              <input
+                type="time"
+                value={form.time}
+                onChange={(e) => update('time', e.target.value)}
+                required
+                className="input pl-9"
+              />
+            </div>
+          </Field>
+        </div>
+
+        <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground/80 pt-1">
+          <Calendar size={13} className="text-muted-fg" /> Ende <span className="text-muted-fg font-normal">(optional)</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Datum">
+            <div className="datetime-wrap">
+              <Calendar size={14} className="datetime-icon" />
+              <input
+                type="date"
+                value={form.end_date}
+                onChange={(e) => update('end_date', e.target.value)}
+                className="input pl-9"
+              />
+            </div>
+          </Field>
+          <Field label="Uhrzeit">
+            <div className="datetime-wrap">
+              <Clock size={14} className="datetime-icon" />
+              <input
+                type="time"
+                value={form.end_time}
+                onChange={(e) => update('end_time', e.target.value)}
+                className="input pl-9"
+              />
+            </div>
+          </Field>
+        </div>
       </div>
 
-      {/* Location */}
-      <Field label="Ort" required>
-        <input
-          type="text"
+      {/* Location — autocomplete-backed */}
+      <Field label="Ort" required hint="Tippe einen Ort und wähle einen Vorschlag, damit das Event auf der Karte erscheint.">
+        <LocationAutocomplete
           value={form.location}
-          onChange={(e) => update('location', e.target.value)}
-          required
+          onChange={({ label, lat, lng }) => {
+            setForm((prev) => ({ ...prev, location: label, latitude: lat, longitude: lng }));
+          }}
           placeholder="z.B. Berghain, Berlin"
-          className="input"
+          required
         />
       </Field>
 
@@ -308,34 +337,17 @@ export function EventForm({
         />
       </Field>
 
-      {/* Participants + visibility + chat */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="Max. Teilnehmer">
-          <input
-            type="number"
-            value={form.max_participants}
-            onChange={(e) => update('max_participants', parseInt(e.target.value, 10) || 0)}
-            className="input"
-          />
-        </Field>
-
-        {/* Individuals can ONLY create private events. Organizers choose. */}
-        {!isIndividual ? (
-          <Field label="Sichtbarkeit">
-            <select
-              value={form.visibility}
-              onChange={(e) => update('visibility', e.target.value as 'public' | 'private')}
+      {/* Participants + chat — organizers don't get a participant cap or
+          a visibility toggle (they always create public events). */}
+      <div className={`grid grid-cols-1 ${isIndividual ? 'md:grid-cols-2' : ''} gap-4`}>
+        {isIndividual && (
+          <Field label="Max. Teilnehmer">
+            <input
+              type="number"
+              value={form.max_participants}
+              onChange={(e) => update('max_participants', parseInt(e.target.value, 10) || 0)}
               className="input"
-            >
-              <option value="public">Öffentlich</option>
-              <option value="private">Privat (nur eingeladene)</option>
-            </select>
-          </Field>
-        ) : (
-          <Field label="Sichtbarkeit">
-            <div className="px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm text-muted-fg">
-              Privat (nur eingeladene)
-            </div>
+            />
           </Field>
         )}
 
@@ -416,13 +428,13 @@ export function EventForm({
       <style jsx>{`
         .input {
           width: 100%;
-          padding: 0.625rem 0.875rem;
+          padding: 0.7rem 0.875rem;
           border-radius: 0.75rem;
           border: 1px solid var(--color-border-subtle);
           background: var(--color-elevated);
           color: var(--color-foreground);
           font-size: 0.875rem;
-          transition: border-color 0.15s;
+          transition: border-color 0.15s, background-color 0.15s;
         }
         .input:focus {
           outline: none;
@@ -431,6 +443,44 @@ export function EventForm({
         .input::placeholder {
           color: var(--color-muted-fg);
           opacity: 0.6;
+        }
+
+        /* Date/time picker — strip the ugly native chrome and style
+           with our own icon overlay. The native picker still appears
+           when the user clicks anywhere on the field (so mobile keeps
+           the system-level wheel pickers). */
+        .datetime-wrap {
+          position: relative;
+          display: block;
+        }
+        .datetime-wrap :global(.datetime-icon) {
+          position: absolute;
+          left: 0.7rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--color-muted-fg);
+          pointer-events: none;
+          z-index: 1;
+        }
+        .datetime-wrap input[type='date'],
+        .datetime-wrap input[type='time'] {
+          appearance: none;
+          -webkit-appearance: none;
+          font-family: inherit;
+          color-scheme: dark;
+          cursor: pointer;
+          min-height: 42px;
+        }
+        /* Hide the default calendar/clock icon since we render our own */
+        .datetime-wrap input[type='date']::-webkit-calendar-picker-indicator,
+        .datetime-wrap input[type='time']::-webkit-calendar-picker-indicator {
+          opacity: 0;
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          cursor: pointer;
         }
       `}</style>
     </form>

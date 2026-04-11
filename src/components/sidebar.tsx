@@ -41,7 +41,7 @@ const organizerNav: NavItem[] = [
   { label: 'Event erstellen', href: '/organizer/events/create', icon: CalendarPlus },
   { label: 'Reichweite', href: '/organizer/reach', icon: BarChart3 },
   { label: 'Follower', href: '/organizer/followers', icon: UserCheck },
-  { label: 'Nachrichten', href: '/organizer/chat', icon: MessageCircle },
+  { label: 'Announcements', href: '/organizer/chat', icon: MessageCircle },
   { label: 'Benachrichtigungen', href: '/organizer/notifications', icon: Bell, badgeKey: 'notifications' },
   { label: 'Einstellungen', href: '/organizer/settings', icon: Settings },
 ];
