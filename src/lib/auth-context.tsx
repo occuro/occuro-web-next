@@ -40,25 +40,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Immediately set loading false after a short delay no matter what
     const forceReady = setTimeout(() => setLoading(false), 1500);
 
-    // Use getUser() for the initial check rather than getSession() so we
-    // detect a stale/expired session immediately. getSession() reads
-    // straight from the cookie without server validation, so a broken
-    // session would look "logged in" until the first failing API call —
-    // which is exactly the bug where the user couldn't log out.
-    // The proxy.ts middleware refreshes cookies on every navigation, so
-    // by the time we get here the cookies should be valid; if getUser()
-    // still rejects, the session truly is dead and we treat it as logged out.
-    supabase.auth.getUser().then(({ data: { user: verifiedUser }, error }) => {
-      if (error || !verifiedUser) {
+    // RACE every supabase call against a timeout. The "stuck after
+    // login" bug is the SDK call hanging forever in some corrupted
+    // state — neither resolving nor throwing. Without a timeout the
+    // whole auth flow blocks indefinitely.
+    const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T | null> =>
+      Promise.race<T | null>([
+        p.then((v) => v as T).catch((e) => {
+          console.warn(`[auth] ${label} threw`, e);
+          return null;
+        }),
+        new Promise<null>((resolve) => setTimeout(() => {
+          console.warn(`[auth] ${label} timed out after ${ms}ms`);
+          resolve(null);
+        }, ms)),
+      ]);
+
+    (async () => {
+      const result = await withTimeout(supabase.auth.getUser(), 3000, 'getUser');
+      const verifiedUser = result?.data?.user ?? null;
+      if (!verifiedUser) {
         setUser(null);
         setLoading(false);
         return;
       }
       setUser(verifiedUser);
-      fetchProfile(verifiedUser.id).finally(() => setLoading(false));
-    }).catch(() => {
+      await fetchProfile(verifiedUser.id);
       setLoading(false);
-    });
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
@@ -81,24 +90,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function fetchProfile(userId: string) {
-    try {
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      setProfile(prof);
+    // Same race-against-timeout pattern as the auth check above. A
+    // profile fetch that hangs would leave the sidebar showing "User"
+    // forever and every protected page blank.
+    const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T | null> =>
+      Promise.race<T | null>([
+        p.then((v) => v as T).catch((e) => {
+          console.warn(`[auth] ${label} threw`, e);
+          return null;
+        }),
+        new Promise<null>((resolve) => setTimeout(() => {
+          console.warn(`[auth] ${label} timed out after ${ms}ms`);
+          resolve(null);
+        }, ms)),
+      ]);
 
-      if (prof?.user_type === 'organization') {
-        const { data: org } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('owner_id', userId)
-          .single();
-        setOrganization(org);
-      }
-    } catch {
-      // Profile fetch failed — user exists but profile might not
+    // PostgrestBuilder is a thenable, not a Promise — wrap in
+    // Promise.resolve() so the timeout helper sees a real Promise.
+    const profRes = await withTimeout(
+      Promise.resolve(supabase.from('profiles').select('*').eq('id', userId).maybeSingle()),
+      4000,
+      'fetchProfile.profiles',
+    );
+    const prof = profRes?.data ?? null;
+    setProfile(prof);
+
+    if (prof?.user_type === 'organization') {
+      const orgRes = await withTimeout(
+        Promise.resolve(supabase.from('organizations').select('*').eq('owner_id', userId).maybeSingle()),
+        4000,
+        'fetchProfile.organizations',
+      );
+      setOrganization(orgRes?.data ?? null);
     }
   }
 
