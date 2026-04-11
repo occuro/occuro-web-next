@@ -194,11 +194,14 @@ export function EventForm({
       saveError = updErr;
       savedId = initialEvent.id;
     } else {
-      // Insert new event with proper organizer fields based on mode
+      // Insert new event with proper organizer fields based on mode.
+      // The events table has a CHECK constraint that organizer_org_id
+      // and organizer_profile_id are mutually exclusive — exactly one
+      // of them must be set, never both. Organizers go through the
+      // org id, individuals through their profile id.
       const insertPayload = {
         ...payload,
-        organizer_profile_id: user.id,
-        // Individuals never have an org id; organizers attach theirs
+        organizer_profile_id: !isIndividual && organization?.id ? null : user.id,
         organizer_org_id: !isIndividual && organization?.id ? organization.id : null,
         organizer_name: !isIndividual && organization?.name ? organization.name : null,
       };
