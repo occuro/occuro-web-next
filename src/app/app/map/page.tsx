@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import type { Event } from '@/types/occuro';
 import { formatDate, getCategoryColor } from '@/lib/utils';
-import { MapPin, X, CalendarRange, Sparkles, Sun, Sunrise, Coffee, CalendarDays } from 'lucide-react';
+import { MapPin, X, CalendarRange, Sparkles, Sun, Sunrise, Wine, CalendarDays } from 'lucide-react';
 
 // Both map providers are heavy (mapkit script / maplibre bundle), so we
 // dynamic-import them client-only to keep them out of the initial bundle.
@@ -159,15 +159,24 @@ function MapPageInner() {
     if (error) {
       console.warn('[map] events fetch failed:', error.message);
     }
-    const all = (data ?? []) as Event[];
+    // CRITICAL: supabase-js returns numeric columns (like latitude /
+    // longitude on the events table) as STRINGS by default to preserve
+    // precision. mapkit and maplibre both silently no-op on string
+    // coordinates → no pins. Force-convert here so every downstream
+    // consumer can rely on real numbers.
+    const all = ((data ?? []) as Event[]).map((e) => ({
+      ...e,
+      latitude: e.latitude != null ? Number(e.latitude) : null,
+      longitude: e.longitude != null ? Number(e.longitude) : null,
+    }));
     setFetchedCount(all.length);
-    console.info(`[map] fetched ${all.length} events for range=${dateRange}`);
+    console.info(`[map] fetched ${all.length} events for range=${dateRange}`, all.slice(0, 3));
 
     // Apply any cached geocodes from a previous visit so the user
     // doesn't see "no pins" while we re-geocode the same events.
     const cache = loadGeocodeCache();
     const enriched = all.map((e) => {
-      if (e.latitude != null && e.longitude != null) return e;
+      if (e.latitude != null && e.longitude != null && !Number.isNaN(e.latitude) && !Number.isNaN(e.longitude)) return e;
       const cached = cache[e.id];
       return cached ? { ...e, latitude: cached.lat, longitude: cached.lng } : e;
     });
@@ -214,11 +223,16 @@ function MapPageInner() {
     })();
   }
 
-  // Only events with coords get rendered as pins. Events that are
-  // still being geocoded in the background pop in as their lat/lng
-  // resolves (the events state is patched in place).
+  // Only events with valid numeric coords get rendered as pins.
+  // Events that are still being geocoded in the background pop in as
+  // their lat/lng resolves (the events state is patched in place).
+  // The Number.isFinite check filters out NaN that comes back when
+  // supabase returns garbage strings or the geocoder returns junk.
   const eventsWithCoords = useMemo(
-    () => events.filter((e) => e.latitude != null && e.longitude != null),
+    () => events.filter((e) =>
+      e.latitude != null && e.longitude != null
+      && Number.isFinite(e.latitude) && Number.isFinite(e.longitude)
+    ),
     [events],
   );
 
@@ -264,7 +278,7 @@ function MapPageInner() {
           { key: 'all' as const, label: 'Alle', icon: Sparkles },
           { key: 'today' as const, label: 'Heute', icon: Sun },
           { key: 'tomorrow' as const, label: 'Morgen', icon: Sunrise },
-          { key: 'weekend' as const, label: 'Wochenende', icon: Coffee },
+          { key: 'weekend' as const, label: 'Wochenende', icon: Wine },
           { key: 'week' as const, label: 'Diese Woche', icon: CalendarRange },
         ]).map((d) => {
           const Icon = d.icon;
@@ -286,9 +300,54 @@ function MapPageInner() {
         })}
       </div>
 
-      {/* Map + sidebar */}
+      {/* Events left, map right (mobile parity).
+          Mobile-first layout stacks the events list on top followed by
+          the map; on lg screens they sit side-by-side with the events
+          on the left so users can scan the list and click into the
+          right side. */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 rounded-2xl border border-border-subtle bg-surface overflow-hidden relative h-[420px] sm:h-[520px] lg:h-[640px]">
+        {/* Events sidebar (left on lg+) */}
+        <div className="lg:col-span-2 space-y-2 lg:max-h-[640px] lg:overflow-y-auto pr-1 order-2 lg:order-1">
+          {events.length === 0 ? (
+            <div className="text-center py-16 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
+              <CalendarDays size={32} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Keine anstehenden Events</p>
+              <p className="text-[11px] mt-1">Versuche einen anderen Zeitraum.</p>
+            </div>
+          ) : (
+            events.map((event) => {
+              const hasCoords = event.latitude != null && event.longitude != null && Number.isFinite(event.latitude) && Number.isFinite(event.longitude);
+              return (
+                <button
+                  key={event.id}
+                  onClick={() => hasCoords && setSelected(event)}
+                  disabled={!hasCoords}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
+                    selected?.id === event.id
+                      ? 'bg-violet-500/10 border border-violet-500/30'
+                      : 'border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong'
+                  } ${!hasCoords ? 'opacity-60 cursor-default' : ''}`}
+                  title={hasCoords ? '' : 'Koordinaten werden geladen…'}
+                >
+                  <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(event.category) }} />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[13px] font-medium truncate">{event.title}</h4>
+                    <p className="text-[11px] text-muted-fg truncate flex items-center gap-1">
+                      <MapPin size={10} className="flex-shrink-0" />{event.location}
+                    </p>
+                    <p className="text-[11px] text-muted-fg">{formatDate(event.date)}</p>
+                  </div>
+                  {!hasCoords && (
+                    <span className="text-[9px] text-muted-fg/70 italic flex-shrink-0">Lädt…</span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Map (right on lg+) */}
+        <div className="lg:col-span-3 rounded-2xl border border-border-subtle bg-surface overflow-hidden relative h-[420px] sm:h-[520px] lg:h-[640px] order-1 lg:order-2">
           {loading || provider === 'probing' ? (
             <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center">
               <MapPin size={32} className="text-muted-fg/30" />
@@ -316,46 +375,6 @@ function MapPageInner() {
             >
               <X size={13} /> Schließen
             </button>
-          )}
-        </div>
-
-        {/* Sidebar list */}
-        <div className="lg:col-span-2 space-y-2 lg:max-h-[640px] lg:overflow-y-auto pr-1">
-          {events.length === 0 ? (
-            <div className="text-center py-16 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
-              <CalendarDays size={32} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />
-              <p className="text-sm font-medium">Keine anstehenden Events</p>
-              <p className="text-[11px] mt-1">Versuche einen anderen Zeitraum.</p>
-            </div>
-          ) : (
-            events.map((event) => {
-              const hasCoords = event.latitude != null && event.longitude != null;
-              return (
-                <button
-                  key={event.id}
-                  onClick={() => hasCoords && setSelected(event)}
-                  disabled={!hasCoords}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
-                    selected?.id === event.id
-                      ? 'bg-violet-500/10 border border-violet-500/30'
-                      : 'border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong'
-                  } ${!hasCoords ? 'opacity-60 cursor-default' : ''}`}
-                  title={hasCoords ? '' : 'Koordinaten werden geladen…'}
-                >
-                  <div className="w-2 h-10 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(event.category) }} />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-[13px] font-medium truncate">{event.title}</h4>
-                    <p className="text-[11px] text-muted-fg truncate flex items-center gap-1">
-                      <MapPin size={10} className="flex-shrink-0" />{event.location}
-                    </p>
-                    <p className="text-[11px] text-muted-fg">{formatDate(event.date)}</p>
-                  </div>
-                  {!hasCoords && (
-                    <span className="text-[9px] text-muted-fg/70 italic flex-shrink-0">Lädt…</span>
-                  )}
-                </button>
-              );
-            })
           )}
         </div>
       </div>
