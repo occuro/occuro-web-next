@@ -135,34 +135,13 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
           );
         }
 
-        // Auto-locate the user as soon as the map is ready. The browser
-        // shows its native permission prompt — if the user accepts we
-        // pan to their position; if they deny we just stay at the
-        // default region. Either way the explicit Locate button below
-        // remains available as a manual retry.
-        // skipAutoLocate is set when the page wants the map at a
-        // specific deeplink target — auto-locating would yank the user
-        // away from the location they explicitly asked to see.
-        if (navigator.geolocation && !skipAutoLocate) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              if (cancelled || !mapInstanceRef.current) return;
-              didLocateUserRef.current = true;
-              didFitRef.current = true; // suppress the auto-fit-to-events on first event load
-              mapInstanceRef.current.setRegionAnimated(
-                new mapkit.CoordinateRegion(
-                  new mapkit.Coordinate(pos.coords.latitude, pos.coords.longitude),
-                  new mapkit.CoordinateSpan(0.15, 0.15),
-                ),
-                true,
-              );
-            },
-            () => {
-              // Permission denied or timed out — silently fall back.
-            },
-            { timeout: 8000, maximumAge: 60_000 },
-          );
-        }
+        // Auto-locate is intentionally NOT fired here anymore. It used
+        // to race against the events fetch — if the geolocation
+        // resolved first, the map centered on the user and the pin
+        // for the event ended up offscreen. Events take priority now:
+        // the events sync effect below fits the viewport to the
+        // events bounds. The user can still tap the manual locate
+        // button at the top of the map to jump to their position.
       })
       .catch((err) => {
         console.error('[AppleMap] init failed:', err);
@@ -197,25 +176,18 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
       const coordinate = new mapkit.Coordinate(event.latitude, event.longitude);
       const color = getCategoryColor(event.category);
 
-      const annotation = new mapkit.Annotation(
-        coordinate,
-        () => {
-          const div = document.createElement('div');
-          div.innerHTML = `
-            <svg width="34" height="44" viewBox="0 0 34 44" style="filter:drop-shadow(0 4px 6px rgba(0,0,0,0.4));cursor:pointer;">
-              <path d="M17 1C8.16 1 1 8.16 1 17c0 12 16 26 16 26s16-14 16-26c0-8.84-7.16-16-16-16z"
-                    fill="${color}" stroke="#FFFFFF" stroke-width="2" />
-              <circle cx="17" cy="17" r="6" fill="#FFFFFF" />
-            </svg>
-          `;
-          return div;
-        },
-        {
-          title: event.title,
-          subtitle: event.location ?? '',
-          anchorOffset: new DOMPoint(0, -22),
-        },
-      );
+      // Apple's built-in MarkerAnnotation renders a proper teardrop
+      // pin with the chosen color. Way more reliable than the custom
+      // SVG factory the previous version used — that was rendering
+      // empty divs in some browsers because the SVG height was being
+      // collapsed to zero.
+      const annotation = new mapkit.MarkerAnnotation(coordinate, {
+        title: event.title,
+        subtitle: event.location ?? '',
+        color,
+        glyphColor: '#FFFFFF',
+        displayPriority: 1000, // never get hidden by clustering
+      });
 
       annotation.addEventListener('select', () => {
         onSelectRef.current(event);
