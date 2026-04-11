@@ -133,7 +133,7 @@ export default function OrganizerTicketsPage() {
           {current.map((event) => (
             <Link
               key={event.id}
-              href={`/organizer/events/${event.id}`}
+              href={`/organizer/tickets/${event.id}`}
               className={`group flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-all duration-200 ${tab === 'past' ? 'opacity-60' : ''}`}
             >
               {isLive(event) && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />}
