@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
-import { formatDate, getCategoryColor } from '@/lib/utils';
-import { Search, Users, User, Music, CalendarDays, Building2, X, BadgeCheck, ArrowRight } from 'lucide-react';
+import {
+  Search, Users, X, BadgeCheck, UserPlus, UserCheck, Building2,
+  Check, Loader2, UserX, Clock,
+} from 'lucide-react';
 
-type SearchScope = 'people' | 'organizers' | 'events' | 'artists';
+type Tab = 'friends' | 'requests' | 'discover';
 
 interface PersonResult {
   id: string;
@@ -22,101 +24,260 @@ interface OrgResult {
   avatar_url: string | null;
   category: string | null;
   verified: boolean;
-  bio: string | null;
 }
 
 export default function FriendsPage() {
   const { user } = useAuth();
-  const [scope, setScope] = useState<SearchScope>('people');
-  const [search, setSearch] = useState('');
-  const [friends, setFriends] = useState<PersonResult[]>([]);
-  const [searchResults, setSearchResults] = useState<PersonResult[]>([]);
-  const [orgResults, setOrgResults] = useState<OrgResult[]>([]);
-  const [followedOrgs, setFollowedOrgs] = useState<OrgResult[]>([]);
-  const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
-  useEffect(() => {
-    if (user) fetchInitial();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  const [tab, setTab] = useState<Tab>('friends');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (search.length >= 2) doSearch();
-    else { setSearchResults([]); setOrgResults([]); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, scope]);
+  // Friends
+  const [friends, setFriends] = useState<PersonResult[]>([]);
+  const [followedOrgs, setFollowedOrgs] = useState<OrgResult[]>([]);
 
-  async function fetchInitial() {
-    // Friends
-    const { data: friendships } = await supabase
-      .from('friendships')
-      .select('user_id, friend_id')
-      .or(`user_id.eq.${user!.id},friend_id.eq.${user!.id}`)
-      .eq('status', 'accepted');
+  // Requests
+  const [incomingRequests, setIncomingRequests] = useState<PersonResult[]>([]);
+  const [outgoingIds, setOutgoingIds] = useState<Set<string>>(new Set());
 
-    if (friendships?.length) {
-      const friendIds = friendships.map((f) => f.user_id === user!.id ? f.friend_id : f.user_id);
-      const { data: profiles } = await supabase
+  // Discover
+  const [suggestions, setSuggestions] = useState<PersonResult[]>([]);
+  const [searchResults, setSearchResults] = useState<PersonResult[]>([]);
+  const [orgSearchResults, setOrgSearchResults] = useState<OrgResult[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Action busy states (per-id)
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+
+  const setBusy = (id: string, busy: boolean) => {
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      if (busy) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const reload = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+
+    const [friendshipsRes, followsRes, suggestionsRes] = await Promise.all([
+      supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`),
+      supabase
+        .from('organizer_follows')
+        .select('organizer_org_id')
+        .eq('follower_id', user.id)
+        .not('organizer_org_id', 'is', null),
+      // Suggestions: any individual profile that's not us, not already a
+      // friend, not blocked. Cap at 30. Server-side ranking is on the
+      // mobile app — for the WebApp we keep it simple.
+      supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, bio, user_type')
+        .neq('id', user.id)
+        .eq('user_type', 'individual')
+        .order('created_at', { ascending: false })
+        .limit(30),
+    ]);
+
+    const friendships = (friendshipsRes.data ?? []) as Array<{ user_id: string; friend_id: string; status: string }>;
+    const acceptedIds = friendships
+      .filter((f) => f.status === 'accepted')
+      .map((f) => (f.user_id === user.id ? f.friend_id : f.user_id));
+    const incomingIds = friendships
+      .filter((f) => f.status === 'pending' && f.friend_id === user.id)
+      .map((f) => f.user_id);
+    const outgoingPendingIds = friendships
+      .filter((f) => f.status === 'pending' && f.user_id === user.id)
+      .map((f) => f.friend_id);
+
+    setOutgoingIds(new Set(outgoingPendingIds));
+
+    // Resolve all relevant profiles in one query
+    const allIds = [...new Set([...acceptedIds, ...incomingIds])];
+    let profileMap = new Map<string, PersonResult>();
+    if (allIds.length > 0) {
+      const { data: profs } = await supabase
         .from('profiles')
         .select('id, full_name, username, avatar_url, bio')
-        .in('id', friendIds);
-      setFriends(profiles ?? []);
+        .in('id', allIds);
+      profileMap = new Map(((profs ?? []) as PersonResult[]).map((p) => [p.id, p]));
     }
+
+    const friendsList = acceptedIds
+      .map((id) => profileMap.get(id))
+      .filter((p): p is PersonResult => Boolean(p))
+      .sort((a, b) =>
+        (a.full_name ?? '').localeCompare(b.full_name ?? '', 'de', { sensitivity: 'base' }),
+      );
+    setFriends(friendsList);
+
+    const incomingList = incomingIds
+      .map((id) => profileMap.get(id))
+      .filter((p): p is PersonResult => Boolean(p))
+      .sort((a, b) =>
+        (a.full_name ?? '').localeCompare(b.full_name ?? '', 'de', { sensitivity: 'base' }),
+      );
+    setIncomingRequests(incomingList);
 
     // Followed orgs
-    const { data: follows } = await supabase
-      .from('organizer_follows')
-      .select('organizer_org_id')
-      .eq('follower_id', user!.id)
-      .not('organizer_org_id', 'is', null);
-
-    if (follows?.length) {
-      const orgIds = follows.map((f) => f.organizer_org_id).filter(Boolean);
+    const orgIds = ((followsRes.data ?? []) as Array<{ organizer_org_id: string }>)
+      .map((f) => f.organizer_org_id)
+      .filter(Boolean);
+    if (orgIds.length > 0) {
       const { data: orgs } = await supabase
         .from('organizations')
-        .select('id, name, avatar_url, category, verified, bio')
+        .select('id, name, avatar_url, category, verified')
         .in('id', orgIds);
-      setFollowedOrgs(orgs ?? []);
+      setFollowedOrgs(((orgs ?? []) as OrgResult[]).sort((a, b) =>
+        (a.name ?? '').localeCompare(b.name ?? '', 'de', { sensitivity: 'base' }),
+      ));
+    } else {
+      setFollowedOrgs([]);
     }
+
+    // Suggestions: filter out friends + incoming + outgoing requests
+    const excludeIds = new Set([...acceptedIds, ...incomingIds, ...outgoingPendingIds]);
+    setSuggestions(
+      ((suggestionsRes.data ?? []) as PersonResult[])
+        .filter((p) => !excludeIds.has(p.id))
+        .sort((a, b) =>
+          (a.full_name ?? '').localeCompare(b.full_name ?? '', 'de', { sensitivity: 'base' }),
+        ),
+    );
 
     setLoading(false);
-  }
+  }, [supabase, user]);
 
-  async function doSearch() {
-    const q = `%${search}%`;
-    if (scope === 'people') {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, full_name, username, avatar_url, bio')
-        .or(`full_name.ilike.${q},username.ilike.${q}`)
-        .neq('id', user!.id)
-        .limit(20);
-      setSearchResults(data ?? []);
-    } else if (scope === 'organizers') {
-      const { data } = await supabase
-        .from('organizations')
-        .select('id, name, avatar_url, category, verified, bio')
-        .ilike('name', q)
-        .limit(20);
-      setOrgResults(data ?? []);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  // ── Search (debounced) ─────────────────────────────────────────
+  useEffect(() => {
+    if (search.trim().length < 2) {
+      setSearchResults([]);
+      setOrgSearchResults([]);
+      return;
     }
+    const handler = setTimeout(async () => {
+      setSearching(true);
+      const q = `%${search.trim().replace(/%/g, '\\%')}%`;
+      const [peopleRes, orgRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name, username, avatar_url, bio')
+          .or(`full_name.ilike.${q},username.ilike.${q}`)
+          .neq('id', user!.id)
+          .limit(30),
+        supabase
+          .from('organizations')
+          .select('id, name, avatar_url, category, verified')
+          .ilike('name', q)
+          .limit(15),
+      ]);
+      setSearchResults(
+        ((peopleRes.data ?? []) as PersonResult[]).sort((a, b) =>
+          (a.full_name ?? '').localeCompare(b.full_name ?? '', 'de', { sensitivity: 'base' }),
+        ),
+      );
+      setOrgSearchResults(
+        ((orgRes.data ?? []) as OrgResult[]).sort((a, b) =>
+          (a.name ?? '').localeCompare(b.name ?? '', 'de', { sensitivity: 'base' }),
+        ),
+      );
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [search, supabase, user]);
+
+  // ── Friend actions ─────────────────────────────────────────────
+  async function sendRequest(targetId: string) {
+    if (!user) return;
+    setBusy(targetId, true);
+    await supabase.from('friendships').insert({
+      user_id: user.id,
+      friend_id: targetId,
+      status: 'pending',
+    });
+    setOutgoingIds((prev) => new Set(prev).add(targetId));
+    setBusy(targetId, false);
   }
 
-  const isSearching = search.length >= 2;
+  async function cancelRequest(targetId: string) {
+    if (!user) return;
+    setBusy(targetId, true);
+    await supabase
+      .from('friendships')
+      .delete()
+      .match({ user_id: user.id, friend_id: targetId, status: 'pending' });
+    setOutgoingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(targetId);
+      return next;
+    });
+    setBusy(targetId, false);
+  }
 
-  const scopes: { key: SearchScope; label: string; icon: any }[] = [
-    { key: 'people', label: 'Personen', icon: Users },
-    { key: 'organizers', label: 'Veranstalter', icon: Building2 },
-    { key: 'events', label: 'Events', icon: CalendarDays },
-    { key: 'artists', label: 'Künstler', icon: Music },
-  ];
+  async function acceptRequest(requesterId: string) {
+    if (!user) return;
+    setBusy(requesterId, true);
+    await supabase
+      .from('friendships')
+      .update({ status: 'accepted' })
+      .match({ user_id: requesterId, friend_id: user.id, status: 'pending' });
+    await reload();
+    setBusy(requesterId, false);
+  }
+
+  async function declineRequest(requesterId: string) {
+    if (!user) return;
+    setBusy(requesterId, true);
+    await supabase
+      .from('friendships')
+      .delete()
+      .match({ user_id: requesterId, friend_id: user.id, status: 'pending' });
+    setIncomingRequests((prev) => prev.filter((p) => p.id !== requesterId));
+    setBusy(requesterId, false);
+  }
+
+  async function removeFriend(friendId: string) {
+    if (!user) return;
+    if (!confirm('Freund wirklich entfernen?')) return;
+    setBusy(friendId, true);
+    await supabase
+      .from('friendships')
+      .delete()
+      .or(`and(user_id.eq.${user.id},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${user.id})`)
+      .eq('status', 'accepted');
+    setFriends((prev) => prev.filter((p) => p.id !== friendId));
+    setBusy(friendId, false);
+  }
+
+  // ── Filtered friends list (when not searching) ─────────────────
+  const filteredFriends = useMemo(() => {
+    if (!search.trim()) return friends;
+    const q = search.trim().toLowerCase();
+    return friends.filter((f) =>
+      (f.full_name ?? '').toLowerCase().includes(q) ||
+      (f.username ?? '').toLowerCase().includes(q),
+    );
+  }, [friends, search]);
+
+  const isSearching = search.trim().length >= 2;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-4xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-heading font-bold tracking-tight">Entdecken</h1>
-        <p className="text-sm text-muted-fg mt-1">Finde Freunde, Veranstalter und Events</p>
+        <h1 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight">Freunde</h1>
+        <p className="text-sm text-muted-fg mt-1">Verwalte deine Freunde und entdecke neue Leute</p>
       </div>
 
       {/* Search */}
@@ -124,145 +285,326 @@ export default function FriendsPage() {
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-fg" />
         <input
           type="text"
-          placeholder={`${scopes.find((s) => s.key === scope)?.label} suchen...`}
+          placeholder={tab === 'friends' ? 'Freunde durchsuchen…' : 'Personen oder Veranstalter suchen…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-10 py-3.5 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/30 transition-all duration-200"
+          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/30 transition-all"
         />
         {search && (
-          <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-fg hover:text-foreground transition-colors">
+          <button
+            onClick={() => setSearch('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-fg hover:text-foreground"
+          >
             <X size={16} />
           </button>
         )}
       </div>
 
-      {/* Scope Tabs */}
-      <div className="flex gap-2">
-        {scopes.map((s) => {
-          const Icon = s.icon;
-          return (
-            <button
-              key={s.key}
-              onClick={() => { setScope(s.key); setSearch(''); }}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200 ${
-                scope === s.key
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'bg-surface border border-border-subtle text-foreground/70 hover:text-foreground hover:border-border-strong'
-              }`}
-            >
-              <Icon size={14} strokeWidth={scope === s.key ? 2.2 : 1.8} />
-              {s.label}
-            </button>
-          );
-        })}
+      {/* Tabs */}
+      <div className="flex rounded-2xl bg-muted p-1">
+        <TabButton
+          active={tab === 'friends'}
+          onClick={() => setTab('friends')}
+          icon={Users}
+          label="Freunde"
+          count={friends.length}
+        />
+        <TabButton
+          active={tab === 'requests'}
+          onClick={() => setTab('requests')}
+          icon={UserCheck}
+          label="Anfragen"
+          count={incomingRequests.length}
+          highlight={incomingRequests.length > 0}
+        />
+        <TabButton
+          active={tab === 'discover'}
+          onClick={() => setTab('discover')}
+          icon={UserPlus}
+          label="Entdecken"
+        />
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-18 rounded-xl bg-surface border border-border-subtle animate-pulse" />
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-20 rounded-xl bg-surface border border-border-subtle animate-pulse" />
           ))}
         </div>
-      ) : isSearching ? (
-        /* Search Results */
-        <div className="space-y-2 stagger-children">
-          {scope === 'people' && (
-            searchResults.length === 0 ? (
-              <EmptyState icon={Users} text="Keine Personen gefunden" />
-            ) : (
-              searchResults.map((p) => (
-                <PersonRow key={p.id} person={p} />
-              ))
-            )
-          )}
-          {scope === 'organizers' && (
-            orgResults.length === 0 ? (
-              <EmptyState icon={Building2} text="Keine Veranstalter gefunden" />
-            ) : (
-              orgResults.map((o) => (
-                <OrgRow key={o.id} org={o} />
-              ))
-            )
-          )}
-          {scope === 'events' && (
-            <EmptyState icon={CalendarDays} text="Event-Suche kommt bald" />
-          )}
-          {scope === 'artists' && (
-            <EmptyState icon={Music} text="Künstler-Suche kommt bald" />
-          )}
-        </div>
       ) : (
-        /* Default: Friends + Followed Organizers */
-        <div className="space-y-8">
-          {/* Followed Organizers */}
-          {followedOrgs.length > 0 && (
-            <div>
-              <h2 className="text-base font-heading font-semibold mb-3">Gefolgte Veranstalter</h2>
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {followedOrgs.map((org) => (
-                  <div key={org.id} className="flex flex-col items-center gap-2 min-w-[80px]">
-                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle">
-                      {org.avatar_url ? (
-                        <img src={org.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        org.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <span className="text-[11px] text-center font-medium truncate w-full">{org.name}</span>
+        <>
+          {/* ── Friends tab ──────────────────────────────────── */}
+          {tab === 'friends' && (
+            <>
+              {/* Followed Organizers (only when no search active) */}
+              {!isSearching && followedOrgs.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-[12px] font-semibold text-muted-fg uppercase tracking-wider">
+                      Gefolgte Veranstalter
+                    </h2>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    {followedOrgs.map((org) => (
+                      <div key={org.id} className="flex flex-col items-center gap-2 min-w-[72px]">
+                        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle">
+                          {org.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={org.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-foreground/70">{org.name.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-center font-medium truncate w-full">{org.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {filteredFriends.length === 0 ? (
+                <EmptyState
+                  icon={Users}
+                  text={isSearching ? 'Keine Freunde gefunden' : 'Noch keine Freunde'}
+                  subtitle={isSearching ? undefined : 'Wechsle zu „Entdecken" um neue Leute zu finden.'}
+                />
+              ) : (
+                <div className="space-y-2 stagger-children">
+                  {filteredFriends.map((friend) => (
+                    <PersonRow
+                      key={friend.id}
+                      person={friend}
+                      busy={busyIds.has(friend.id)}
+                      action={
+                        <button
+                          onClick={() => void removeFriend(friend.id)}
+                          disabled={busyIds.has(friend.id)}
+                          className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
+                        >
+                          <UserX size={11} /> Entfernen
+                        </button>
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Friends */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-heading font-semibold">Freunde ({friends.length})</h2>
-            </div>
-            {friends.length === 0 ? (
-              <EmptyState icon={Users} text="Noch keine Freunde" subtitle="Suche nach Personen um Freundschaftsanfragen zu senden." />
+          {/* ── Requests tab ─────────────────────────────────── */}
+          {tab === 'requests' && (
+            incomingRequests.length === 0 ? (
+              <EmptyState
+                icon={UserCheck}
+                text="Keine offenen Anfragen"
+                subtitle="Wenn dir jemand eine Freundschaftsanfrage sendet, erscheint sie hier."
+              />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 stagger-children">
-                {friends.map((friend) => (
-                  <PersonRow key={friend.id} person={friend} />
+              <div className="space-y-2 stagger-children">
+                {incomingRequests.map((person) => (
+                  <PersonRow
+                    key={person.id}
+                    person={person}
+                    busy={busyIds.has(person.id)}
+                    action={
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => void declineRequest(person.id)}
+                          disabled={busyIds.has(person.id)}
+                          className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors"
+                        >
+                          Ablehnen
+                        </button>
+                        <button
+                          onClick={() => void acceptRequest(person.id)}
+                          disabled={busyIds.has(person.id)}
+                          className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
+                        >
+                          {busyIds.has(person.id) ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                          Annehmen
+                        </button>
+                      </div>
+                    }
+                  />
                 ))}
               </div>
-            )}
-          </div>
-        </div>
+            )
+          )}
+
+          {/* ── Discover tab ─────────────────────────────────── */}
+          {tab === 'discover' && (
+            <>
+              {isSearching ? (
+                <>
+                  {/* Search results */}
+                  {searching && (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 size={18} className="animate-spin text-muted-fg" />
+                    </div>
+                  )}
+
+                  {!searching && searchResults.length === 0 && orgSearchResults.length === 0 && (
+                    <EmptyState icon={Search} text="Nichts gefunden" subtitle="Versuch einen anderen Suchbegriff." />
+                  )}
+
+                  {searchResults.length > 0 && (
+                    <div>
+                      <h2 className="text-[12px] font-semibold text-muted-fg uppercase tracking-wider mb-3">
+                        Personen
+                      </h2>
+                      <div className="space-y-2 stagger-children">
+                        {searchResults.map((person) => (
+                          <PersonRow
+                            key={person.id}
+                            person={person}
+                            busy={busyIds.has(person.id)}
+                            action={
+                              outgoingIds.has(person.id) ? (
+                                <button
+                                  onClick={() => void cancelRequest(person.id)}
+                                  disabled={busyIds.has(person.id)}
+                                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
+                                >
+                                  <Clock size={11} /> Gesendet
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => void sendRequest(person.id)}
+                                  disabled={busyIds.has(person.id)}
+                                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
+                                >
+                                  {busyIds.has(person.id) ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />}
+                                  Hinzufügen
+                                </button>
+                              )
+                            }
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {orgSearchResults.length > 0 && (
+                    <div>
+                      <h2 className="text-[12px] font-semibold text-muted-fg uppercase tracking-wider mb-3">
+                        Veranstalter
+                      </h2>
+                      <div className="space-y-2">
+                        {orgSearchResults.map((org) => <OrgRow key={org.id} org={org} />)}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : suggestions.length === 0 ? (
+                <EmptyState icon={UserPlus} text="Keine Vorschläge" subtitle="Suche nach einem Namen oder Username." />
+              ) : (
+                <div>
+                  <h2 className="text-[12px] font-semibold text-muted-fg uppercase tracking-wider mb-3">
+                    Personen, die du kennen könntest
+                  </h2>
+                  <div className="space-y-2 stagger-children">
+                    {suggestions.slice(0, 12).map((person) => (
+                      <PersonRow
+                        key={person.id}
+                        person={person}
+                        busy={busyIds.has(person.id)}
+                        action={
+                          outgoingIds.has(person.id) ? (
+                            <button
+                              onClick={() => void cancelRequest(person.id)}
+                              disabled={busyIds.has(person.id)}
+                              className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
+                            >
+                              <Clock size={11} /> Gesendet
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => void sendRequest(person.id)}
+                              disabled={busyIds.has(person.id)}
+                              className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
+                            >
+                              {busyIds.has(person.id) ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />}
+                              Hinzufügen
+                            </button>
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function PersonRow({ person }: { person: PersonResult }) {
+// ────────────────────────────────────────────────────────────────────
+// Sub-components
+// ────────────────────────────────────────────────────────────────────
+
+function TabButton({
+  active, onClick, icon: Icon, label, count, highlight,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Users;
+  label: string;
+  count?: number;
+  highlight?: boolean;
+}) {
   return (
-    <div className="flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-all duration-200 cursor-pointer">
+    <button
+      onClick={onClick}
+      className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 rounded-xl text-[12px] sm:text-[13px] font-medium transition-all duration-200 ${
+        active ? 'bg-surface text-foreground shadow-sm' : 'text-muted-fg hover:text-foreground'
+      }`}
+    >
+      <Icon size={14} strokeWidth={active ? 2.2 : 1.8} />
+      {label}
+      {typeof count === 'number' && count > 0 && (
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${highlight && !active ? 'bg-violet-600 text-white' : 'bg-elevated'}`}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function PersonRow({ person, action, busy }: { person: PersonResult; action?: React.ReactNode; busy?: boolean }) {
+  return (
+    <div className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface ${busy ? 'opacity-60' : ''}`}>
       <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center text-[13px] font-semibold flex-shrink-0 overflow-hidden">
         {person.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={person.avatar_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          person.full_name?.charAt(0).toUpperCase()
+          <span className="text-foreground/70">{person.full_name?.charAt(0).toUpperCase()}</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-[14px] truncate">{person.full_name}</h3>
-        {person.username && <p className="text-[12px] text-muted-fg">@{person.username}</p>}
+        {person.username && (
+          <p className="text-[12px] text-muted-fg truncate">@{person.username}</p>
+        )}
       </div>
+      {action && <div className="flex-shrink-0">{action}</div>}
     </div>
   );
 }
 
 function OrgRow({ org }: { org: OrgResult }) {
   return (
-    <div className="flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-all duration-200 cursor-pointer">
+    <div className="flex items-center gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface">
       <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center text-[13px] font-semibold flex-shrink-0 overflow-hidden">
         {org.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={org.avatar_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          org.name.charAt(0).toUpperCase()
+          <span className="text-foreground/70"><Building2 size={16} /></span>
         )}
       </div>
       <div className="flex-1 min-w-0">
@@ -270,13 +612,13 @@ function OrgRow({ org }: { org: OrgResult }) {
           <h3 className="font-semibold text-[14px] truncate">{org.name}</h3>
           {org.verified && <BadgeCheck size={14} className="text-violet-500 flex-shrink-0" />}
         </div>
-        {org.category && <p className="text-[12px] text-muted-fg">{org.category}</p>}
+        {org.category && <p className="text-[12px] text-muted-fg truncate">{org.category}</p>}
       </div>
     </div>
   );
 }
 
-function EmptyState({ icon: Icon, text, subtitle }: { icon: any; text: string; subtitle?: string }) {
+function EmptyState({ icon: Icon, text, subtitle }: { icon: typeof Users; text: string; subtitle?: string }) {
   return (
     <div className="text-center py-16 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
       <Icon size={36} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />
