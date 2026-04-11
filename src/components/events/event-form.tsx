@@ -371,6 +371,7 @@ export function EventForm({
                 value={form.time}
                 onChange={(e) => update('time', e.target.value)}
                 required
+                step={300}
                 className="input"
               />
             </div>
@@ -397,6 +398,7 @@ export function EventForm({
                 type="time"
                 value={form.end_time}
                 onChange={(e) => update('end_time', e.target.value)}
+                step={300}
                 className="input"
               />
             </div>
@@ -657,30 +659,62 @@ export function EventForm({
           opacity: 0.6;
         }
 
-        /* Date/time picker — keep the native chrome (calendar icon on
-           the right) so users get the proper system picker on click.
-           Removed the custom left icon overlay because it was sitting
-           on top of the placeholder text and looking broken. */
+        /* Date/time picker — bigger touch targets, monospace numerals
+           for tabular alignment, and a nicer focus state. We keep the
+           native picker (best UX on mobile) but make the visible
+           field feel custom-built. */
         .datetime-wrap {
           position: relative;
           display: block;
         }
         .datetime-wrap input[type='date'],
         .datetime-wrap input[type='time'] {
-          font-family: inherit;
+          font-family: 'Space Grotesk', ui-monospace, monospace;
+          font-variant-numeric: tabular-nums;
+          font-size: 0.95rem;
+          font-weight: 600;
+          letter-spacing: 0.01em;
           color-scheme: dark;
           cursor: pointer;
-          min-height: 42px;
+          min-height: 48px;
+          padding: 0.75rem 1rem;
+          background: var(--color-elevated);
+          border: 1px solid var(--color-border-subtle);
+          border-radius: 0.875rem;
+          transition: border-color 0.15s, background-color 0.15s, transform 0.1s;
         }
+        .datetime-wrap input[type='date']:hover,
+        .datetime-wrap input[type='time']:hover {
+          background: var(--color-muted);
+          border-color: var(--color-border-strong);
+        }
+        .datetime-wrap input[type='date']:focus,
+        .datetime-wrap input[type='time']:focus {
+          outline: none;
+          border-color: rgba(139, 92, 246, 0.6);
+          box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+        }
+        .datetime-wrap input[type='date']:active,
+        .datetime-wrap input[type='time']:active {
+          transform: scale(0.98);
+        }
+        /* Style the native indicator — small, accent-colored, and
+           clickable. The indicator is the only piece of native chrome
+           we can target consistently across browsers. */
         .datetime-wrap input[type='date']::-webkit-calendar-picker-indicator,
         .datetime-wrap input[type='time']::-webkit-calendar-picker-indicator {
-          filter: invert(0.5);
+          filter: invert(0.5) sepia(1) hue-rotate(230deg) saturate(2);
           cursor: pointer;
-          opacity: 0.7;
+          opacity: 0.8;
+          padding: 4px;
+          margin-right: -4px;
+          border-radius: 6px;
+          transition: opacity 0.15s, background-color 0.15s;
         }
         .datetime-wrap input[type='date']::-webkit-calendar-picker-indicator:hover,
         .datetime-wrap input[type='time']::-webkit-calendar-picker-indicator:hover {
           opacity: 1;
+          background-color: rgba(139, 92, 246, 0.15);
         }
       `}</style>
     </form>
