@@ -36,23 +36,17 @@ export default function LandingPage() {
       {/* Interactive Background Grid */}
       <InteractiveGrid />
 
-      {/* Header */}
+      {/* Header — only the Anmelden link as a quiet shortcut for
+          returning users. Registrieren is the primary CTA in the hero
+          below to avoid duplicate buttons (Apple/Linear/Notion pattern). */}
       <header className="relative z-10 flex items-center justify-between px-8 lg:px-12 py-5" data-grid-exclude>
         <h1 className="text-xl font-heading font-bold tracking-tight">occuro</h1>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/auth/login"
-            className="px-5 py-2.5 rounded-full text-[13px] font-medium text-foreground/70 hover:text-foreground transition-colors"
-          >
-            Anmelden
-          </Link>
-          <Link
-            href="/auth/register"
-            className="px-5 py-2.5 rounded-full text-[13px] font-medium bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform"
-          >
-            Registrieren
-          </Link>
-        </div>
+        <Link
+          href="/auth/login"
+          className="px-4 py-2 text-[13px] font-medium text-foreground/60 hover:text-foreground transition-colors"
+        >
+          Anmelden
+        </Link>
       </header>
 
       {/* Hero */}

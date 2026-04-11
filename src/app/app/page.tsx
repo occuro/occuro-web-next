@@ -78,26 +78,22 @@ export default function DiscoverPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      {/* Hero */}
+      {/* Header — minimalistic, no big violet box. Title left, the
+          private-event CTA quietly to the right. The Apple/Linear
+          way: no decorative gradients or hero blocks, just structure. */}
       {!isSearching && (
-        <div className="relative rounded-2xl bg-gradient-to-br from-violet-600 to-purple-800 p-6 sm:p-8 text-white overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_70%)]" />
-          <div className="relative flex items-end justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-heading font-bold">Entdecken</h1>
-              <p className="text-white/70 text-sm mt-1">Finde Events in deiner Nähe</p>
-            </div>
-            {/* Quick CTA — own private event. Right inside the hero so
-                individual users can't miss it. The full create form
-                lives at /app/events/create. */}
-            <Link
-              href="/app/events/create"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold bg-white text-violet-700 hover:bg-white/95 hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-lg"
-            >
-              <CalendarPlus size={15} strokeWidth={2.2} />
-              Eigenes Event
-            </Link>
+        <div className="flex items-end justify-between gap-4 flex-wrap pt-2">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight">Entdecken</h1>
+            <p className="text-sm text-muted-fg mt-1">Finde Events in deiner Nähe</p>
           </div>
+          <Link
+            href="/app/events/create"
+            className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 active:scale-[0.98] transition-all shadow-lg shadow-violet-600/20"
+          >
+            <CalendarPlus size={15} strokeWidth={2.2} className="transition-transform group-hover:rotate-12" />
+            Eigenes Event erstellen
+          </Link>
         </div>
       )}
 

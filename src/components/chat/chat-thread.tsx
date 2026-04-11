@@ -299,16 +299,6 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
         </button>
       </div>
 
-      {/* ─── E2E hint banner for DMs ─── */}
-      {room?.type === 'dm' && !loading && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/5 border-b border-amber-500/15 text-[11px] text-amber-300/90">
-          <Lock size={12} className="flex-shrink-0" />
-          <span>
-            Nachrichten in der mobilen App sind Ende-zu-Ende verschlüsselt. In der WebApp sind nur Vorschauen sichtbar — komplette Nachrichten siehst du in der iOS-App.
-          </span>
-        </div>
-      )}
-
       {/* ─── Messages ─── */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
         {loading ? (
