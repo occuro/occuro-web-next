@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 import { NotificationsBell } from '@/components/notifications-bell';
 import {
-  Search, Map, CalendarDays, Ticket, Users, MessageCircle,
+  Search, Map, CalendarDays, Users, MessageCircle,
   Settings, LayoutDashboard, CalendarPlus, BarChart3,
   UserCheck, LogOut, Home, ChevronRight, Menu, X,
 } from 'lucide-react';
@@ -26,7 +26,6 @@ const userNav: NavItem[] = [
   { label: 'Entdecken', href: '/app', icon: Search },
   { label: 'Karte', href: '/app/map', icon: Map },
   { label: 'Kalender', href: '/app/calendar', icon: CalendarDays },
-  { label: 'Tickets', href: '/app/wallet', icon: Ticket },
   { label: 'Freunde', href: '/app/friends', icon: Users },
   { label: 'Nachrichten', href: '/app/chat', icon: MessageCircle },
   { label: 'Einstellungen', href: '/app/settings', icon: Settings },
