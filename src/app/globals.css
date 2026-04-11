@@ -137,26 +137,54 @@ a, button {
 .stagger-children > *:nth-child(8) { animation-delay: 350ms; }
 .stagger-children > *:nth-child(9) { animation-delay: 400ms; }
 
-/* ─── Google Maps InfoWindow theming ───────────────────────────────
-   The default InfoWindow is white with black text and has a chunky
-   close-button + tail. Override so it picks up our surface variables
-   and looks like the rest of the app. */
-.gm-style .gm-style-iw-c {
+/* ─── MapLibre popup theming ───────────────────────────────────────
+   The default popup is white with black text. Override so it picks
+   up our surface variables and looks like the rest of the app. */
+.maplibregl-popup-content {
+  background: var(--color-surface) !important;
+  color: var(--color-foreground) !important;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+  padding: 12px 14px !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--color-surface) !important;
+  border-bottom-color: var(--color-surface) !important;
+}
+.maplibregl-popup-close-button {
+  display: none;
+}
+.maplibregl-ctrl-attrib {
+  background: rgba(0, 0, 0, 0.4) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.maplibregl-ctrl-group {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+.maplibregl-ctrl button {
+  background-color: transparent !important;
+}
+.maplibregl-ctrl button:hover {
+  background-color: var(--color-elevated) !important;
+}
+
+/* ─── Apple MapKit JS theming ──────────────────────────────────────
+   Override the default callout (popup) so it matches the app surface. */
+.mk-callout {
   background: var(--color-surface) !important;
   color: var(--color-foreground) !important;
   border: 1px solid var(--color-border-subtle) !important;
   border-radius: 12px !important;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25) !important;
+}
+.mk-callout-content {
   padding: 12px 14px !important;
-}
-.gm-style .gm-style-iw-tc::after {
-  background: var(--color-surface) !important;
-}
-.gm-style .gm-style-iw-d {
-  overflow: visible !important;
-}
-.gm-style .gm-style-iw-chr {
-  display: none !important;
 }
 
 /* ─── Mobile drawer slide-in ─────────────────────────────────────── */
