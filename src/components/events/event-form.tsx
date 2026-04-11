@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
+import { ImageUpload } from '@/components/image-upload';
 import {
-  Save, Loader2, AlertTriangle, Check, X, Trash2,
+  Save, Loader2, AlertTriangle, Check, Trash2,
 } from 'lucide-react';
 import type { Event } from '@/types/occuro';
 
@@ -296,14 +297,14 @@ export function EventForm({
         </Field>
       </div>
 
-      {/* Banner URL — quick win until image upload is wired */}
-      <Field label="Banner-Bild URL" hint="Bild-Upload kommt bald — vorerst Direktlink.">
-        <input
-          type="url"
+      {/* Banner image upload */}
+      <Field label="Banner-Bild" hint="JPG, PNG oder WEBP, max. 5 MB. Empfohlenes Seitenverhältnis 21:9.">
+        <ImageUpload
           value={form.banner_url}
-          onChange={(e) => update('banner_url', e.target.value)}
-          placeholder="https://..."
-          className="input"
+          onChange={(url) => update('banner_url', url ?? '')}
+          bucket="event-images"
+          pathPrefix="event-banners"
+          variant="banner"
         />
       </Field>
 

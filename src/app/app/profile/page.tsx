@@ -11,6 +11,7 @@ import {
   Bookmark, Calendar, Clock, ImageOff, Lock, Pencil,
   Grid3X3, X, Save, Loader2, Users, Share2, Check, Plus,
 } from 'lucide-react';
+import { ImageUpload } from '@/components/image-upload';
 
 type ProfileTab = 'events' | 'private' | 'saved';
 type EventStatusFilter = 'interested' | 'attending' | 'past';
@@ -677,22 +678,21 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
               className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
             />
           </Field>
-          <Field label="Avatar URL" hint="Bild-Upload kommt bald — vorerst Direktlink.">
-            <input
-              type="url"
+          <Field label="Profilbild">
+            <ImageUpload
               value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              onChange={(url) => setAvatarUrl(url ?? '')}
+              bucket="avatars"
+              variant="circle"
             />
           </Field>
-          <Field label="Banner URL">
-            <input
-              type="url"
+          <Field label="Banner">
+            <ImageUpload
               value={bannerUrl}
-              onChange={(e) => setBannerUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              onChange={(url) => setBannerUrl(url ?? '')}
+              bucket="avatars"
+              pathPrefix="banners"
+              variant="banner"
             />
           </Field>
 

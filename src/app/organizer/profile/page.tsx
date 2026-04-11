@@ -11,6 +11,7 @@ import {
   CheckCircle2, ImageOff, Lock, Plus, X, Save, Loader2, Tag,
   CalendarRange, TrendingUp,
 } from 'lucide-react';
+import { ImageUpload } from '@/components/image-upload';
 
 type EventTab = 'upcoming' | 'live' | 'past';
 
@@ -380,13 +381,13 @@ function EditOrganizationModal({ organization, onClose, onSaved }: EditOrganizat
               className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
             />
           </Field>
-          <Field label="Avatar URL" hint="Bild-Upload kommt bald — vorerst Direktlink.">
-            <input
-              type="url"
+          <Field label="Logo / Avatar">
+            <ImageUpload
               value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              onChange={(url) => setAvatarUrl(url ?? '')}
+              bucket="avatars"
+              pathPrefix="org-avatars"
+              variant="circle"
             />
           </Field>
 
