@@ -36,7 +36,6 @@ const organizerNav: NavItem[] = [
   { label: 'Home', href: '/organizer', icon: Home },
   { label: 'Statistiken', href: '/organizer/dashboard', icon: LayoutDashboard },
   { label: 'Event erstellen', href: '/organizer/events/create', icon: CalendarPlus },
-  { label: 'Tickets', href: '/organizer/tickets', icon: Ticket },
   { label: 'Reichweite', href: '/organizer/reach', icon: BarChart3 },
   { label: 'Follower', href: '/organizer/followers', icon: UserCheck },
   { label: 'Nachrichten', href: '/organizer/chat', icon: MessageCircle },
