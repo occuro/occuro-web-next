@@ -9,7 +9,6 @@ import {
   ArrowLeft, Send, Loader2, Lock, ImageOff, MoreVertical, User, Users, Megaphone,
   UserCircle2, Flag, Ban,
 } from 'lucide-react';
-import { FriendProfileModal } from '@/components/friend-profile-modal';
 import { ReportModal } from '@/components/report-modal';
 
 interface ChatThreadProps {
@@ -56,12 +55,18 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Header menu + profile preview state ─────────────────────────────
+  // ── Header menu + profile navigation state ─────────────────────────
   const [menuOpen, setMenuOpen] = useState(false);
-  const [previewUser, setPreviewUser] = useState<SenderProfile | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Navigate to the public profile page for a user. Uses the username
+  // when set so the URL stays clean, falls back to the user id.
+  function openProfile(p: SenderProfile) {
+    const slug = p.username?.trim() || p.id;
+    router.push(`/app/profile/${slug}`);
+  }
 
   // Close the dropdown menu when clicking anywhere outside it
   useEffect(() => {
@@ -338,7 +343,7 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
         {headerInfo && (
           <button
             type="button"
-            onClick={() => { if (otherUser) setPreviewUser(otherUser); }}
+            onClick={() => { if (otherUser) openProfile(otherUser); }}
             disabled={!otherUser}
             className="flex items-center gap-3 flex-1 min-w-0 -mx-1 px-1 py-1 rounded-xl hover:bg-elevated/50 transition-colors text-left disabled:cursor-default disabled:hover:bg-transparent"
           >
@@ -377,7 +382,7 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
               <div className="absolute top-full right-0 mt-1 w-56 rounded-2xl border border-border-subtle bg-surface shadow-2xl shadow-black/40 overflow-hidden z-30 animate-fade-in">
                 <button
                   type="button"
-                  onClick={() => { setMenuOpen(false); setPreviewUser(otherUser); }}
+                  onClick={() => { setMenuOpen(false); openProfile(otherUser); }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-[13px] hover:bg-elevated transition-colors"
                 >
                   <UserCircle2 size={15} className="text-muted-fg" />
@@ -439,7 +444,7 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
                 profile={profile}
                 showAvatar={showAvatar}
                 showName={showName}
-                onProfileClick={(p) => setPreviewUser(p)}
+                onProfileClick={(p) => openProfile(p)}
               />
             );
           })
@@ -466,19 +471,6 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
             {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
           </button>
         </form>
-      )}
-
-      {/* ─── Profile preview modal (opened from header tap or 3-dots menu) ─── */}
-      {previewUser && (
-        <FriendProfileModal
-          friend={{
-            id: previewUser.id,
-            full_name: previewUser.full_name ?? 'Unbekannt',
-            username: previewUser.username,
-            avatar_url: previewUser.avatar_url,
-          }}
-          onClose={() => setPreviewUser(null)}
-        />
       )}
 
       {/* ─── Report modal ─── */}

@@ -1,13 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import {
   Search, Users, X, BadgeCheck, UserPlus, UserCheck, Building2,
   Check, Loader2, UserX, Clock,
 } from 'lucide-react';
-import { FriendProfileModal } from '@/components/friend-profile-modal';
 import { OrganizerProfileModal } from '@/components/organizer-profile-modal';
 
 type Tab = 'friends' | 'requests' | 'discover';
@@ -31,6 +32,7 @@ interface OrgResult {
 export default function FriendsPage() {
   const { user } = useAuth();
   const supabase = createClient();
+  const router = useRouter();
 
   const [tab, setTab] = useState<Tab>('friends');
   const [search, setSearch] = useState('');
@@ -53,9 +55,16 @@ export default function FriendsPage() {
   // Action busy states (per-id)
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
-  // Currently previewed friend (clicking a row opens the modal)
-  const [previewFriend, setPreviewFriend] = useState<PersonResult | null>(null);
+  // Org preview still uses a modal (orgs don't have a public profile
+  // page on the webapp yet — friends do).
   const [previewOrg, setPreviewOrg] = useState<OrgResult | null>(null);
+
+  // Helper: navigate to the public profile page using username when
+  // available (cleaner URL) and falling back to the user id.
+  const openProfile = useCallback((person: PersonResult) => {
+    const slug = person.username?.trim() || person.id;
+    router.push(`/app/profile/${slug}`);
+  }, [router]);
 
   const setBusy = (id: string, busy: boolean) => {
     setBusyIds((prev) => {
@@ -432,7 +441,7 @@ export default function FriendsPage() {
                       key={friend.id}
                       person={friend}
                       busy={busyIds.has(friend.id)}
-                      onPreview={setPreviewFriend}
+                      onPreview={openProfile}
                       action={
                         <button
                           onClick={(e) => { e.stopPropagation(); void removeFriend(friend.id); }}
@@ -516,7 +525,7 @@ export default function FriendsPage() {
                             key={person.id}
                             person={person}
                             busy={busyIds.has(person.id)}
-                            onPreview={setPreviewFriend}
+                            onPreview={openProfile}
                             action={
                               outgoingIds.has(person.id) ? (
                                 <button
@@ -567,7 +576,7 @@ export default function FriendsPage() {
                         key={person.id}
                         person={person}
                         busy={busyIds.has(person.id)}
-                        onPreview={setPreviewFriend}
+                        onPreview={openProfile}
                         action={
                           outgoingIds.has(person.id) ? (
                             <button
@@ -596,16 +605,6 @@ export default function FriendsPage() {
             </>
           )}
         </>
-      )}
-
-      {/* Friend profile preview modal — opens on row tap */}
-      {previewFriend && (
-        <FriendProfileModal
-          friend={previewFriend}
-          isFriend={friends.some((f) => f.id === previewFriend.id)}
-          onRemoveFriend={removeFriend}
-          onClose={() => setPreviewFriend(null)}
-        />
       )}
 
       {/* Organizer profile preview modal — opens on org card tap */}
