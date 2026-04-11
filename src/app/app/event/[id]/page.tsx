@@ -13,6 +13,7 @@ import {
   Trophy, Trash2, Flag,
 } from 'lucide-react';
 import { ReportModal } from '@/components/report-modal';
+import { OrganizerProfileModal } from '@/components/organizer-profile-modal';
 
 type UserStatus = 'interested' | 'confirmed' | 'attended' | 'not-interested' | 'saved' | null;
 
@@ -65,6 +66,7 @@ export default function EventDetailPage({
   const [status, setStatus] = useState<UserStatus>(null);
   const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
+  const [orgPreviewOpen, setOrgPreviewOpen] = useState(false);
 
   // Giveaway state
   const [giveaway, setGiveaway] = useState<Giveaway | null>(null);
@@ -441,12 +443,26 @@ export default function EventDetailPage({
         </div>
       )}
 
-      {/* Organizer */}
+      {/* Organizer — clickable card opens the org profile preview when
+          we have a real organizer_org_id (i.e. it's a verified org, not
+          a private user-created event). */}
       {event.organizer_name && (
-        <div className="rounded-2xl border border-border-subtle bg-surface p-5">
-          <p className="text-[12px] text-muted-fg uppercase tracking-wide mb-2">Veranstalter</p>
-          <p className="font-semibold">{event.organizer_name}</p>
-        </div>
+        event.organizer_org_id ? (
+          <button
+            type="button"
+            onClick={() => setOrgPreviewOpen(true)}
+            className="w-full text-left rounded-2xl border border-border-subtle bg-surface p-5 hover:border-violet-500/30 hover:bg-elevated/30 transition-colors"
+          >
+            <p className="text-[12px] text-muted-fg uppercase tracking-wide mb-2">Veranstalter</p>
+            <p className="font-semibold">{event.organizer_name}</p>
+            <p className="text-[11px] text-muted-fg mt-0.5">Antippen für Profil</p>
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-border-subtle bg-surface p-5">
+            <p className="text-[12px] text-muted-fg uppercase tracking-wide mb-2">Veranstalter</p>
+            <p className="font-semibold">{event.organizer_name}</p>
+          </div>
+        )
       )}
 
       {/* ─── EVENT FEED ───────────────────────────────────────────── */}
@@ -480,6 +496,18 @@ export default function EventDetailPage({
         targetId={event.id}
         targetName={event.title}
       />
+
+      {/* Organizer profile preview */}
+      {orgPreviewOpen && event.organizer_org_id && (
+        <OrganizerProfileModal
+          org={{
+            id: event.organizer_org_id,
+            name: event.organizer_name ?? 'Veranstalter',
+            avatar_url: null,
+          }}
+          onClose={() => setOrgPreviewOpen(false)}
+        />
+      )}
     </div>
   );
 }

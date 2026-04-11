@@ -8,6 +8,7 @@ import {
   Check, Loader2, UserX, Clock,
 } from 'lucide-react';
 import { FriendProfileModal } from '@/components/friend-profile-modal';
+import { OrganizerProfileModal } from '@/components/organizer-profile-modal';
 
 type Tab = 'friends' | 'requests' | 'discover';
 
@@ -54,6 +55,7 @@ export default function FriendsPage() {
 
   // Currently previewed friend (clicking a row opens the modal)
   const [previewFriend, setPreviewFriend] = useState<PersonResult | null>(null);
+  const [previewOrg, setPreviewOrg] = useState<OrgResult | null>(null);
 
   const setBusy = (id: string, busy: boolean) => {
     setBusyIds((prev) => {
@@ -396,8 +398,13 @@ export default function FriendsPage() {
                   </div>
                   <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                     {followedOrgs.map((org) => (
-                      <div key={org.id} className="flex flex-col items-center gap-2 min-w-[72px]">
-                        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle">
+                      <button
+                        key={org.id}
+                        type="button"
+                        onClick={() => setPreviewOrg(org)}
+                        className="flex flex-col items-center gap-2 min-w-[72px] group"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all">
                           {org.avatar_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={org.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -405,8 +412,8 @@ export default function FriendsPage() {
                             <span className="text-foreground/70">{org.name.charAt(0).toUpperCase()}</span>
                           )}
                         </div>
-                        <span className="text-[10px] text-center font-medium truncate w-full">{org.name}</span>
-                      </div>
+                        <span className="text-[10px] text-center font-medium truncate w-full group-hover:text-violet-400 transition-colors">{org.name}</span>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -542,7 +549,7 @@ export default function FriendsPage() {
                         Veranstalter
                       </h2>
                       <div className="space-y-2">
-                        {orgSearchResults.map((org) => <OrgRow key={org.id} org={org} />)}
+                        {orgSearchResults.map((org) => <OrgRow key={org.id} org={org} onPreview={setPreviewOrg} />)}
                       </div>
                     </div>
                   )}
@@ -598,6 +605,14 @@ export default function FriendsPage() {
           isFriend={friends.some((f) => f.id === previewFriend.id)}
           onRemoveFriend={removeFriend}
           onClose={() => setPreviewFriend(null)}
+        />
+      )}
+
+      {/* Organizer profile preview modal — opens on org card tap */}
+      {previewOrg && (
+        <OrganizerProfileModal
+          org={{ id: previewOrg.id, name: previewOrg.name, avatar_url: previewOrg.avatar_url }}
+          onClose={() => setPreviewOrg(null)}
         />
       )}
     </div>
@@ -684,9 +699,25 @@ function PersonRow({
   );
 }
 
-function OrgRow({ org }: { org: OrgResult }) {
+function OrgRow({ org, onPreview }: { org: OrgResult; onPreview?: (org: OrgResult) => void }) {
+  const Wrapper = onPreview
+    ? ({ children }: { children: React.ReactNode }) => (
+        <button
+          type="button"
+          onClick={() => onPreview(org)}
+          className="w-full text-left flex items-center gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface hover:bg-elevated/40 hover:border-border-strong transition-colors"
+        >
+          {children}
+        </button>
+      )
+    : ({ children }: { children: React.ReactNode }) => (
+        <div className="flex items-center gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface">
+          {children}
+        </div>
+      );
+
   return (
-    <div className="flex items-center gap-4 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface">
+    <Wrapper>
       <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center text-[13px] font-semibold flex-shrink-0 overflow-hidden">
         {org.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -702,7 +733,7 @@ function OrgRow({ org }: { org: OrgResult }) {
         </div>
         {org.category && <p className="text-[12px] text-muted-fg truncate">{org.category}</p>}
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
