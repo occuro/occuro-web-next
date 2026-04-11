@@ -195,6 +195,19 @@ export default function EventDetailPage({
           { onConflict: 'event_id,user_id' },
         );
         setStatus('saved');
+        // Saving an invited event also counts as engagement → auto-
+        // accept the pending invitation, same as the RSVP path below.
+        if (pendingInvite) {
+          const { error: invErr } = await supabase
+            .from('event_invitations')
+            .update({ status: 'accepted' })
+            .eq('id', pendingInvite.id);
+          if (invErr) {
+            console.warn('[event] auto-accept invitation after save failed:', invErr.message);
+          } else {
+            setPendingInvite(null);
+          }
+        }
       }
       return;
     }
@@ -207,6 +220,27 @@ export default function EventDetailPage({
         { onConflict: 'event_id,user_id' },
       );
       setStatus(newStatus);
+    }
+
+    // If the user has a pending invitation for this event AND they
+    // just engaged positively (interested / confirmed), auto-accept
+    // the invitation. Without this, clicking "Zusagen" on an invited
+    // private event left the invitation in pending state forever and
+    // the event never showed up in the user's Privat tab on profile
+    // (which keys off accepted invitations).
+    if (
+      pendingInvite &&
+      (newStatus === 'interested' || newStatus === 'confirmed' || newStatus === 'attended')
+    ) {
+      const { error: invErr } = await supabase
+        .from('event_invitations')
+        .update({ status: 'accepted' })
+        .eq('id', pendingInvite.id);
+      if (invErr) {
+        console.warn('[event] auto-accept invitation after RSVP failed:', invErr.message);
+      } else {
+        setPendingInvite(null);
+      }
     }
     // Refresh counts
     const { data } = await supabase
@@ -548,7 +582,7 @@ export default function EventDetailPage({
             }`}
           >
             <CheckCircle2 size={16} strokeWidth={status === 'confirmed' ? 2.5 : 1.8} />
-            Bin dabei
+            Zusagen
           </button>
           <button
             onClick={() => updateStatus('saved')}

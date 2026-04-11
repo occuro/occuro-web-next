@@ -40,6 +40,25 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Reload on tab focus / visibility — same pattern as useChatRooms.
+  // Without this, RSVPing or saving an event from /app/event/[id] and
+  // navigating back left the profile showing stale tabs because Next.js
+  // App Router keeps the page mounted and useEffect doesn't re-run.
+  useEffect(() => {
+    if (!user) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void fetchData();
+    };
+    const onFocus = () => { void fetchData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   async function fetchData() {
     setLoading(true);
     const [statusesRes, friendsRes, savedRes, invitesRes] = await Promise.all([

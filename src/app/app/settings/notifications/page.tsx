@@ -83,7 +83,7 @@ const ORG_GROUPS: { title: string; items: { key: PrefKey; label: string; subtitl
     items: [
       { key: 'org_new_followers', label: 'Neue Follower', icon: UserPlus },
       { key: 'org_milestones', label: 'Meilensteine', subtitle: '10, 50, 100… Interessenten', icon: Megaphone },
-      { key: 'event_rsvp', label: 'Neue RSVPs', subtitle: 'Wenn jemand auf "Bin dabei" klickt', icon: Bell },
+      { key: 'event_rsvp', label: 'Neue RSVPs', subtitle: 'Wenn jemand "Zusagen" klickt', icon: Bell },
     ],
   },
   {

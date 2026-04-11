@@ -261,6 +261,19 @@ export function EventForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Banner image — sits at the very top so it's the first thing
+          a user sees while creating the event. The visual anchor for
+          everything that follows. */}
+      <Field label="Banner-Bild" hint="JPG, PNG oder WEBP, max. 5 MB. Empfohlenes Seitenverhältnis 21:9.">
+        <ImageUpload
+          value={form.banner_url}
+          onChange={(url) => update('banner_url', url ?? '')}
+          bucket="event-images"
+          pathPrefix="event-banners"
+          variant="banner"
+        />
+      </Field>
+
       {/* Title + slogan */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Titel" required>
@@ -491,17 +504,6 @@ export function EventForm({
           </select>
         </Field>
       </div>
-
-      {/* Banner image upload */}
-      <Field label="Banner-Bild" hint="JPG, PNG oder WEBP, max. 5 MB. Empfohlenes Seitenverhältnis 21:9.">
-        <ImageUpload
-          value={form.banner_url}
-          onChange={(url) => update('banner_url', url ?? '')}
-          bucket="event-images"
-          pathPrefix="event-banners"
-          variant="banner"
-        />
-      </Field>
 
       {/* Chat-Toggle — kein Teilnehmer-Cap mehr (weder Privat noch
           Veranstalter). Für private Events ist die Einladung der echte
