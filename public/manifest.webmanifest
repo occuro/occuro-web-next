@@ -1,0 +1,47 @@
+{
+  "name": "occuro — Events entdecken",
+  "short_name": "occuro",
+  "description": "Entdecke Events in deiner Nähe, verbinde dich mit Freunden, und erlebe unvergessliche Momente.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0A0B",
+  "theme_color": "#0A0A0B",
+  "lang": "de",
+  "categories": ["social", "entertainment", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Karte",
+      "short_name": "Karte",
+      "url": "/app/map",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kalender",
+      "short_name": "Kalender",
+      "url": "/app/calendar",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Chats",
+      "short_name": "Chats",
+      "url": "/app/chat",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
