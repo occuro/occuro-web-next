@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import {
-  Globe, Palette, Bell, Shield, MapPin, UserX, Lock, Mail,
+  Globe, Bell, Shield, MapPin, UserX, Lock, Mail,
   HelpCircle, FileText, Info, LogOut, Trash2, ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
@@ -25,7 +25,6 @@ export default function SettingsPage() {
       title: 'Allgemein',
       items: [
         { label: 'Sprache', subtitle: 'Deutsch', icon: Globe, href: '/app/settings/language' },
-        { label: 'Erscheinungsbild', subtitle: 'System', icon: Palette, href: '/app/settings/appearance' },
         { label: 'Benachrichtigungen', icon: Bell, href: '/app/settings/notifications' },
       ],
     },

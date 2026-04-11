@@ -135,13 +135,34 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
           );
         }
 
-        // Auto-locate is intentionally NOT fired here anymore. It used
-        // to race against the events fetch — if the geolocation
-        // resolved first, the map centered on the user and the pin
-        // for the event ended up offscreen. Events take priority now:
-        // the events sync effect below fits the viewport to the
-        // events bounds. The user can still tap the manual locate
-        // button at the top of the map to jump to their position.
+        // Auto-locate the user, but only as a fallback. The events
+        // sync effect below sets didFitRef = true the first time
+        // events arrive with coords, and we check that flag here so
+        // we never override an already-fit-to-events viewport.
+        // Behaviour:
+        //   - Events arrive first → fit to events → ignore geolocation
+        //   - Geolocation resolves first → center on user → events
+        //     sync effect still runs but didFitRef is true so it
+        //     doesn't yank the viewport away
+        if (navigator.geolocation && !skipAutoLocate) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (cancelled || !mapInstanceRef.current) return;
+              if (didFitRef.current) return; // events already won
+              didLocateUserRef.current = true;
+              didFitRef.current = true;
+              mapInstanceRef.current.setRegionAnimated(
+                new mapkit.CoordinateRegion(
+                  new mapkit.Coordinate(pos.coords.latitude, pos.coords.longitude),
+                  new mapkit.CoordinateSpan(0.15, 0.15),
+                ),
+                true,
+              );
+            },
+            () => {},
+            { timeout: 8000, maximumAge: 60_000 },
+          );
+        }
       })
       .catch((err) => {
         console.error('[AppleMap] init failed:', err);

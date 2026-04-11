@@ -5,7 +5,7 @@ import { SettingsShell, SettingsCard, SettingsRow, Toggle } from '@/components/s
 import { useAuth } from '@/lib/auth-context';
 import {
   Bell, MessageCircle, Users, UserPlus, Calendar, Megaphone,
-  Star, Rss, MapPin,
+  Star, Rss,
 } from 'lucide-react';
 
 const PREFS_KEY = '@occuro/notification_prefs';
@@ -21,8 +21,7 @@ type PrefKey =
   | 'org_new_followers'
   | 'org_milestones'
   | 'org_event_reminders'
-  | 'event_rsvp'
-  | 'share_live_location';
+  | 'event_rsvp';
 
 const DEFAULT_PREFS: Record<PrefKey, boolean> = {
   friend_requests: true,
@@ -36,7 +35,6 @@ const DEFAULT_PREFS: Record<PrefKey, boolean> = {
   org_milestones: true,
   org_event_reminders: true,
   event_rsvp: true,
-  share_live_location: false,
 };
 
 const INDIVIDUAL_GROUPS: { title: string; items: { key: PrefKey; label: string; subtitle?: string; icon: typeof Bell }[] }[] = [
@@ -60,12 +58,6 @@ const INDIVIDUAL_GROUPS: { title: string; items: { key: PrefKey; label: string; 
       { key: 'event_reminders', label: 'Event-Erinnerungen', subtitle: 'Vor dem Beginn deiner Events', icon: Calendar },
       { key: 'event_feed', label: 'Event-Feed', subtitle: 'Neue Posts in Events, an denen du teilnimmst', icon: Rss },
       { key: 'organizer_events', label: 'Veranstalter-Updates', subtitle: 'Neue Events von Veranstaltern, denen du folgst', icon: Star },
-    ],
-  },
-  {
-    title: 'Standort',
-    items: [
-      { key: 'share_live_location', label: 'Live-Standort teilen', subtitle: 'Bei Events deinen Standort an Freunde freigeben', icon: MapPin },
     ],
   },
 ];
@@ -119,7 +111,7 @@ export default function NotificationsSettingsPage() {
   return (
     <SettingsShell
       title="Benachrichtigungen"
-      description="Wähle, welche Push-Benachrichtigungen du erhalten möchtest."
+      description="Wähle, welche In-App-Benachrichtigungen du erhalten möchtest."
     >
       {groups.map((group) => (
         <SettingsCard key={group.title} title={group.title}>
