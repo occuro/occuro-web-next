@@ -9,7 +9,7 @@ import Link from 'next/link';
 import {
   MapPin, Globe, AtSign, Settings, Heart, CheckCircle2,
   Bookmark, Calendar, Clock, ImageOff, Lock, Pencil,
-  Grid3X3, X, Save, Loader2, Users, Share2, Check,
+  Grid3X3, X, Save, Loader2, Users, Share2, Check, Plus,
 } from 'lucide-react';
 
 type ProfileTab = 'events' | 'private' | 'saved';
@@ -322,6 +322,14 @@ export default function ProfilePage() {
       {/* ─── Private events tab ─── */}
       {profileTab === 'private' && (
         <>
+          {/* Quick CTA: create new private event */}
+          <Link
+            href="/app/events/create"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+          >
+            <Plus size={15} /> Neues privates Event erstellen
+          </Link>
+
           {privateEvents.length > 0 && (
             <div className="grid grid-cols-2 gap-1.5">
               {([
