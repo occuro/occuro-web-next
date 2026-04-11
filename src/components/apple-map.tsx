@@ -76,13 +76,23 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
   // get yanked back to Germany center after their position arrives.
   const didLocateUserRef = useRef(false);
   const onSelectRef = useRef(onSelect);
+  // Mirror `selected` into a ref so the mount effect can read the
+  // latest value at init time without depending on it (which would
+  // re-create the map every time selection changes — bad).
+  const selectedRef = useRef(selected);
+  // State (not ref) so the pan-on-selected effect re-runs once the map
+  // becomes available. The deeplink fetch may set `selected` BEFORE
+  // mapkit is ready; the ref-based approach silently dropped that pan.
+  const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Keep the latest onSelect callback in a ref so we don't have to
-  // re-create annotation listeners just because the parent re-renders.
+  // Keep the latest onSelect + selected in refs.
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
 
   // ── Boot the map once on mount ──────────────────────────────────────
   useEffect(() => {
@@ -102,6 +112,25 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
           ),
         });
         mapInstanceRef.current = map;
+        setMapReady(true);
+
+        // Deeplink center: if the parent already set `selected` (e.g. via
+        // ?event=… on /app/map) BEFORE mapkit finished loading, the
+        // pan-on-selected effect at the bottom will have bailed because
+        // mapInstanceRef.current was null. Center the map immediately
+        // here so the user lands on the right spot.
+        const selNow = selectedRef.current;
+        if (selNow && selNow.latitude != null && selNow.longitude != null) {
+          didFitRef.current = true; // suppress the auto-fit-to-events
+          didLocateUserRef.current = true; // suppress the auto-locate
+          map.setRegionAnimated(
+            new mapkit.CoordinateRegion(
+              new mapkit.Coordinate(selNow.latitude, selNow.longitude),
+              new mapkit.CoordinateSpan(0.05, 0.05),
+            ),
+            false,
+          );
+        }
 
         // Auto-locate the user as soon as the map is ready. The browser
         // shows its native permission prompt — if the user accepts we
@@ -208,6 +237,9 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
   }, [events]);
 
   // ── Fly to selected event ──────────────────────────────────────────
+  // mapReady is in the deps so this fires both when selected changes
+  // AND when the map first becomes available — covers the deeplink
+  // race where selected was set before mapkit finished loading.
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !selected || selected.latitude == null || selected.longitude == null) return;
@@ -218,7 +250,7 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
       ),
       true,
     );
-  }, [selected]);
+  }, [selected, mapReady]);
 
   function flyToLocation(lat: number, lng: number) {
     const map = mapInstanceRef.current;

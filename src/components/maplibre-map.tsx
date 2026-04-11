@@ -58,6 +58,13 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
   }, [skipAutoLocate]);
 
   const initialView = useMemo(() => {
+    // Deeplink wins: if the parent already passed a `selected` event
+    // (e.g. from /app/map?event=…), center the map on it from the
+    // very first render. Otherwise the auto-fit logic would briefly
+    // show DACH-wide before snapping to the deeplink target.
+    if (selected && selected.latitude != null && selected.longitude != null) {
+      return { longitude: selected.longitude, latitude: selected.latitude, zoom: 13 };
+    }
     if (events.length === 0) return DEFAULT_VIEW;
     if (events.length === 1) {
       return { longitude: events[0].longitude!, latitude: events[0].latitude!, zoom: 11 };
@@ -69,13 +76,17 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
       latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
       zoom: 5,
     };
+    // selected only matters for the initial render — once the map is
+    // mounted, the pan-on-selected effect below handles updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events]);
 
   // Auto-fit bounds when events change — but only if we haven't already
-  // centered on the user's location (otherwise we'd yank them away).
+  // centered on the user's location AND no deeplink target is set.
   useEffect(() => {
     if (!mapRef.current || events.length < 2) return;
     if (didLocateUserRef.current) return;
+    if (selected) return; // deeplink target — don't yank to bbox
     const lngs = events.map((e) => e.longitude!);
     const lats = events.map((e) => e.latitude!);
     const bounds: [[number, number], [number, number]] = [
@@ -83,9 +94,10 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
       [Math.max(...lngs), Math.max(...lats)],
     ];
     mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 12 });
-  }, [events]);
+  }, [events, selected]);
 
-  // Fly to selected
+  // Fly to selected — also fires when the map first becomes available
+  // (handles the deeplink race where selected was set before mount).
   useEffect(() => {
     if (!mapRef.current || !selected) return;
     mapRef.current.flyTo({
