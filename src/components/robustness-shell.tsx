@@ -5,32 +5,89 @@ import { AlertTriangle, RefreshCw, X, Sparkles } from 'lucide-react';
 
 /**
  * RobustnessShell wraps the entire app with several layers of protection
- * against deploy-time breakage:
+ * against deploy-time breakage. Vercel's built-in Skew Protection is
+ * Pro-only ($20/mo) so we roll our own with a service worker + polling.
  *
- * 1. **ChunkLoadError auto-recovery** (window-level): when Next.js fails
- *    to load a JS chunk because the file no longer exists on the new
- *    deploy, we trigger a single hard reload (with a cooldown so we
- *    can't get into a reload loop).
+ * 1. **Service Worker** (`/sw.js`): intercepts fetches to /_next/static/*
+ *    chunks. If any returns 404 (file no longer exists on the new
+ *    deploy), the SW posts a CHUNK_GONE message to every open tab.
+ *    The shell listens and triggers a hard reload. Catches the race
+ *    where the user clicks a link that loads a chunk from the old
+ *    build that's already gone.
  *
- * 2. **Update-available banner**: polls /api/version every 30s + on
- *    every tab focus + on every click. Compares against the build the
- *    user is running. When a newer deploy is detected, an unobtrusive
- *    bottom-right toast lets the user actively update with one tap.
- *    After 5 minutes of being shown, it auto-reloads to prevent stale
- *    sessions from staying broken indefinitely.
+ * 2. **ChunkLoadError window listener** (ChunkErrorRecovery): catches
+ *    the same condition from a different angle — if React/Next surfaces
+ *    a ChunkLoadError directly to window.onerror, we hard-reload.
  *
- * 3. **Error boundary**: if a React component throws, we render a
- *    "something went wrong" screen with a Reset button instead of a
- *    blank page. Reset clears auth + localStorage + reloads.
+ * 3. **Update-available banner**: polls /api/version every 30s + on
+ *    every tab focus + on every click. When a newer deploy is detected,
+ *    an unobtrusive bottom-right toast lets the user actively update.
+ *    After 5 minutes the banner auto-reloads anyway.
+ *
+ * 4. **Error boundary**: if a React component throws, we render a
+ *    "something went wrong" screen with a Reset button.
  */
 export function RobustnessShell({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
+      <ServiceWorkerInstaller />
       <ChunkErrorRecovery />
       <UpdateAvailableBanner />
       {children}
     </ErrorBoundary>
   );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// 0. Service worker installer
+// ────────────────────────────────────────────────────────────────────
+
+const SW_RELOAD_COOLDOWN_KEY = '__occuro_sw_reload_at';
+const SW_RELOAD_COOLDOWN_MS = 30 * 1000;
+
+function ServiceWorkerInstaller() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+
+    let active = true;
+
+    // Register the worker. updateViaCache='none' makes the browser
+    // revalidate sw.js on every navigation, so SW updates roll out
+    // basically immediately instead of after the browser's default
+    // 24h cache window.
+    navigator.serviceWorker
+      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
+      .then((reg) => {
+        if (!active) return;
+        // Force an update check on register so we always have the
+        // freshest worker.
+        void reg.update().catch(() => {});
+      })
+      .catch((err) => {
+        console.warn('[robustness] SW register failed:', err);
+      });
+
+    // Handle CHUNK_GONE messages from the SW. Cooldown prevents reload
+    // loops if the new build is also broken.
+    function onMessage(event: MessageEvent) {
+      if (event.data?.type !== 'CHUNK_GONE') return;
+      try {
+        const last = sessionStorage.getItem(SW_RELOAD_COOLDOWN_KEY);
+        if (last && Date.now() - parseInt(last, 10) < SW_RELOAD_COOLDOWN_MS) return;
+        sessionStorage.setItem(SW_RELOAD_COOLDOWN_KEY, String(Date.now()));
+      } catch {}
+      console.warn('[robustness] SW reported chunk gone — hard reload');
+      window.location.reload();
+    }
+    navigator.serviceWorker.addEventListener('message', onMessage);
+
+    return () => {
+      active = false;
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+    };
+  }, []);
+  return null;
 }
 
 // ────────────────────────────────────────────────────────────────────
