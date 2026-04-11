@@ -48,6 +48,10 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   const [friendCount, setFriendCount] = useState(0);
   const [friendshipStatus, setFriendshipStatus] = useState<'none' | 'friends' | 'pending_out' | 'pending_in'>('none');
   const [loading, setLoading] = useState(true);
+  // Debug trail surfaced in the error UI when nothing matches.
+  // Tells us exactly what the page tried, what came back, and any
+  // RLS / network errors — without needing the user to open DevTools.
+  const [debugLog, setDebugLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [eventGroup, setEventGroup] = useState<EventGroup>('attending');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,45 +62,45 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   // ── Load everything ──────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
-    console.info(`[profile] resolving slug=${slug}`);
-    // Resolve slug → real user id. UUIDs go through .eq('id', ...);
-    // anything else is treated as a username. The previous version
-    // tried `eq('username', slug)` first which failed for UUID slugs
-    // because Postgres rejects the implicit-text-cast comparison
-    // when RLS is involved.
+    const trail: string[] = [];
+    const log = (msg: string) => {
+      trail.push(msg);
+      console.info(`[profile] ${msg}`);
+    };
+    log(`slug="${slug}"`);
+    log(`auth user=${user?.id ?? 'null'}`);
+
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
+    log(`isUuid=${isUuid}`);
     let resolved: FullProfile | null = null;
     const cols = 'id, full_name, username, avatar_url, banner_url, bio, location, website, instagram, interests';
-    if (isUuid) {
-      const { data, error } = await supabase
-        .from('profiles').select(cols).eq('id', slug).maybeSingle();
-      if (error) console.warn('[profile] id lookup failed:', error.message);
-      resolved = (data as FullProfile | null) ?? null;
+
+    // Try BOTH lookups regardless of slug shape — usernames could be
+    // anything, ids are UUIDs, and we'd rather make two cheap queries
+    // than misclassify and silently fail.
+    const idRes = await supabase
+      .from('profiles').select(cols).eq('id', slug).maybeSingle();
+    log(`id lookup: ${idRes.data ? 'HIT' : 'miss'}${idRes.error ? ` err=${idRes.error.message}` : ''}`);
+    if (idRes.data) {
+      resolved = idRes.data as FullProfile;
     } else {
-      // Username lookup is case-insensitive — the unique index is on
-      // lower(username) so .eq('username', 'Max') would miss a row
-      // with username='max'. ilike with no wildcards behaves like
-      // a case-insensitive eq.
-      const { data, error } = await supabase
+      const userRes = await supabase
         .from('profiles').select(cols).ilike('username', slug).maybeSingle();
-      if (error) console.warn('[profile] username lookup failed:', error.message);
-      resolved = (data as FullProfile | null) ?? null;
-      // If username didn't match, fall back to id in case the slug
-      // happens to be a non-UUID id format.
-      if (!resolved) {
-        const fallback = await supabase
-          .from('profiles').select(cols).eq('id', slug).maybeSingle();
-        if (fallback.error) console.warn('[profile] fallback id lookup failed:', fallback.error.message);
-        resolved = (fallback.data as FullProfile | null) ?? null;
+      log(`username lookup: ${userRes.data ? 'HIT' : 'miss'}${userRes.error ? ` err=${userRes.error.message}` : ''}`);
+      if (userRes.data) {
+        resolved = userRes.data as FullProfile;
       }
     }
+
     if (!resolved) {
-      console.warn(`[profile] no row matched slug=${slug}`);
+      log('no row matched — giving up');
+      setDebugLog(trail);
       setProfile(null);
       setLoading(false);
       return;
     }
-    console.info(`[profile] resolved to`, resolved.id);
+    log(`resolved id=${resolved.id} username=${resolved.username ?? 'null'}`);
+    setDebugLog(trail);
     setProfile(resolved);
 
     const today = new Date().toISOString().split('T')[0];
@@ -260,11 +264,21 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
 
   if (!profile) {
     return (
-      <div className="max-w-3xl mx-auto py-20 text-center text-muted-fg">
+      <div className="max-w-3xl mx-auto py-20 text-center text-muted-fg space-y-4">
         <p className="text-sm font-medium">Profil nicht gefunden</p>
-        <Link href="/app/friends" className="inline-flex items-center gap-1 mt-3 text-[13px] text-violet-400 hover:text-violet-300">
+        <Link href="/app/friends" className="inline-flex items-center gap-1 text-[13px] text-violet-400 hover:text-violet-300">
           <ArrowLeft size={13} /> Zurück zu Freunden
         </Link>
+        {debugLog.length > 0 && (
+          <details className="mt-6 text-left max-w-md mx-auto">
+            <summary className="text-[11px] cursor-pointer hover:text-foreground">
+              Debug-Info (zum Reporten)
+            </summary>
+            <pre className="text-[10px] mt-2 p-3 rounded-lg bg-elevated/60 border border-border-subtle whitespace-pre-wrap break-all text-left text-foreground/80">
+{debugLog.join('\n')}
+            </pre>
+          </details>
+        )}
       </div>
     );
   }
