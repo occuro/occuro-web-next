@@ -7,9 +7,18 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // Match the same fallback chain as next.config.ts so the build-time
+  // bundle marker and the runtime API marker derive from the same
+  // source. If VERCEL_DEPLOYMENT_ID isn't present at runtime for any
+  // reason, the git commit SHA is always set on Vercel and changes
+  // with every deploy.
+  const deploymentId =
+    process.env.VERCEL_DEPLOYMENT_ID ??
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    'dev';
   return NextResponse.json(
     {
-      deploymentId: process.env.VERCEL_DEPLOYMENT_ID ?? 'dev',
+      deploymentId,
       builtAt: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
     },
     {

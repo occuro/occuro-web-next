@@ -161,7 +161,7 @@ function ChunkErrorRecovery() {
 // 2. Deploy bouncer — sign out + bounce on new deployment
 // ────────────────────────────────────────────────────────────────────
 
-const VERSION_POLL_INTERVAL_MS = 30 * 1000; // 30s
+const VERSION_POLL_INTERVAL_MS = 15 * 1000; // 15s — aggressive polling so a stuck user notices a fresh deploy fast.
 
 /**
  * Detects when a new deployment is live and forces the current user
@@ -182,9 +182,12 @@ function DeployBouncer() {
 
     // Build-time deployment ID baked into the bundle the user is running.
     const myDeploymentId = process.env.NEXT_PUBLIC_DEPLOYMENT_ID;
+    // Diagnostic: always print the bundle's version on mount so anyone
+    // can crack open DevTools and verify the bouncer is wired up.
+    console.info(`[robustness] bundle deploymentId=${myDeploymentId}`);
     const isDev = !myDeploymentId || myDeploymentId === 'dev';
     if (isDev) {
-      console.warn('[robustness] NEXT_PUBLIC_DEPLOYMENT_ID is "dev" — skew detection disabled. On Vercel this means VERCEL_DEPLOYMENT_ID was not present at build time.');
+      console.warn('[robustness] NEXT_PUBLIC_DEPLOYMENT_ID is "dev" — skew detection disabled. On Vercel this means neither VERCEL_DEPLOYMENT_ID nor VERCEL_GIT_COMMIT_SHA was present at build time.');
       return;
     }
 
@@ -229,6 +232,7 @@ function DeployBouncer() {
         const data = await res.json() as { deploymentId: string };
         if (cancelled) return;
         if (data.deploymentId && data.deploymentId !== myDeploymentId) {
+          console.warn(`[robustness] version mismatch — bundle=${myDeploymentId} server=${data.deploymentId}`);
           await bounce(data.deploymentId);
         }
       } catch {

@@ -16,13 +16,21 @@ const nextConfig: NextConfig = {
   // "stuck after deploy" bug.
   //
   // Falls back to undefined in dev (no skew protection needed locally).
-  deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
+  // Also fall back to the git commit SHA — VERCEL_DEPLOYMENT_ID is the
+  // canonical value but on some Vercel project setups it shows up empty
+  // at build time, leaving the bundle without a usable version marker.
+  // The commit SHA is always present on Vercel and changes with every
+  // deploy, so it's a perfectly valid stand-in for skew detection.
+  deploymentId: process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA,
 
   // Expose a public version of the deployment ID so the client can
   // poll /api/version and detect "a newer build is live" without
   // having to hard-reload to find out.
   env: {
-    NEXT_PUBLIC_DEPLOYMENT_ID: process.env.VERCEL_DEPLOYMENT_ID ?? 'dev',
+    NEXT_PUBLIC_DEPLOYMENT_ID:
+      process.env.VERCEL_DEPLOYMENT_ID ??
+      process.env.VERCEL_GIT_COMMIT_SHA ??
+      'dev',
   },
 };
 

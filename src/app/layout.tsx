@@ -13,13 +13,10 @@ export const metadata: Metadata = {
     title: 'occuro',
     statusBarStyle: 'black-translucent',
   },
+  // Favicon comes from src/app/icon.svg via Next.js file-based icon
+  // convention — same ring logo as the homepage. Keeping the apple
+  // touch icon explicit because iOS doesn't pick up SVGs reliably.
   icons: {
-    icon: [
-      { url: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-    ],
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
