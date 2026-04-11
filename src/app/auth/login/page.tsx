@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -10,7 +9,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -18,26 +16,63 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Wrap the entire login flow in try/catch — any unhandled rejection
+    // would otherwise leave the button stuck on "Anmelden..." forever
+    // because setLoading(false) wouldn't run.
+    try {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setError(error.message === 'Invalid login credentials'
-        ? 'E-Mail oder Passwort falsch.'
-        : error.message);
+      if (signInError) {
+        setError(signInError.message === 'Invalid login credentials'
+          ? 'E-Mail oder Passwort falsch.'
+          : signInError.message);
+        setLoading(false);
+        return;
+      }
+
+      // signInWithPassword already returns the user — no need for a
+      // separate getUser() round-trip. That second call was racing
+      // against cookie propagation and could hang for several seconds.
+      const userId = signInData.user?.id;
+      if (!userId) {
+        setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.');
+        setLoading(false);
+        return;
+      }
+
+      // Profile lookup is best-effort — if the row doesn't exist yet
+      // (brand new account, profile created via trigger but not yet
+      // visible due to replication lag), we default to the regular
+      // user route. maybeSingle() returns null instead of throwing.
+      let userType: string | null = null;
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', userId)
+          .maybeSingle();
+        userType = profile?.user_type ?? null;
+      } catch (profileErr) {
+        // Swallow — fall back to /app
+        console.warn('[login] profile lookup failed:', profileErr);
+      }
+
+      // Hard redirect so cookies are properly set for SSR.
+      // window.location.href is intentional — we DON'T want the
+      // Next router here because it would do a soft nav and skip
+      // the proxy.ts cookie refresh.
+      window.location.href = userType === 'organization' ? '/organizer' : '/app';
+    } catch (err) {
+      console.error('[login] threw:', err);
+      setError(
+        err instanceof Error
+          ? `Unerwarteter Fehler: ${err.message}`
+          : 'Unerwarteter Fehler bei der Anmeldung.',
+      );
       setLoading(false);
-      return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', user.id)
-        .single();
-
-      // Hard redirect so cookies are properly set for SSR
-      window.location.href = profile?.user_type === 'organization' ? '/organizer' : '/app';
     }
   };
 
