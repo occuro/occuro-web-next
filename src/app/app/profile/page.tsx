@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [statuses, setStatuses] = useState<Record<string, EventStatus>>({});
   const [savedEventIds, setSavedEventIds] = useState<string[]>([]);
+  const [acceptedInviteEventIds, setAcceptedInviteEventIds] = useState<string[]>([]);
   const [friendCount, setFriendCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -41,7 +42,7 @@ export default function ProfilePage() {
 
   async function fetchData() {
     setLoading(true);
-    const [statusesRes, friendsRes, savedRes] = await Promise.all([
+    const [statusesRes, friendsRes, savedRes, invitesRes] = await Promise.all([
       supabase.from('event_statuses').select('event_id, status').eq('user_id', user!.id),
       // Fetch accepted friendship rows then dedupe in JS — a `count`
       // query with .or().eq() was returning the wrong number because
@@ -53,6 +54,13 @@ export default function ProfilePage() {
         .or(`user_id.eq.${user!.id},friend_id.eq.${user!.id}`)
         .eq('status', 'accepted'),
       supabase.from('saved_events').select('event_id').eq('user_id', user!.id),
+      // Accepted invitations to private events — these should land in
+      // the "Privat" tab even though we're not the organizer.
+      supabase
+        .from('event_invitations')
+        .select('event_id')
+        .eq('invited_user_id', user!.id)
+        .eq('status', 'accepted'),
     ]);
 
     const statusData = statusesRes.data ?? [];
@@ -71,10 +79,15 @@ export default function ProfilePage() {
     const savedIds = (savedRes.data ?? []).map((r: { event_id: string }) => r.event_id);
     setSavedEventIds(savedIds);
 
-    // Collect all event IDs we need: those with a status, saved ones, and own events
+    const inviteIds = ((invitesRes.data ?? []) as Array<{ event_id: string }>).map((r) => r.event_id);
+    setAcceptedInviteEventIds(inviteIds);
+
+    // Collect all event IDs we need: those with a status, saved ones,
+    // accepted invitations, and own events.
     const eventIds = new Set<string>([
       ...statusData.map((s: { event_id: string }) => s.event_id),
       ...savedIds,
+      ...inviteIds,
     ]);
 
     // Also fetch events the user owns (private events appear here even without a status)
@@ -132,13 +145,17 @@ export default function ProfilePage() {
     [events, savedEventIds],
   );
   const privateEvents = useMemo(() => {
-    // Own private events (the user is the creator) — invited private events
-    // come through event_statuses + status='confirmed' which lands them in
-    // attendingEvents above. For full mobile parity we could fetch
-    // event_invitations too, but the simpler "own private" rule covers the
-    // common case.
-    return events.filter((e) => e.visibility === 'private' && e.organizer_profile_id === user?.id);
-  }, [events, user?.id]);
+    // Own private events (user is the organizer) PLUS private events
+    // the user has been invited to and accepted. The mobile app shows
+    // both in the same "Privat" tab so we mirror that here.
+    const inviteSet = new Set(acceptedInviteEventIds);
+    return events.filter((e) =>
+      e.visibility === 'private' && (
+        e.organizer_profile_id === user?.id ||
+        inviteSet.has(e.id)
+      ),
+    );
+  }, [events, user?.id, acceptedInviteEventIds]);
 
   const filteredPrivateEvents = useMemo(
     () =>

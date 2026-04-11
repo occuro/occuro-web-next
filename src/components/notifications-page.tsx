@@ -29,8 +29,19 @@ export function NotificationsPage() {
     ? notifications.filter((n) => !n.read)
     : notifications;
 
-  function handleClick(notif: AppNotification) {
-    if (!notif.read) markAsRead(notif.id);
+  async function handleClick(notif: AppNotification) {
+    // AWAIT the mark-as-read before navigating — fire-and-forget here
+    // would let the navigation start before the DB write committed,
+    // and the in-flight UPDATE could be aborted by the page transition.
+    // The result was that the sidebar Benachrichtigungen badge stayed
+    // stuck on the unread state.
+    if (!notif.read) {
+      try {
+        await markAsRead(notif.id);
+      } catch (e) {
+        console.warn('[notifications] markAsRead failed:', e);
+      }
+    }
     const data = notif.data ?? {};
     const eventId = (data.eventId ?? data.event_id) as string | undefined;
     const friendId = (data.friend_id ?? data.friendId) as string | undefined;
