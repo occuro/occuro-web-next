@@ -213,25 +213,6 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
     );
   }, [selected]);
 
-  function locateMe() {
-    const map = mapInstanceRef.current;
-    if (!map || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        didLocateUserRef.current = true;
-        map.setRegionAnimated(
-          new mapkit.CoordinateRegion(
-            new mapkit.Coordinate(pos.coords.latitude, pos.coords.longitude),
-            new mapkit.CoordinateSpan(0.1, 0.1),
-          ),
-          true,
-        );
-      },
-      () => {},
-      { timeout: 8000 },
-    );
-  }
-
   function flyToLocation(lat: number, lng: number) {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -260,7 +241,7 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
   return (
     <>
       <div ref={containerRef} className="w-full h-full" />
-      <MapSearchBar onSelectLocation={flyToLocation} onLocate={locateMe} />
+      <MapSearchBar onSelectLocation={flyToLocation} />
     </>
   );
 }

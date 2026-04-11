@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Search, Locate, X } from 'lucide-react';
+import { Search, Locate, X, Loader2, AlertCircle } from 'lucide-react';
 
 interface NominatimResult {
   place_id: number;
@@ -11,23 +11,27 @@ interface NominatimResult {
 }
 
 interface MapSearchBarProps {
-  onSelectLocation: (lat: number, lng: number, label: string) => void;
-  onLocate: () => void;
+  /** Called when the user picks a search result OR clicks Locate-Me. */
+  onSelectLocation: (lat: number, lng: number, label?: string) => void;
 }
+
+type LocateStatus = 'idle' | 'loading' | 'denied' | 'unavailable' | 'timeout';
 
 /**
  * Search bar overlay rendered on top of the map. Uses OpenStreetMap's
  * Nominatim free geocoder for autocomplete (no API key needed). Sits
  * top-left across the map; the locate button sits on its right side.
  *
- * Nominatim usage policy is 1 req/sec — we debounce typing to ~350ms
- * which keeps us comfortably below that for real users.
+ * The locate button owns its own permission/loading state — if the
+ * browser denies geolocation it shows a visible tooltip explaining
+ * how to re-enable it (otherwise the click would silently do nothing).
  */
-export function MapSearchBar({ onSelectLocation, onLocate }: MapSearchBarProps) {
+export function MapSearchBar({ onSelectLocation }: MapSearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<NominatimResult[]>([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [locateStatus, setLocateStatus] = useState<LocateStatus>('idle');
   const wrapperRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -35,10 +39,10 @@ export function MapSearchBar({ onSelectLocation, onLocate }: MapSearchBarProps) 
   useEffect(() => {
     if (!query.trim() || query.trim().length < 2) {
       setResults([]);
-      setLoading(false);
+      setLoadingResults(false);
       return;
     }
-    setLoading(true);
+    setLoadingResults(true);
     const handle = setTimeout(() => {
       abortRef.current?.abort();
       const ac = new AbortController();
@@ -50,14 +54,14 @@ export function MapSearchBar({ onSelectLocation, onLocate }: MapSearchBarProps) 
         .then((r) => r.json())
         .then((data: NominatimResult[]) => {
           setResults(Array.isArray(data) ? data : []);
-          setLoading(false);
+          setLoadingResults(false);
         })
         .catch((err) => {
           if (err?.name !== 'AbortError') {
             console.warn('[MapSearchBar] geocoding failed:', err);
             setResults([]);
           }
-          setLoading(false);
+          setLoadingResults(false);
         });
     }, 350);
     return () => clearTimeout(handle);
@@ -75,6 +79,13 @@ export function MapSearchBar({ onSelectLocation, onLocate }: MapSearchBarProps) 
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
+  // Auto-clear the locate error after a few seconds so it doesn't linger.
+  useEffect(() => {
+    if (locateStatus === 'idle' || locateStatus === 'loading') return;
+    const t = setTimeout(() => setLocateStatus('idle'), 6000);
+    return () => clearTimeout(t);
+  }, [locateStatus]);
+
   function handleSelect(result: NominatimResult) {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
@@ -83,6 +94,42 @@ export function MapSearchBar({ onSelectLocation, onLocate }: MapSearchBarProps) 
     setOpen(false);
     onSelectLocation(lat, lng, result.display_name);
   }
+
+  function handleLocate() {
+    if (!navigator.geolocation) {
+      setLocateStatus('unavailable');
+      return;
+    }
+    setLocateStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocateStatus('idle');
+        onSelectLocation(pos.coords.latitude, pos.coords.longitude);
+      },
+      (err) => {
+        // err.code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+        console.warn('[MapSearchBar] geolocation failed:', err.code, err.message);
+        if (err.code === 1) setLocateStatus('denied');
+        else if (err.code === 2) setLocateStatus('unavailable');
+        else if (err.code === 3) setLocateStatus('timeout');
+        else setLocateStatus('unavailable');
+      },
+      { timeout: 10_000, enableHighAccuracy: false, maximumAge: 60_000 },
+    );
+  }
+
+  const errorMessage = (() => {
+    switch (locateStatus) {
+      case 'denied':
+        return 'Standort verweigert. Erlaube den Zugriff in deinen Browser-Einstellungen (Schloss-Symbol links neben der URL).';
+      case 'unavailable':
+        return 'Standort ist nicht verfügbar.';
+      case 'timeout':
+        return 'Standortabfrage hat zu lange gedauert. Bitte erneut versuchen.';
+      default:
+        return null;
+    }
+  })();
 
   return (
     <div
@@ -114,9 +161,9 @@ export function MapSearchBar({ onSelectLocation, onLocate }: MapSearchBarProps) 
           </div>
 
           {/* Autocomplete dropdown */}
-          {open && (results.length > 0 || loading) && (
+          {open && (results.length > 0 || loadingResults) && (
             <div className="absolute top-12 left-0 right-0 bg-surface border border-border-subtle rounded-2xl shadow-2xl shadow-black/40 overflow-hidden max-h-[280px] overflow-y-auto">
-              {loading && results.length === 0 ? (
+              {loadingResults && results.length === 0 ? (
                 <div className="px-4 py-3 text-[12px] text-muted-fg">Suche…</div>
               ) : (
                 results.map((r) => {
@@ -141,14 +188,33 @@ export function MapSearchBar({ onSelectLocation, onLocate }: MapSearchBarProps) 
 
         {/* Locate-me button */}
         <button
-          onClick={onLocate}
-          className="w-10 h-10 rounded-full bg-surface/95 backdrop-blur border border-border-subtle shadow-lg flex items-center justify-center hover:bg-elevated transition-colors flex-shrink-0"
+          onClick={handleLocate}
+          disabled={locateStatus === 'loading'}
+          className={`relative w-10 h-10 rounded-full backdrop-blur border shadow-lg flex items-center justify-center transition-colors flex-shrink-0 ${
+            locateStatus === 'denied' || locateStatus === 'unavailable' || locateStatus === 'timeout'
+              ? 'bg-red-500/10 border-red-500/40 text-red-400'
+              : 'bg-surface/95 border-border-subtle text-foreground hover:bg-elevated'
+          }`}
           aria-label="Mein Standort"
           title="Mein Standort"
         >
-          <Locate size={15} className="text-foreground" />
+          {locateStatus === 'loading' ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : locateStatus === 'denied' || locateStatus === 'unavailable' || locateStatus === 'timeout' ? (
+            <AlertCircle size={15} />
+          ) : (
+            <Locate size={15} />
+          )}
         </button>
       </div>
+
+      {/* Error tooltip */}
+      {errorMessage && (
+        <div className="mt-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-[12px] text-red-300 backdrop-blur shadow-lg flex items-start gap-2">
+          <AlertCircle size={13} className="flex-shrink-0 mt-0.5" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

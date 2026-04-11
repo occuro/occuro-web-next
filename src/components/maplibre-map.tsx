@@ -94,22 +94,6 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
     });
   }, [selected]);
 
-  function locateMe() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        didLocateUserRef.current = true;
-        mapRef.current?.flyTo({
-          center: [pos.coords.longitude, pos.coords.latitude],
-          zoom: 12,
-          duration: 800,
-        });
-      },
-      () => {},
-      { timeout: 8000 },
-    );
-  }
-
   function flyToLocation(lat: number, lng: number) {
     didLocateUserRef.current = true; // suppress auto-fit-to-events
     mapRef.current?.flyTo({
@@ -220,7 +204,7 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
         )}
       </MapLibreMap>
 
-      <MapSearchBar onSelectLocation={flyToLocation} onLocate={locateMe} />
+      <MapSearchBar onSelectLocation={flyToLocation} />
     </>
   );
 }
