@@ -31,9 +31,10 @@ export default function CreatePrivateEventPage() {
       <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] px-4 py-3.5">
         <p className="text-[12px] text-violet-200/90 leading-relaxed">
           <strong className="font-semibold text-violet-300">Wie funktioniert das?</strong>{' '}
-          Private Events sind nur für eingeladene Personen sichtbar. Nach dem Erstellen kannst du
-          deine Freunde direkt zum Event einladen und mit ihnen im Event-Chat schreiben.
-          Öffentliche Events können nur verifizierte Veranstalter erstellen.
+          Private Events sind nur für eingeladene Personen sichtbar. Du kannst Freunde
+          schon beim Erstellen einladen und auch jederzeit danach noch weitere hinzufügen
+          und mit allen im Event-Chat schreiben. Öffentliche Events können nur
+          verifizierte Veranstalter erstellen.
         </p>
       </div>
 

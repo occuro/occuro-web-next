@@ -7,7 +7,10 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import {
   ArrowLeft, Send, Loader2, Lock, ImageOff, MoreVertical, User, Users, Megaphone,
+  UserCircle2, Flag, Ban,
 } from 'lucide-react';
+import { FriendProfileModal } from '@/components/friend-profile-modal';
+import { ReportModal } from '@/components/report-modal';
 
 interface ChatThreadProps {
   roomId: string;
@@ -52,6 +55,43 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Header menu + profile preview state ─────────────────────────────
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [previewUser, setPreviewUser] = useState<SenderProfile | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the dropdown menu when clicking anywhere outside it
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [menuOpen]);
+
+  async function handleBlock() {
+    if (!user || !otherUser) return;
+    if (!confirm(`${otherUser.full_name ?? 'Diesen Nutzer'} wirklich blockieren? Du erhältst keine Nachrichten mehr von dieser Person.`)) {
+      return;
+    }
+    setBlocking(true);
+    const { error: blockErr } = await supabase
+      .from('user_blocks')
+      .insert({ blocker_id: user.id, blocked_id: otherUser.id });
+    setBlocking(false);
+    if (blockErr) {
+      alert(`Blockieren fehlgeschlagen: ${blockErr.message}`);
+      return;
+    }
+    setMenuOpen(false);
+    router.push(backHref);
+  }
 
   // ── Load room + messages + profiles ───────────────────────────────
   const loadAll = useCallback(async () => {
@@ -274,7 +314,12 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
           <ArrowLeft size={18} />
         </button>
         {headerInfo && (
-          <>
+          <button
+            type="button"
+            onClick={() => { if (otherUser) setPreviewUser(otherUser); }}
+            disabled={!otherUser}
+            className="flex items-center gap-3 flex-1 min-w-0 -mx-1 px-1 py-1 rounded-xl hover:bg-elevated/50 transition-colors text-left disabled:cursor-default disabled:hover:bg-transparent"
+          >
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
               {headerInfo.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -289,14 +334,54 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
                 <p className="text-[11px] text-muted-fg truncate">{headerInfo.subtitle}</p>
               )}
             </div>
-          </>
+          </button>
         )}
-        <button
-          className="p-2 rounded-full hover:bg-elevated transition-colors"
-          aria-label="Mehr"
-        >
-          <MoreVertical size={18} className="text-muted-fg" />
-        </button>
+
+        {/* 3-dots dropdown — only meaningful for DMs (where there's a
+            single other user we can act on). For event/announcement
+            rooms there's nothing to report or block, so the button is
+            hidden entirely. */}
+        {otherUser && (
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              className="p-2 rounded-full hover:bg-elevated transition-colors"
+              aria-label="Mehr"
+            >
+              <MoreVertical size={18} className="text-muted-fg" />
+            </button>
+            {menuOpen && (
+              <div className="absolute top-full right-0 mt-1 w-56 rounded-2xl border border-border-subtle bg-surface shadow-2xl shadow-black/40 overflow-hidden z-30 animate-fade-in">
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); setPreviewUser(otherUser); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-[13px] hover:bg-elevated transition-colors"
+                >
+                  <UserCircle2 size={15} className="text-muted-fg" />
+                  Profil ansehen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMenuOpen(false); setReportOpen(true); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-[13px] hover:bg-elevated transition-colors border-t border-border-subtle"
+                >
+                  <Flag size={15} className="text-amber-400" />
+                  Nutzer melden
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBlock}
+                  disabled={blocking}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-[13px] text-red-400 hover:bg-red-500/5 transition-colors border-t border-border-subtle disabled:opacity-50"
+                >
+                  {blocking ? <Loader2 size={15} className="animate-spin" /> : <Ban size={15} />}
+                  Blockieren
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ─── Messages ─── */}
@@ -332,6 +417,7 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
                 profile={profile}
                 showAvatar={showAvatar}
                 showName={showName}
+                onProfileClick={(p) => setPreviewUser(p)}
               />
             );
           })
@@ -359,6 +445,30 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
           </button>
         </form>
       )}
+
+      {/* ─── Profile preview modal (opened from header tap or 3-dots menu) ─── */}
+      {previewUser && (
+        <FriendProfileModal
+          friend={{
+            id: previewUser.id,
+            full_name: previewUser.full_name ?? 'Unbekannt',
+            username: previewUser.username,
+            avatar_url: previewUser.avatar_url,
+          }}
+          onClose={() => setPreviewUser(null)}
+        />
+      )}
+
+      {/* ─── Report modal ─── */}
+      {otherUser && (
+        <ReportModal
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          targetType="profile"
+          targetId={otherUser.id}
+          targetName={otherUser.full_name ?? undefined}
+        />
+      )}
     </div>
   );
 }
@@ -368,13 +478,14 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
 // ────────────────────────────────────────────────────────────────────
 
 function MessageBubble({
-  msg, isOwn, profile, showAvatar, showName,
+  msg, isOwn, profile, showAvatar, showName, onProfileClick,
 }: {
   msg: ChatMessage;
   isOwn: boolean;
   profile?: SenderProfile;
   showAvatar: boolean;
   showName: boolean;
+  onProfileClick?: (profile: SenderProfile) => void;
 }) {
   // E2E messages: we can't decrypt in the browser, so show the
   // notification_preview if available, otherwise a lock placeholder.
@@ -391,7 +502,13 @@ function MessageBubble({
       {!isOwn && (
         <div className="w-7 h-7 flex-shrink-0">
           {showAvatar && (
-            <div className="w-7 h-7 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => { if (profile && onProfileClick) onProfileClick(profile); }}
+              disabled={!profile || !onProfileClick}
+              className="w-7 h-7 rounded-full bg-muted overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-violet-500/40 transition-all"
+              aria-label="Profil ansehen"
+            >
               {profile?.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -400,16 +517,20 @@ function MessageBubble({
                   {(profile?.full_name ?? '?').charAt(0).toUpperCase()}
                 </span>
               )}
-            </div>
+            </button>
           )}
         </div>
       )}
 
       <div className={`max-w-[75%] flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
         {showName && profile && (
-          <span className="text-[10px] font-semibold text-muted-fg px-2 mb-0.5">
+          <button
+            type="button"
+            onClick={() => onProfileClick?.(profile)}
+            className="text-[10px] font-semibold text-muted-fg px-2 mb-0.5 hover:text-foreground transition-colors text-left"
+          >
             {profile.full_name ?? profile.username ?? '?'}
-          </span>
+          </button>
         )}
         <div
           className={`px-3.5 py-2 rounded-2xl text-[14px] leading-snug ${

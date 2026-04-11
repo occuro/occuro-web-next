@@ -433,6 +433,9 @@ function ShareProfileButton({
     : `https://occuroapp.com/profile/${slug}`;
 
   async function handleShare() {
+    // Prefer the native share sheet when available. If the user dismisses
+    // it (AbortError) we do NOTHING — earlier this would silently fall
+    // through to "Kopiert" which made cancelling look like a success.
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
       try {
         await navigator.share({
@@ -440,18 +443,25 @@ function ShareProfileButton({
           text: `Schau dir ${profile?.full_name ?? 'mein Profil'} auf occuro an`,
           url: profileUrl,
         });
-        return;
-      } catch {
-        // User cancelled or share failed → fall through to clipboard
+      } catch (err) {
+        // AbortError = user dismissed the sheet → leave the button alone.
+        // Anything else is a real failure → fall back to clipboard copy.
+        const name = (err as { name?: string } | null)?.name;
+        if (name === 'AbortError') return;
+        await copyToClipboard();
       }
+      return;
     }
-    // Fallback: copy link to clipboard
+    // No native share sheet at all → straight to clipboard.
+    await copyToClipboard();
+  }
+
+  async function copyToClipboard() {
     try {
       await navigator.clipboard.writeText(profileUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // Last resort: open share URL in new tab
       window.open(profileUrl, '_blank');
     }
   }
