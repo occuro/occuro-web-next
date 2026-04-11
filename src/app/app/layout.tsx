@@ -15,11 +15,17 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     }
   }, [loading, user, router]);
 
-  // Always render the layout — don't block on loading
+  // On mobile (<lg) the sidebar renders a sticky top bar via internal
+  // responsive logic. On desktop it's a 260px sticky sidebar in a flex
+  // row. Padding is generous on desktop, tighter on mobile, with a
+  // safe-area-aware bottom padding so floating bars don't sit under
+  // the iPhone home indicator.
   return (
-    <div className="flex min-h-screen">
+    <div className="flex flex-col lg:flex-row min-h-screen">
       <Sidebar variant="user" />
-      <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+      <main className="flex-1 px-4 py-5 lg:p-8 overflow-y-auto pb-safe">
+        {children}
+      </main>
     </div>
   );
 }

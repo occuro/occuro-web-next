@@ -152,7 +152,7 @@ export default function MapPage() {
 
       {/* Map + sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-3 rounded-2xl border border-border-subtle bg-surface overflow-hidden relative" style={{ height: '640px' }}>
+        <div className="lg:col-span-3 rounded-2xl border border-border-subtle bg-surface overflow-hidden relative h-[420px] sm:h-[520px] lg:h-[640px]">
           {loading ? (
             <div className="w-full h-full bg-muted animate-pulse flex items-center justify-center">
               <MapPin size={32} className="text-muted-fg/30" />
@@ -280,7 +280,7 @@ export default function MapPage() {
         </div>
 
         {/* Sidebar list */}
-        <div className="lg:col-span-2 space-y-2 max-h-[640px] overflow-y-auto pr-1">
+        <div className="lg:col-span-2 space-y-2 lg:max-h-[640px] lg:overflow-y-auto pr-1">
           {events.length === 0 ? (
             <div className="text-center py-16 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
               <MapPin size={32} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />

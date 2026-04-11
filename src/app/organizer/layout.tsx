@@ -17,9 +17,11 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
   }, [loading, user, userType, router]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex flex-col lg:flex-row min-h-screen">
       <Sidebar variant="organizer" />
-      <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+      <main className="flex-1 px-4 py-5 lg:p-8 overflow-y-auto pb-safe">
+        {children}
+      </main>
     </div>
   );
 }

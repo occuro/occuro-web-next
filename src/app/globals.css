@@ -173,3 +173,30 @@ a, button {
 .maplibregl-ctrl button:hover {
   background-color: var(--color-elevated) !important;
 }
+
+/* ─── Mobile drawer slide-in ─────────────────────────────────────── */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── iOS safe-area + tap target hygiene ─────────────────────────── */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+}
+
+/* Prevent iOS from auto-zooming on input focus (which is jarring on
+   mobile) by ensuring all inputs are at least 16px on small screens. */
+@media (max-width: 1023px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}

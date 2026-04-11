@@ -260,7 +260,10 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
   }, [room, otherUser, eventBannerUrl]);
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-4rem)] flex flex-col animate-fade-in">
+    // Height: mobile top bar is 56px (h-14), desktop has none — so we
+    // subtract 56px on mobile and the desktop layout's p-8 (~64px) above.
+    // The dvh unit handles iOS Safari's address bar shrinking correctly.
+    <div className="max-w-4xl mx-auto h-[calc(100dvh-7rem)] lg:h-[calc(100dvh-6rem)] flex flex-col animate-fade-in">
       {/* ─── Header ─── */}
       <div className="flex items-center gap-3 px-2 sm:px-0 pb-4 border-b border-border-subtle">
         <button
