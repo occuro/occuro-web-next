@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import type { Event } from '@/types/occuro';
@@ -21,12 +22,37 @@ type MapProvider = 'probing' | 'apple' | 'maplibre';
 
 export default function MapPage() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
 
   const [events, setEvents] = useState<Event[]>([]);
   const [selected, setSelected] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<string | null>(null);
   const [provider, setProvider] = useState<MapProvider>('probing');
+
+  // Deeplink: ?event=… — when the user clicks an event's location on
+  // the detail page we land here, fetch that event by id, and select
+  // it so the map auto-pans + opens the popup. lat/lng are passed for
+  // forward compat / sharable URLs but the event's own coords drive
+  // the actual centering via the maps' useEffect on `selected`.
+  const deeplinkEventId = searchParams.get('event');
+
+  useEffect(() => {
+    if (!deeplinkEventId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', deeplinkEventId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setSelected(data as Event);
+    })();
+    return () => { cancelled = true; };
+    // Only re-run when the deeplink event id changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deeplinkEventId]);
 
   // ── Probe which map provider to use ────────────────────────────────
   // Hit /api/maps/token once on mount. If it returns a token, Apple
@@ -105,9 +131,19 @@ export default function MapPage() {
               <MapPin size={32} className="text-muted-fg/30" />
             </div>
           ) : provider === 'apple' ? (
-            <AppleMap events={events} selected={selected} onSelect={setSelected} />
+            <AppleMap
+              events={events}
+              selected={selected}
+              onSelect={setSelected}
+              skipAutoLocate={Boolean(deeplinkEventId)}
+            />
           ) : (
-            <MapLibreFallback events={events} selected={selected} onSelect={setSelected} />
+            <MapLibreFallback
+              events={events}
+              selected={selected}
+              onSelect={setSelected}
+              skipAutoLocate={Boolean(deeplinkEventId)}
+            />
           )}
 
           {selected && (

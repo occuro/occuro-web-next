@@ -54,6 +54,10 @@ interface AppleMapProps {
   events: Event[];
   selected: Event | null;
   onSelect: (event: Event | null) => void;
+  /** When true, the map skips its auto-locate-on-mount step. Used for
+   *  deeplinks (?event=…) where the parent already wants the map at
+   *  a specific location. */
+  skipAutoLocate?: boolean;
 }
 
 /**
@@ -62,7 +66,7 @@ interface AppleMapProps {
  * for each one. Uses native mapkit annotations rather than wrapping each
  * one in React for performance and so callouts respect Apple animations.
  */
-export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
+export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<mapkit.Map | null>(null);
   const annotationsRef = useRef<Map<string, mapkit.Annotation>>(new Map());
@@ -104,7 +108,10 @@ export function AppleMap({ events, selected, onSelect }: AppleMapProps) {
         // pan to their position; if they deny we just stay at the
         // default region. Either way the explicit Locate button below
         // remains available as a manual retry.
-        if (navigator.geolocation) {
+        // skipAutoLocate is set when the page wants the map at a
+        // specific deeplink target — auto-locating would yank the user
+        // away from the location they explicitly asked to see.
+        if (navigator.geolocation && !skipAutoLocate) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               if (cancelled || !mapInstanceRef.current) return;

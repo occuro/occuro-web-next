@@ -23,6 +23,8 @@ interface MapLibreFallbackProps {
   events: Event[];
   selected: Event | null;
   onSelect: (event: Event | null) => void;
+  /** When true, skip auto-locate-on-mount (deeplink target wins). */
+  skipAutoLocate?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ interface MapLibreFallbackProps {
  * MapLibre GL — same fork tree as Mapbox GL but BSD-licensed and works
  * with any tile provider, including OpenFreeMap (no key required).
  */
-export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbackProps) {
+export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }: MapLibreFallbackProps) {
   const mapRef = useRef<MapRef | null>(null);
   // Once we've panned to the user's location, suppress the auto-fit-to-
   // events behavior so the user doesn't get yanked back to the bbox.
@@ -39,7 +41,7 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
   // Auto-locate on mount — the browser shows its native permission prompt;
   // if the user accepts we fly to their position, otherwise stay at default.
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation || skipAutoLocate) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         didLocateUserRef.current = true;
@@ -53,7 +55,7 @@ export function MapLibreFallback({ events, selected, onSelect }: MapLibreFallbac
       () => {},
       { timeout: 8000, maximumAge: 60_000 },
     );
-  }, []);
+  }, [skipAutoLocate]);
 
   const initialView = useMemo(() => {
     if (events.length === 0) return DEFAULT_VIEW;

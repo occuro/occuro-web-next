@@ -335,10 +335,23 @@ export default function EventDetailPage({
             {formatTime(event.time)}
             {event.end_time && ` – ${formatTime(event.end_time)}`}
           </span>
-          <span className="flex items-center gap-1.5">
-            <MapPin size={14} strokeWidth={1.6} />
-            {event.location}
-          </span>
+          {event.latitude != null && event.longitude != null ? (
+            <Link
+              href={`/app/map?lat=${event.latitude}&lng=${event.longitude}&event=${event.id}`}
+              className="flex items-center gap-1.5 hover:text-foreground transition-colors group"
+              title="Auf der Karte anzeigen"
+            >
+              <MapPin size={14} strokeWidth={1.6} />
+              <span className="underline decoration-dotted underline-offset-2 group-hover:decoration-solid">
+                {event.location}
+              </span>
+            </Link>
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <MapPin size={14} strokeWidth={1.6} />
+              {event.location}
+            </span>
+          )}
           {event.max_participants > 0 && (
             <span className="flex items-center gap-1.5">
               <Users size={14} strokeWidth={1.6} /> Max. {event.max_participants}
