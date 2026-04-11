@@ -101,7 +101,10 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
       .then(() => {
         if (cancelled || !containerRef.current) return;
         const map = new mapkit.Map(containerRef.current, {
-          showsCompass: mapkit.FeatureVisibility.Adaptive,
+          // Compass is hidden because we don't enable rotation, and
+          // mapkit warns if the compass would be shown without
+          // rotation enabled. Set explicitly to Hidden to silence it.
+          showsCompass: mapkit.FeatureVisibility.Hidden,
           showsZoomControl: true,
           showsMapTypeControl: false,
           showsUserLocationControl: false,
