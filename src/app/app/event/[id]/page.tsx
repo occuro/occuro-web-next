@@ -497,19 +497,10 @@ export default function EventDetailPage({
           • Public events: Interessiert + Zusagen + Speichern. */}
       {!isPast && user && !isOwnEvent && (
         event.visibility === 'private' ? (
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            <button
-              onClick={() => updateStatus('confirmed')}
-              disabled={inviteBusy}
-              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 disabled:opacity-50 ${
-                status === 'confirmed' || status === 'attended'
-                  ? 'bg-green-500 text-white shadow-sm'
-                  : 'bg-violet-600 text-white hover:bg-violet-500 shadow-sm'
-              }`}
-            >
-              {inviteBusy ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} strokeWidth={2.2} />}
-              {status === 'confirmed' || status === 'attended' ? 'Zugesagt' : 'Zusagen'}
-            </button>
+          // Mobile parity: destructive action (Absagen) on the LEFT,
+          // primary positive action (Zusagen) on the RIGHT. Same
+          // convention iOS uses for confirmation alerts.
+          <div className="flex gap-2 sm:gap-3">
             <button
               onClick={async () => {
                 // Absagen: decline the invitation if there's a pending one,
@@ -527,6 +518,18 @@ export default function EventDetailPage({
             >
               <XIcon size={16} strokeWidth={2.2} />
               Absagen
+            </button>
+            <button
+              onClick={() => updateStatus('confirmed')}
+              disabled={inviteBusy}
+              className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 disabled:opacity-50 ${
+                status === 'confirmed' || status === 'attended'
+                  ? 'bg-green-500 text-white shadow-sm'
+                  : 'bg-violet-600 text-white hover:bg-violet-500 shadow-sm'
+              }`}
+            >
+              {inviteBusy ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} strokeWidth={2.2} />}
+              {status === 'confirmed' || status === 'attended' ? 'Zugesagt' : 'Zusagen'}
             </button>
           </div>
         ) : (
