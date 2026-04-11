@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
@@ -20,7 +20,20 @@ const CATEGORIES = ['Music', 'Business', 'Health', 'Sports', 'Education', 'Art',
 
 type MapProvider = 'probing' | 'apple' | 'maplibre';
 
+// Wrapping the inner component in <Suspense> is REQUIRED by Next.js
+// when a client component reads useSearchParams() — without it, the
+// production build fails with "useSearchParams() should be wrapped
+// in a suspense boundary". Without the boundary the server can't
+// statically prerender the page and the whole deploy aborts.
 export default function MapPage() {
+  return (
+    <Suspense fallback={null}>
+      <MapPageInner />
+    </Suspense>
+  );
+}
+
+function MapPageInner() {
   const supabase = createClient();
   const searchParams = useSearchParams();
 
