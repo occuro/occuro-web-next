@@ -103,40 +103,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    // Try a full signOut first (invalidates the session server-side too).
-    // If the local session is already broken (which is what causes the
-    // "kann mich nicht ausloggen" bug), the call throws — fall back to a
-    // local-scope signOut so we at least clear the browser state.
+    // Try the SDK signOut first, but RACE it against a 2s timeout so a
+    // hung supabase client (the actual root cause of "kann mich nicht
+    // ausloggen") can't block the cleanup. The cleanup below is the
+    // real source of truth — wiping cookies + localStorage + redirecting
+    // to / is what actually logs the user out from the app's POV.
+    const withTimeout = <T,>(p: Promise<T>, ms: number) =>
+      Promise.race<T | 'timeout'>([
+        p as Promise<T>,
+        new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), ms)),
+      ]);
+
     try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.warn('[auth] global signOut failed, falling back to local scope', e);
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch (innerErr) {
-        console.error('[auth] local signOut also failed', innerErr);
+      const result = await withTimeout(supabase.auth.signOut(), 2000);
+      if (result === 'timeout') {
+        console.warn('[auth] supabase signOut hung — moving on with local cleanup');
       }
+    } catch (e) {
+      console.warn('[auth] supabase signOut threw — moving on with local cleanup', e);
     }
     // Safety net: purge any leftover supabase tokens (cookies + localStorage).
-    // This guarantees the user is fully logged out even if the SDK calls
-    // above silently no-op'd because of stale state.
+    // This is the part that actually guarantees the user is logged out
+    // from the browser's POV — even if the SDK above hung or no-op'd.
     try {
       Object.keys(localStorage).forEach((k) => {
-        if (k.startsWith('sb-')) localStorage.removeItem(k);
+        if (k.startsWith('sb-') || k.startsWith('@occuro')) localStorage.removeItem(k);
       });
+      sessionStorage.clear();
       document.cookie.split(';').forEach((c) => {
         const name = c.trim().split('=')[0];
-        if (name.startsWith('sb-')) {
-          // Clear on root and on all higher-level paths just in case
-          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-        }
+        if (!name) return;
+        // Clear on root path AND on the host (covers subdomain cookies)
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
       });
     } catch {}
     setUser(null);
     setProfile(null);
     setOrganization(null);
-    // Hard reload — guarantees every cached client/store is reset and the
-    // user lands on the public landing page in a clean state.
+    // Hard navigate — guarantees every cached client/store is reset and
+    // the user lands on the public landing page on a fresh bundle.
     window.location.href = '/';
   };
 
