@@ -73,8 +73,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
       if (error) console.warn('[profile] id lookup failed:', error.message);
       resolved = (data as FullProfile | null) ?? null;
     } else {
+      // Username lookup is case-insensitive — the unique index is on
+      // lower(username) so .eq('username', 'Max') would miss a row
+      // with username='max'. ilike with no wildcards behaves like
+      // a case-insensitive eq.
       const { data, error } = await supabase
-        .from('profiles').select(cols).eq('username', slug).maybeSingle();
+        .from('profiles').select(cols).ilike('username', slug).maybeSingle();
       if (error) console.warn('[profile] username lookup failed:', error.message);
       resolved = (data as FullProfile | null) ?? null;
       // If username didn't match, fall back to id in case the slug
