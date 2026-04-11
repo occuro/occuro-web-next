@@ -10,7 +10,7 @@ import {
   ArrowLeft, Calendar, Clock, MapPin, Heart, CheckCircle2,
   Users, Globe, Ticket, ImageOff, ExternalLink, Lock,
   Gift, Award, Sparkles, Loader2, MessageCircle, Send,
-  Trophy, Trash2, Flag,
+  Trophy, Trash2, Flag, Mail, X as XIcon,
 } from 'lucide-react';
 import { ReportModal } from '@/components/report-modal';
 import { OrganizerProfileModal } from '@/components/organizer-profile-modal';
@@ -67,6 +67,11 @@ export default function EventDetailPage({
   const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
   const [orgPreviewOpen, setOrgPreviewOpen] = useState(false);
+  // Pending invitation row for the current user, if any. Drives the
+  // accept/decline banner at the top of the page (mirrors the mobile
+  // app's behaviour where a private invite shows up as an inline CTA).
+  const [pendingInvite, setPendingInvite] = useState<{ id: string } | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
 
   // Giveaway state
   const [giveaway, setGiveaway] = useState<Giveaway | null>(null);
@@ -86,13 +91,31 @@ export default function EventDetailPage({
     if (!id) return;
     setLoading(true);
 
-    const [eventRes, statusRes, giveawayRes] = await Promise.all([
+    const [eventRes, statusRes, savedRes, giveawayRes, inviteRes] = await Promise.all([
       supabase.from('events').select('*').eq('id', id).single(),
       user
         ? supabase.from('event_statuses').select('status').eq('event_id', id).eq('user_id', user.id).maybeSingle()
         : Promise.resolve({ data: null }),
+      // saved_events lookup — separate from event_statuses on mobile,
+      // and the profile page reads from this table too.
+      user
+        ? supabase.from('saved_events').select('event_id').eq('event_id', id).eq('user_id', user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
       supabase.from('event_giveaways').select('*').eq('event_id', id).maybeSingle(),
+      // Pending invitation for the current user — drives the accept/
+      // decline banner. Mobile parity: see useInvitations.ts.
+      user
+        ? supabase
+            .from('event_invitations')
+            .select('id')
+            .eq('event_id', id)
+            .eq('invited_user_id', user.id)
+            .eq('status', 'pending')
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
+
+    setPendingInvite((inviteRes.data as { id: string } | null) ?? null);
 
     if (eventRes.error || !eventRes.data) {
       setEvent(null);
@@ -100,7 +123,15 @@ export default function EventDetailPage({
       return;
     }
     setEvent(eventRes.data as Event);
-    setStatus((statusRes.data as { status: UserStatus } | null)?.status ?? null);
+    // saved_events row takes precedence over event_statuses for the
+    // visual "saved" state — saving an event you've also marked as
+    // interested should still show the Save button as active.
+    const savedRow = savedRes.data as { event_id: string } | null;
+    if (savedRow) {
+      setStatus('saved');
+    } else {
+      setStatus((statusRes.data as { status: UserStatus } | null)?.status ?? null);
+    }
 
     const gw = (giveawayRes.data as Giveaway | null) ?? null;
     setGiveaway(gw);
@@ -150,6 +181,23 @@ export default function EventDetailPage({
   // ── Status (RSVP) actions ────────────────────────────────────────
   async function updateStatus(newStatus: UserStatus) {
     if (!user || !event) return;
+    // "saved" lives in its own table on mobile (saved_events). The
+    // webapp profile page reads from saved_events too, so a save
+    // written to event_statuses would never appear in the Gespeichert
+    // tab. Route saves to the dedicated table to match.
+    if (newStatus === 'saved') {
+      if (status === 'saved') {
+        await supabase.from('saved_events').delete().eq('event_id', event.id).eq('user_id', user.id);
+        setStatus(null);
+      } else {
+        await supabase.from('saved_events').upsert(
+          { event_id: event.id, user_id: user.id },
+          { onConflict: 'event_id,user_id' },
+        );
+        setStatus('saved');
+      }
+      return;
+    }
     if (newStatus === status) {
       await supabase.from('event_statuses').delete().eq('event_id', event.id).eq('user_id', user.id);
       setStatus(null);
@@ -175,6 +223,74 @@ export default function EventDetailPage({
         .select('id', { count: 'exact', head: true })
         .eq('giveaway_id', giveaway.id);
       setGiveawayEntryCount(count ?? 0);
+    }
+  }
+
+  // ── Invitation accept / decline ──────────────────────────────────
+  // Mirrors the mobile app's useInvitations.acceptInvitation /
+  // declineInvitation: accepting writes status='accepted' on the
+  // invitation row AND upserts an event_status='confirmed' (which the
+  // DB trigger uses to add the user to the event chat). Declining
+  // writes status='declined' and clears any existing event_status row
+  // so the user vanishes from participation lists.
+  async function acceptInvitation() {
+    if (!user || !event || !pendingInvite || inviteBusy) return;
+    setInviteBusy(true);
+    try {
+      const { error: invErr } = await supabase
+        .from('event_invitations')
+        .update({ status: 'accepted' })
+        .eq('id', pendingInvite.id);
+      if (invErr) {
+        alert(`Annehmen fehlgeschlagen: ${invErr.message}`);
+        return;
+      }
+      const { error: statusErr } = await supabase
+        .from('event_statuses')
+        .upsert(
+          { event_id: event.id, user_id: user.id, status: 'confirmed' },
+          { onConflict: 'event_id,user_id' },
+        );
+      if (statusErr) {
+        console.warn('[event] event_statuses upsert after accept failed:', statusErr.message);
+      }
+      setPendingInvite(null);
+      setStatus('confirmed');
+      // Refresh counts
+      const { data } = await supabase
+        .from('events')
+        .select('interested_count, confirmed_count')
+        .eq('id', event.id)
+        .single();
+      if (data) setEvent((prev) => prev ? { ...prev, ...data } : prev);
+    } finally {
+      setInviteBusy(false);
+    }
+  }
+
+  async function declineInvitation() {
+    if (!user || !event || !pendingInvite || inviteBusy) return;
+    setInviteBusy(true);
+    try {
+      const { error: invErr } = await supabase
+        .from('event_invitations')
+        .update({ status: 'declined' })
+        .eq('id', pendingInvite.id);
+      if (invErr) {
+        alert(`Ablehnen fehlgeschlagen: ${invErr.message}`);
+        return;
+      }
+      // Defensive: clear any prior event_status row so the user
+      // doesn't show up as a participant after declining.
+      await supabase
+        .from('event_statuses')
+        .delete()
+        .eq('event_id', event.id)
+        .eq('user_id', user.id);
+      setPendingInvite(null);
+      setStatus(null);
+    } finally {
+      setInviteBusy(false);
     }
   }
 
@@ -373,6 +489,41 @@ export default function EventDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Pending invitation banner — shows when the current user has a
+          pending event_invitation row for this event. Mirrors the
+          mobile app's accept/decline CTA. */}
+      {pendingInvite && !isPast && (
+        <div className="rounded-2xl border border-violet-500/30 bg-violet-500/[0.06] p-4 sm:p-5 flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+            <Mail size={18} className="text-violet-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px] font-semibold">Du wurdest zu diesem Event eingeladen</p>
+            <p className="text-[12px] text-muted-fg mt-0.5">
+              Sag zu oder lehne ab. Beim Annehmen kommst du automatisch in den Event-Chat.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={acceptInvitation}
+                disabled={inviteBusy}
+                className="px-4 py-2 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {inviteBusy ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                Annehmen
+              </button>
+              <button
+                onClick={declineInvitation}
+                disabled={inviteBusy}
+                className="px-4 py-2 rounded-full text-[12px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <XIcon size={12} />
+                Ablehnen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* RSVP buttons */}
       {!isPast && user && !isOwnEvent && (
