@@ -32,18 +32,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createClient());
 
   useEffect(() => {
-    // Drop any stored prefs from older schema versions before we read
-    // anything else — guarantees no stale localStorage shape can crash
-    // a downstream component this session.
     purgeOldSchemas();
 
-    // Immediately set loading false after a short delay no matter what
-    const forceReady = setTimeout(() => setLoading(false), 1500);
+    const forceReady = setTimeout(() => setLoading(false), 5000);
 
-    // RACE every supabase call against a timeout. The "stuck after
-    // login" bug is the SDK call hanging forever in some corrupted
-    // state — neither resolving nor throwing. Without a timeout the
-    // whole auth flow blocks indefinitely.
     const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T | null> =>
       Promise.race<T | null>([
         p.then((v) => v as T).catch((e) => {
@@ -56,17 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }, ms)),
       ]);
 
+    let initialLoadDone = false;
+
     (async () => {
-      const result = await withTimeout(supabase.auth.getUser(), 3000, 'getUser');
+      const result = await withTimeout(supabase.auth.getUser(), 4000, 'getUser');
       const verifiedUser = result?.data?.user ?? null;
       if (!verifiedUser) {
         setUser(null);
         setLoading(false);
+        initialLoadDone = true;
         return;
       }
       setUser(verifiedUser);
       await fetchProfile(verifiedUser.id);
       setLoading(false);
+      initialLoadDone = true;
     })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -74,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const u = session?.user ?? null;
         setUser(u);
         if (u) {
-          await fetchProfile(u.id);
+          if (initialLoadDone) {
+            await fetchProfile(u.id);
+          }
         } else {
           setProfile(null);
           setOrganization(null);
@@ -89,10 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function fetchProfile(userId: string) {
-    // Same race-against-timeout pattern as the auth check above. A
-    // profile fetch that hangs would leave the sidebar showing "User"
-    // forever and every protected page blank.
+  async function fetchProfile(userId: string, retries = 2) {
     const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T | null> =>
       Promise.race<T | null>([
         p.then((v) => v as T).catch((e) => {
@@ -105,20 +100,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }, ms)),
       ]);
 
-    // PostgrestBuilder is a thenable, not a Promise — wrap in
-    // Promise.resolve() so the timeout helper sees a real Promise.
     const profRes = await withTimeout(
       Promise.resolve(supabase.from('profiles').select('*').eq('id', userId).maybeSingle()),
-      4000,
+      5000,
       'fetchProfile.profiles',
     );
     const prof = profRes?.data ?? null;
+
+    if (!prof && retries > 0) {
+      await new Promise((r) => setTimeout(r, 1000));
+      return fetchProfile(userId, retries - 1);
+    }
+
     setProfile(prof);
 
     if (prof?.user_type === 'organization') {
       const orgRes = await withTimeout(
         Promise.resolve(supabase.from('organizations').select('*').eq('owner_id', userId).maybeSingle()),
-        4000,
+        5000,
         'fetchProfile.organizations',
       );
       setOrganization(orgRes?.data ?? null);
