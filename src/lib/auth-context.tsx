@@ -44,6 +44,28 @@ function markReloadAttempt(): void {
   }
 }
 
+// Nuclear recovery: wipe all sb-* auth storage so the next client mount
+// starts from a blank slate. Used when the Supabase SDK is deadlocked on
+// its own internal refresh — the usual cause is a corrupt/half-written
+// sb-<ref>-auth-token in localStorage that the SDK tries to refresh on
+// construction and then hangs forever, queueing every subsequent call
+// (getSession, from().select(), everything) behind the stuck refresh.
+function wipeAuthStorage(): void {
+  try {
+    Object.keys(localStorage).forEach((k) => {
+      if (k.startsWith('sb-')) localStorage.removeItem(k);
+    });
+  } catch {}
+  try {
+    document.cookie.split(';').forEach((c) => {
+      const name = c.trim().split('=')[0];
+      if (!name || !name.startsWith('sb-')) return;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+    });
+  } catch {}
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -75,7 +97,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // every request, so the session we see here is trustworthy — we
       // don't need a network-verified getUser() on initial render.
       const sessRes = await withTimeout(supabase.auth.getSession(), 3000, 'getSession');
-      const verifiedUser = sessRes?.data?.session?.user ?? null;
+      // sessRes === null means getSession itself hung — getSession is a
+      // pure localStorage read, so a hang here means the SDK is stuck in
+      // an internal refresh lock (usually due to a corrupted sb-*-auth
+      // token). The client is unrecoverable; wipe auth storage and reload
+      // so the next mount starts clean.
+      if (sessRes === null) {
+        if (!recentlyReloaded()) {
+          console.warn('[auth] getSession hung — wiping auth storage + reload');
+          markReloadAttempt();
+          wipeAuthStorage();
+          resetClient();
+          window.location.reload();
+          return;
+        }
+        // Already tried once within the guard window — fall through to
+        // unauth state so the login page can handle it without looping.
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      const verifiedUser = sessRes.data?.session?.user ?? null;
       if (!verifiedUser) {
         setUser(null);
         setLoading(false);
@@ -167,14 +209,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return fetchProfile(userId, retries - 1);
       }
       // Out of retries — if we never had a profile to begin with, the
-      // client is effectively dead (can't fetch anything). Reset the
-      // singleton + hard-reload so middleware re-establishes the session
-      // on a fresh client. If we already had a profile, keep it and hope
-      // it's a transient blip; the visibility handler can still recover.
+      // client is effectively dead (can't fetch anything). Wipe auth
+      // storage + reset the singleton + hard-reload so the next mount
+      // starts clean. If we already had a profile, keep it and hope it's
+      // a transient blip; the visibility handler can still recover.
       // Guard against infinite reload loops if Supabase itself is down.
       if (!profile && !recentlyReloaded()) {
-        console.warn('[auth] fetchProfile hard-failed with no prior profile — resetting client + reload');
+        console.warn('[auth] fetchProfile hard-failed with no prior profile — wiping + reload');
         markReloadAttempt();
+        wipeAuthStorage();
         resetClient();
         window.location.reload();
         return;
