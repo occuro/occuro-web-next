@@ -259,12 +259,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // supabase-js doesn't throw on HTTP / auth errors — it returns
+    // { data: null, error: { ... } }. When the JWT is expired (e.g.
+    // after returning from a backgrounded tab) this path kicks in:
+    // profRes exists, profRes.data is null, but profRes.error is a
+    // JWT-expired error. Previously the code treated this as "profile
+    // doesn't exist" and setProfile(null) — which is what produced the
+    // "User" fallback in the sidebar while the user was actually still
+    // logged in. Treat any error as a transient failure and keep the
+    // existing profile intact until a real answer comes back.
+    const err = (profRes as { error?: { message?: string } | null }).error;
+    if (err) {
+      console.warn('[auth] fetchProfile returned error — keeping previous profile state:', err.message);
+      return;
+    }
+
     const prof = profRes.data ?? null;
 
     // Query succeeded but no row yet (DB replication lag on fresh signup).
     if (!prof && retries > 0) {
       await new Promise((r) => setTimeout(r, 1000));
       return fetchProfile(userId, retries - 1);
+    }
+
+    // Only overwrite with null if we reached here via "no row + no more
+    // retries" AND we didn't already have a profile. Nulling a
+    // previously-good profile after a transient failure is the exact
+    // thing that caused the User-fallback regression.
+    if (!prof && profile) {
+      console.warn('[auth] fetchProfile returned no row after retries — keeping previous profile state');
+      return;
     }
 
     setProfile(prof);
@@ -275,7 +299,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         5000,
         'fetchProfile.organizations',
       );
-      if (orgRes) setOrganization(orgRes.data ?? null);
+      if (orgRes && !(orgRes as { error?: unknown }).error) {
+        setOrganization(orgRes.data ?? null);
+      }
     }
   }
 
