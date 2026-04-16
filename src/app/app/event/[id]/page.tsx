@@ -103,6 +103,11 @@ export default function EventDetailPage({
   // compute from the source of truth every load.
   const [computedCounts, setComputedCounts] = useState<{ interested: number; confirmed: number }>({ interested: 0, confirmed: 0 });
 
+  // Chat room id for this event — resolved so the "Zum Event-Chat"
+  // button can deep-link into the specific room instead of dumping
+  // the user on the global messages list.
+  const [eventChatRoomId, setEventChatRoomId] = useState<string | null>(null);
+
   const today = new Date().toISOString().split('T')[0];
 
   // ── Load everything ──────────────────────────────────────────────
@@ -189,6 +194,18 @@ export default function EventDetailPage({
       (authors ?? []).forEach((a) => { map[a.id] = a as AuthorInfo; });
       setFeedAuthors(map);
     }
+
+    // Resolve the event's chat room id so the "Zum Event-Chat" button
+    // can deep-link into the specific conversation. RLS only returns
+    // a row here if the user is actually a participant, which is
+    // exactly when we want the button to work.
+    const { data: room } = await supabase
+      .from('chat_rooms')
+      .select('id')
+      .eq('event_id', id)
+      .eq('type', 'event_group')
+      .maybeSingle();
+    setEventChatRoomId((room as { id: string } | null)?.id ?? null);
 
     // Authoritative counts — pulled live from event_statuses since the
     // cached columns on events drift out of sync.
@@ -738,10 +755,13 @@ export default function EventDetailPage({
         posting={postingFeed}
       />
 
-      {/* Event chat link */}
+      {/* Event chat link — deep-link into the specific room when we've
+          been able to resolve it (RLS requires the user to be a
+          participant). Fall back to the chat list only when resolution
+          fails entirely, so the button still does something. */}
       {event.chat_enabled && (
         <Link
-          href="/app/chat"
+          href={eventChatRoomId ? `/app/chat/${eventChatRoomId}` : '/app/chat'}
           className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-border-subtle bg-surface hover:bg-elevated/50 transition-colors text-[13px] font-semibold"
         >
           <MessageCircle size={15} /> Zum Event-Chat
