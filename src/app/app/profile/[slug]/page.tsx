@@ -435,12 +435,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
               <Users size={13} className="text-violet-400" />
               <span className="text-[13px] font-semibold">{friendCount}</span>
-              <span className="text-[12px] text-muted-fg">Freunde</span>
+              <span className="text-[12px] text-muted-fg">{friendCount === 1 ? 'Freund' : 'Freunde'}</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
               <CalendarDays size={13} className="text-violet-400" />
               <span className="text-[13px] font-semibold">{hostedEvents.length + attendingEvents.length}</span>
-              <span className="text-[12px] text-muted-fg">Events</span>
+              <span className="text-[12px] text-muted-fg">{hostedEvents.length + attendingEvents.length === 1 ? 'Event' : 'Events'}</span>
             </div>
           </div>
 
