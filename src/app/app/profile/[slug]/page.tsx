@@ -9,9 +9,10 @@ import { formatDate } from '@/lib/utils';
 import type { Event } from '@/types/occuro';
 import {
   ArrowLeft, MapPin, Globe, AtSign, Users, CalendarDays, MessageCircle,
-  UserMinus, UserPlus, Loader2, Heart, ImageOff, Lock, Flag, Ban, MoreVertical,
+  UserMinus, UserPlus, Loader2, Heart, Lock, Flag, Ban, MoreVertical,
 } from 'lucide-react';
 import { ReportModal } from '@/components/report-modal';
+import { EventBanner } from '@/components/event-banner';
 
 interface FullProfile {
   id: string;
@@ -528,14 +529,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                   className="flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-colors"
                 >
                   <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                    {event.banner_url || event.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={event.banner_url ?? event.image_url ?? ''} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageOff size={14} className="text-muted-fg/30" />
-                      </div>
-                    )}
+                    <EventBanner event={event} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-semibold truncate flex items-center gap-1.5">

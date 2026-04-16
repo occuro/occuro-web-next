@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
-import { Calendar, Heart, CheckCircle2, ImageOff } from 'lucide-react';
+import { Calendar, Heart, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Map as MapLibreMap, Marker, NavigationControl, Popup, type MapRef } from 'react-map-gl/maplibre';
 import { MapSearchBar } from '@/components/map-search-bar';
+import { EventBanner } from '@/components/event-banner';
 
 // Tile provider — defaults to OpenFreeMap (zero-config, fully free,
 // OSM-based) and upgrades to MapTiler Streets-v2 when a key is set
@@ -179,14 +180,7 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
             <div className="min-w-[220px]">
               <div className="flex items-start gap-2.5">
                 <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                  {selected.banner_url || selected.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selected.banner_url ?? selected.image_url ?? ''} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageOff size={14} className="text-muted-fg/40" />
-                    </div>
-                  )}
+                  <EventBanner event={selected} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <span

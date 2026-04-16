@@ -6,8 +6,9 @@ import { useAuth } from '@/lib/auth-context';
 import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
+import { EventBanner } from '@/components/event-banner';
 import {
-  ChevronLeft, ChevronRight, CalendarDays, Clock, MapPin, ImageOff,
+  ChevronLeft, ChevronRight, CalendarDays, Clock, MapPin,
   Heart, CheckCircle2, Lock,
 } from 'lucide-react';
 
@@ -311,14 +312,7 @@ export default function CalendarPage() {
                 >
                   <div className="w-1 h-12 rounded-full flex-shrink-0" style={{ backgroundColor: accentColor }} />
                   <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                    {event.banner_url || event.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={event.banner_url ?? event.image_url ?? ''} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageOff size={16} strokeWidth={1.4} className="text-muted-fg/30" />
-                      </div>
-                    )}
+                    <EventBanner event={event} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">

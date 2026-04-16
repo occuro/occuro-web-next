@@ -8,10 +8,11 @@ import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
   MapPin, BadgeCheck, Users, Pencil, Settings, Clock, Calendar,
-  ImageOff, Plus, X, Save, Loader2, Tag,
+  Plus, X, Save, Loader2, Tag,
   CalendarRange, TrendingUp,
 } from 'lucide-react';
 import { ImageUpload } from '@/components/image-upload';
+import { EventBanner } from '@/components/event-banner';
 
 type EventTab = 'upcoming' | 'live' | 'past';
 
@@ -227,14 +228,7 @@ export default function OrganizerProfilePage() {
               className="group flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-all duration-200"
             >
               <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                {event.banner_url || event.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={event.banner_url ?? event.image_url ?? ''} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageOff size={16} strokeWidth={1.4} className="text-muted-fg/30" />
-                  </div>
-                )}
+                <EventBanner event={event} />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>

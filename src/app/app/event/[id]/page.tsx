@@ -8,11 +8,12 @@ import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Clock, MapPin, Heart, CheckCircle2,
-  Users, Globe, Ticket, ImageOff, ExternalLink, Lock,
+  Users, Globe, Ticket, ExternalLink, Lock,
   Gift, Award, Sparkles, Loader2, MessageCircle, Send,
   Trophy, Trash2, Flag, X as XIcon,
 } from 'lucide-react';
 import { ReportModal } from '@/components/report-modal';
+import { EventBanner } from '@/components/event-banner';
 
 type UserStatus = 'interested' | 'confirmed' | 'attended' | 'not-interested' | 'saved' | null;
 
@@ -457,14 +458,8 @@ export default function EventDetailPage({
 
       {/* Banner */}
       <div className="aspect-[21/9] rounded-2xl bg-muted overflow-hidden relative">
-        {event.banner_url || event.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={event.banner_url ?? event.image_url ?? ''} alt={event.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-elevated/50">
-            <ImageOff size={48} strokeWidth={1} className="text-muted-fg/20" />
-          </div>
-        )}
+        <EventBanner event={event} />
+
         <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex flex-col gap-2">
           <span
             className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold text-white backdrop-blur-sm"

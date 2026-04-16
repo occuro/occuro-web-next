@@ -7,10 +7,11 @@ import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
-  Plus, Search, X, CalendarDays, Radio, Clock, ImageOff,
+  Plus, Search, X, CalendarDays, Radio, Clock,
   AlertTriangle, ShieldCheck, ArrowRight,
   Users, Lock, Pencil,
 } from 'lucide-react';
+import { EventBanner } from '@/components/event-banner';
 
 type EventTab = 'upcoming' | 'live' | 'past';
 
@@ -241,14 +242,7 @@ export default function OrganizerHomePage() {
                 className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0"
               >
                 <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                  {event.banner_url || event.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={event.banner_url ?? event.image_url ?? ''} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageOff size={16} strokeWidth={1.4} className="text-muted-fg/30" />
-                    </div>
-                  )}
+                  <EventBanner event={event} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
