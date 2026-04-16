@@ -474,7 +474,7 @@ export default function EventDetailPage({
       </Link>
 
       {/* Banner */}
-      <div className="aspect-[21/9] rounded-2xl bg-muted overflow-hidden relative">
+      <div className="aspect-[191/100] rounded-3xl bg-muted overflow-hidden relative shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
         <EventBanner event={event} />
 
         <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex flex-col gap-2">

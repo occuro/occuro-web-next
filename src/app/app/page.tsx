@@ -469,7 +469,7 @@ export default function DiscoverPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="rounded-3xl bg-surface border border-border-subtle overflow-hidden">
-                  <div className="aspect-[5/3] bg-muted animate-pulse" />
+                  <div className="aspect-[191/100] bg-muted animate-pulse" />
                   <div className="p-5 space-y-3">
                     <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
                     <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
@@ -618,7 +618,7 @@ function CompactEventCard({
           : 'border-border-subtle hover:border-border-strong'
       }`}
     >
-      <div className="aspect-[16/9] bg-muted relative overflow-hidden">
+      <div className="aspect-[191/100] bg-muted relative overflow-hidden">
         <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
           <EventBanner event={event} />
         </div>
@@ -673,7 +673,7 @@ function EventCard({ event }: { event: Event }) {
       href={`/app/event/${event.id}`}
       className="group rounded-3xl border border-border-subtle bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:border-border-strong hover:-translate-y-0.5 transition-all duration-300"
     >
-      <div className="aspect-[5/3] bg-muted relative overflow-hidden">
+      <div className="aspect-[191/100] bg-muted relative overflow-hidden">
         <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
           <EventBanner event={event} />
         </div>
