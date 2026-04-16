@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth-context';
 import { formatDate } from '@/lib/utils';
 import type { Event } from '@/types/occuro';
 import {
-  ArrowLeft, MapPin, Globe, AtSign, Users, CalendarDays, MessageCircle,
+  ArrowLeft, MapPin, Globe, AtSign, MessageCircle,
   UserMinus, UserPlus, Loader2, Heart, Lock, Flag, Ban, MoreVertical,
 } from 'lucide-react';
 import { ReportModal } from '@/components/report-modal';
@@ -57,7 +57,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [hostedEvents, setHostedEvents] = useState<Event[]>([]);
   const [attendingEvents, setAttendingEvents] = useState<Event[]>([]);
-  const [friendCount, setFriendCount] = useState(0);
   const [friendshipStatus, setFriendshipStatus] = useState<'none' | 'friends' | 'pending_out' | 'pending_in'>('none');
   const [loading, setLoading] = useState(true);
   // Debug trail surfaced in the error UI when nothing matches.
@@ -173,7 +172,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
     setProfile(resolved as FullProfile);
 
     const today = new Date().toISOString().split('T')[0];
-    const [hostedRes, statusesRes, friendsRes, friendshipRes] = await Promise.all([
+    const [hostedRes, statusesRes, friendshipRes] = await Promise.all([
       supabase
         .from('events')
         .select('*')
@@ -187,11 +186,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
         .select('event_id, status')
         .eq('user_id', resolved.id)
         .in('status', ['interested', 'confirmed', 'attended']),
-      supabase
-        .from('friendships')
-        .select('user_id, friend_id, status')
-        .or(`user_id.eq.${resolved.id},friend_id.eq.${resolved.id}`)
-        .eq('status', 'accepted'),
       // Friendship between current user and this profile
       user
         ? supabase
@@ -217,14 +211,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
         .limit(12);
       setAttendingEvents((data ?? []) as Event[]);
     }
-
-    // Distinct friend count
-    const ids = new Set<string>();
-    ((friendsRes.data ?? []) as Array<{ user_id: string; friend_id: string }>).forEach((f) => {
-      const other = f.user_id === resolved!.id ? f.friend_id : f.user_id;
-      if (other) ids.add(other);
-    });
-    setFriendCount(ids.size);
 
     // Friendship status
     if (user) {
@@ -430,19 +416,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
             <p className="text-[14px] leading-relaxed mt-4">{profile.bio}</p>
           )}
 
-          {/* Stats inline pills */}
-          <div className="flex items-center gap-2 mt-4 flex-wrap">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
-              <Users size={13} className="text-violet-400" />
-              <span className="text-[13px] font-semibold">{friendCount}</span>
-              <span className="text-[12px] text-muted-fg">{friendCount === 1 ? 'Freund' : 'Freunde'}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
-              <CalendarDays size={13} className="text-violet-400" />
-              <span className="text-[13px] font-semibold">{hostedEvents.length + attendingEvents.length}</span>
-              <span className="text-[12px] text-muted-fg">{hostedEvents.length + attendingEvents.length === 1 ? 'Event' : 'Events'}</span>
-            </div>
-          </div>
+          {/* Stats pills intentionally removed to match the mobile
+              ProfileView — the events list below already tells the
+              story (which events this person attended / is attending). */}
 
           {/* Location / website / insta row */}
           {(profile.location || profile.website || profile.instagram) && (
