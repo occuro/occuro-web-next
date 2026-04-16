@@ -6,9 +6,10 @@ import { useAuth } from '@/lib/auth-context';
 import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
+import { EventBanner } from '@/components/event-banner';
 import {
   Search, Heart, CheckCircle2, MapPin, Clock, Calendar,
-  ImageOff, ArrowUpDown, X, Sparkles, CalendarPlus,
+  ArrowUpDown, X, Sparkles, CalendarPlus,
   Mail, Users, Building2,
 } from 'lucide-react';
 
@@ -441,18 +442,9 @@ function CompactEventCard({
       }`}
     >
       <div className="aspect-[16/9] bg-muted relative overflow-hidden">
-        {event.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={event.image_url}
-            alt={event.title}
-            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-elevated/50">
-            <ImageOff size={28} strokeWidth={1.2} className="text-muted-fg/30" />
-          </div>
-        )}
+        <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+          <EventBanner event={event} />
+        </div>
         {contextBadge && (
           <span
             className={`absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold backdrop-blur-sm ${
@@ -503,18 +495,9 @@ function EventCard({ event }: { event: Event }) {
       className="group rounded-2xl border border-border-subtle bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:border-border-strong hover:-translate-y-0.5 transition-all duration-300"
     >
       <div className="aspect-[16/9] bg-muted relative overflow-hidden">
-        {event.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={event.image_url}
-            alt={event.title}
-            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-elevated/50">
-            <ImageOff size={32} strokeWidth={1.2} className="text-muted-fg/30" />
-          </div>
-        )}
+        <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+          <EventBanner event={event} />
+        </div>
         <span
           className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white backdrop-blur-sm"
           style={{ backgroundColor: `${catColor}dd` }}
