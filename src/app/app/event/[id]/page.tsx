@@ -52,6 +52,14 @@ interface AuthorInfo {
   avatar_url: string | null;
 }
 
+interface FriendParticipant {
+  id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+  status: 'interested' | 'confirmed' | 'attended';
+}
+
 export default function EventDetailPage({
   params,
 }: {
@@ -81,6 +89,11 @@ export default function EventDetailPage({
   const [feedAuthors, setFeedAuthors] = useState<Record<string, AuthorInfo>>({});
   const [newPostText, setNewPostText] = useState('');
   const [postingFeed, setPostingFeed] = useState(false);
+
+  // Friends who are going to this event (mobile parity with the
+  // "Deine Freunde gehen hin" section in EventDetailsModal).
+  const [friendParticipants, setFriendParticipants] = useState<FriendParticipant[]>([]);
+  const [expandedFriendStatus, setExpandedFriendStatus] = useState<FriendParticipant['status'] | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -167,6 +180,53 @@ export default function EventDetailPage({
       const map: Record<string, AuthorInfo> = {};
       (authors ?? []).forEach((a) => { map[a.id] = a as AuthorInfo; });
       setFeedAuthors(map);
+    }
+
+    // Friend participation (mobile parity): show which of my accepted
+    // friends are interested / confirmed / attended for this event.
+    if (user) {
+      const { data: friendships } = await supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq('status', 'accepted');
+      const friendIds = (friendships ?? []).map((f) =>
+        f.user_id === user.id ? f.friend_id : f.user_id,
+      );
+      if (friendIds.length > 0) {
+        const [statusesRes, profilesRes] = await Promise.all([
+          supabase
+            .from('event_statuses')
+            .select('user_id, status')
+            .eq('event_id', id)
+            .in('user_id', friendIds)
+            .in('status', ['interested', 'confirmed', 'attended']),
+          supabase
+            .from('profiles')
+            .select('id, full_name, username, avatar_url')
+            .in('id', friendIds),
+        ]);
+        const profMap = new Map<string, { id: string; full_name: string | null; username: string | null; avatar_url: string | null }>();
+        (profilesRes.data ?? []).forEach((p) => profMap.set(p.id, p));
+        const participants: FriendParticipant[] = (statusesRes.data ?? [])
+          .map((s) => {
+            const prof = profMap.get(s.user_id);
+            if (!prof) return null;
+            return {
+              id: prof.id,
+              full_name: prof.full_name,
+              username: prof.username,
+              avatar_url: prof.avatar_url,
+              status: s.status as FriendParticipant['status'],
+            };
+          })
+          .filter((x): x is FriendParticipant => x !== null);
+        setFriendParticipants(participants);
+      } else {
+        setFriendParticipants([]);
+      }
+    } else {
+      setFriendParticipants([]);
     }
 
     setLoading(false);
@@ -485,6 +545,20 @@ export default function EventDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Friends going — mobile parity with the "Deine Freunde gehen hin"
+          section on EventDetailsModal. Only shown on public events for
+          non-organizers, and only when there's actually friend activity
+          to display (empty-state is silent). */}
+      {event.visibility === 'public' && !isOwnEvent && friendParticipants.length > 0 && (
+        <FriendsGoingSection
+          participants={friendParticipants}
+          expanded={expandedFriendStatus}
+          onToggle={(s) =>
+            setExpandedFriendStatus((prev) => (prev === s ? null : s))
+          }
+        />
+      )}
 
       {/* RSVP buttons — visibility-dependent layout
           • Private events: Zusagen + Absagen (no Interessiert — you're
@@ -894,4 +968,141 @@ function timeAgo(dateStr: string): string {
   if (days === 1) return 'Gestern';
   if (days < 7) return `${days}d`;
   return new Date(dateStr).toLocaleDateString('de-DE');
+}
+
+function FriendsGoingSection({
+  participants,
+  expanded,
+  onToggle,
+}: {
+  participants: FriendParticipant[];
+  expanded: FriendParticipant['status'] | null;
+  onToggle: (s: FriendParticipant['status']) => void;
+}) {
+  const byStatus: Record<FriendParticipant['status'], FriendParticipant[]> = {
+    interested: participants.filter((p) => p.status === 'interested'),
+    confirmed: participants.filter((p) => p.status === 'confirmed'),
+    attended: participants.filter((p) => p.status === 'attended'),
+  };
+
+  // Display order mirrors the mobile app: confirmed (most committed)
+  // first, then interested, then attended (only if non-empty).
+  const statusOrder: Array<{
+    key: FriendParticipant['status'];
+    label: string;
+    color: string;
+    bg: string;
+    icon: typeof Heart;
+  }> = [
+    { key: 'confirmed', label: 'dabei', color: 'text-green-500', bg: 'bg-green-500/10 hover:bg-green-500/15 border-green-500/20', icon: CheckCircle2 },
+    { key: 'interested', label: 'interessiert', color: 'text-pink-500', bg: 'bg-pink-500/10 hover:bg-pink-500/15 border-pink-500/20', icon: Heart },
+    { key: 'attended', label: 'waren da', color: 'text-violet-400', bg: 'bg-violet-500/10 hover:bg-violet-500/15 border-violet-500/20', icon: Trophy },
+  ];
+
+  // Avatar stack: up to 7 participants from the combined list, confirmed
+  // first so the "most important" faces show up before interested-only.
+  const stack = [...byStatus.confirmed, ...byStatus.interested, ...byStatus.attended].slice(0, 7);
+  const overflow = participants.length - stack.length;
+
+  const expandedList = expanded ? byStatus[expanded] : [];
+
+  return (
+    <section className="rounded-2xl border border-border-subtle bg-surface p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Users size={15} className="text-violet-500" strokeWidth={2} />
+        <h3 className="text-[13px] font-heading font-semibold">
+          {participants.length === 1
+            ? '1 Freund von dir'
+            : `${participants.length} Freunde von dir`}
+        </h3>
+      </div>
+
+      <div className="flex items-center -space-x-2">
+        {stack.map((p) => (
+          <FriendAvatar key={p.id} participant={p} />
+        ))}
+        {overflow > 0 && (
+          <div className="w-9 h-9 rounded-full bg-elevated border-2 border-background flex items-center justify-center text-[11px] font-semibold text-muted-fg">
+            +{overflow}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        {statusOrder.map(({ key, label, color, bg, icon: Icon }) => {
+          const list = byStatus[key];
+          if (list.length === 0) return null;
+          const isOpen = expanded === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onToggle(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${bg} ${
+                isOpen ? 'ring-1 ring-foreground/20' : ''
+              }`}
+            >
+              <Icon size={12} strokeWidth={2} className={color} />
+              <span className="font-semibold">{list.length}</span>
+              <span className="text-foreground/70">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {expanded && expandedList.length > 0 && (
+        <ul className="pt-2 space-y-2 border-t border-border-subtle">
+          {expandedList
+            .slice()
+            .sort((a, b) => (a.full_name ?? '').localeCompare(b.full_name ?? '', 'de'))
+            .map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={p.username ? `/app/profile/${p.username}` : `/app/profile/${p.id}`}
+                  className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-elevated transition-colors"
+                >
+                  <FriendAvatar participant={p} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium truncate">
+                      {p.full_name ?? p.username ?? 'Unbekannt'}
+                    </p>
+                    {p.username && p.full_name && (
+                      <p className="text-[11.5px] text-muted-fg truncate">@{p.username}</p>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function FriendAvatar({
+  participant,
+  size = 'md',
+}: {
+  participant: FriendParticipant;
+  size?: 'sm' | 'md';
+}) {
+  const dim = size === 'sm' ? 'w-8 h-8' : 'w-9 h-9';
+  const fontSize = size === 'sm' ? 'text-[11px]' : 'text-[12px]';
+  const initial = (participant.full_name ?? participant.username ?? '?')
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+  return participant.avatar_url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={participant.avatar_url}
+      alt={participant.full_name ?? ''}
+      className={`${dim} rounded-full object-cover border-2 border-background`}
+    />
+  ) : (
+    <div
+      className={`${dim} rounded-full bg-elevated border-2 border-background flex items-center justify-center font-semibold ${fontSize} text-foreground/70`}
+    >
+      {initial}
+    </div>
+  );
 }
