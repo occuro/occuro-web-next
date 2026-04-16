@@ -209,9 +209,20 @@ function DeployBouncer() {
           ch.close();
         }
       } catch {}
+      // RACE signOut against a 2s timeout. If the Supabase client is in
+      // a stuck internal state (which is exactly when a bounce is most
+      // needed), a bare `await signOut()` hangs forever and the cleanup
+      // below never runs. The manual storage wipe is the actual source
+      // of truth for "the user is logged out" — signOut is just a
+      // politeness call to the Supabase backend.
       try {
         const supabase = createClient();
-        await supabase.auth.signOut();
+        await Promise.race([
+          supabase.auth.signOut().catch((e) => {
+            console.warn('[robustness] supabase signOut threw during bounce:', e);
+          }),
+          new Promise((r) => setTimeout(r, 2000)),
+        ]);
       } catch (e) {
         console.warn('[robustness] supabase signOut failed during bounce:', e);
       }
@@ -224,6 +235,12 @@ function DeployBouncer() {
           }
         });
         sessionStorage.clear();
+        document.cookie.split(';').forEach((c) => {
+          const name = c.trim().split('=')[0];
+          if (!name || !name.startsWith('sb-')) return;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+        });
       } catch {}
       // Hard navigate (not reload!) to / so we drop ALL React state and
       // load the new bundle from scratch. The landing page will show
