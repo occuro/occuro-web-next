@@ -9,14 +9,31 @@ import Link from 'next/link';
 import {
   Search, Heart, CheckCircle2, MapPin, Clock, Calendar,
   ImageOff, ArrowUpDown, X, Sparkles, CalendarPlus,
+  Mail, Users, Building2,
 } from 'lucide-react';
 
 type SortMode = 'relevance' | 'soonest' | 'latest';
 
+type InvitationRow = {
+  id: string;
+  event_id: string;
+  invited_by: string | null;
+  event: Event;
+};
+
+type FriendEventRow = {
+  event: Event;
+  friendCount: number;
+};
+
 export default function DiscoverPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
+  const [invitations, setInvitations] = useState<InvitationRow[]>([]);
+  const [friendEvents, setFriendEvents] = useState<FriendEventRow[]>([]);
+  const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [personalLoading, setPersonalLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>('soonest');
@@ -31,6 +48,15 @@ export default function DiscoverPage() {
     fetchEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category]);
+
+  useEffect(() => {
+    if (!user) {
+      setPersonalLoading(false);
+      return;
+    }
+    fetchPersonal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   async function fetchEvents() {
     setLoading(true);
@@ -49,6 +75,106 @@ export default function DiscoverPage() {
     const { data } = await query;
     setEvents(data ?? []);
     setLoading(false);
+  }
+
+  async function fetchPersonal() {
+    if (!user) return;
+    setPersonalLoading(true);
+    const today = new Date().toISOString().split('T')[0];
+
+    const [invRes, friendshipsRes, followsRes] = await Promise.all([
+      supabase
+        .from('event_invitations')
+        .select('id, event_id, invited_by, status, created_at')
+        .eq('invited_user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('friendships')
+        .select('user_id, friend_id, status')
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq('status', 'accepted'),
+      supabase
+        .from('organizer_follows')
+        .select('organizer_org_id')
+        .eq('follower_id', user.id)
+        .not('organizer_org_id', 'is', null),
+    ]);
+
+    // Invitations → event details
+    const invRows = invRes.data ?? [];
+    let invitationsOut: InvitationRow[] = [];
+    if (invRows.length > 0) {
+      const ids = invRows.map((r) => r.event_id);
+      const { data: invEvents } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', ids)
+        .gte('date', today);
+      const map = new Map((invEvents ?? []).map((e) => [e.id, e as Event]));
+      invitationsOut = invRows
+        .map((r) => {
+          const event = map.get(r.event_id);
+          return event
+            ? { id: r.id, event_id: r.event_id, invited_by: r.invited_by, event }
+            : null;
+        })
+        .filter((r): r is InvitationRow => r !== null);
+    }
+    setInvitations(invitationsOut);
+
+    // Friend events
+    const friendIds = (friendshipsRes.data ?? []).map((f) =>
+      f.user_id === user.id ? f.friend_id : f.user_id,
+    );
+    let friendEventsOut: FriendEventRow[] = [];
+    if (friendIds.length > 0) {
+      const { data: statuses } = await supabase
+        .from('event_statuses')
+        .select('event_id, user_id, status')
+        .in('user_id', friendIds)
+        .in('status', ['interested', 'confirmed']);
+      const countByEvent = new Map<string, number>();
+      (statuses ?? []).forEach((s) => {
+        countByEvent.set(s.event_id, (countByEvent.get(s.event_id) ?? 0) + 1);
+      });
+      const eventIds = Array.from(countByEvent.keys());
+      if (eventIds.length > 0) {
+        const { data: fEvents } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', eventIds)
+          .eq('visibility', 'public')
+          .gte('date', today)
+          .order('date', { ascending: true })
+          .limit(20);
+        friendEventsOut = (fEvents ?? []).map((e) => ({
+          event: e as Event,
+          friendCount: countByEvent.get(e.id) ?? 0,
+        }));
+      }
+    }
+    setFriendEvents(friendEventsOut);
+
+    // Followed organizer events
+    const orgIds = (followsRes.data ?? [])
+      .map((f) => f.organizer_org_id)
+      .filter((id): id is string => Boolean(id));
+    let organizerEventsOut: Event[] = [];
+    if (orgIds.length > 0) {
+      const { data: oEvents } = await supabase
+        .from('events')
+        .select('*')
+        .in('organizer_org_id', orgIds)
+        .eq('visibility', 'public')
+        .gte('date', today)
+        .order('date', { ascending: true })
+        .limit(20);
+      organizerEventsOut = (oEvents ?? []) as Event[];
+    }
+    setOrganizerEvents(organizerEventsOut);
+
+    setPersonalLoading(false);
   }
 
   const filtered = (() => {
@@ -75,12 +201,11 @@ export default function DiscoverPage() {
   })();
 
   const isSearching = search.length >= 2;
+  const hasAnyPersonal =
+    invitations.length > 0 || friendEvents.length > 0 || organizerEvents.length > 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      {/* Header — minimalistic, no big violet box. Title left, the
-          private-event CTA quietly to the right. The Apple/Linear
-          way: no decorative gradients or hero blocks, just structure. */}
       {!isSearching && (
         <div className="flex items-end justify-between gap-4 flex-wrap pt-2">
           <div>
@@ -116,6 +241,60 @@ export default function DiscoverPage() {
           </button>
         )}
       </div>
+
+      {/* Personal sections — only on the default landing (not while searching) */}
+      {!isSearching && user && hasAnyPersonal && (
+        <div className="space-y-8">
+          {invitations.length > 0 && (
+            <PersonalSection
+              icon={<Mail size={16} className="text-violet-500" />}
+              title="Einladungen"
+              subtitle={`${invitations.length} ${invitations.length === 1 ? 'offene Einladung' : 'offene Einladungen'}`}
+            >
+              {invitations.map((inv) => (
+                <CompactEventCard
+                  key={inv.id}
+                  event={inv.event}
+                  contextBadge="Eingeladen"
+                  accent
+                />
+              ))}
+            </PersonalSection>
+          )}
+
+          {friendEvents.length > 0 && (
+            <PersonalSection
+              icon={<Users size={16} className="text-violet-500" />}
+              title="Deine Freunde gehen hin"
+            >
+              {friendEvents.map(({ event, friendCount }) => (
+                <CompactEventCard
+                  key={event.id}
+                  event={event}
+                  contextBadge={
+                    friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`
+                  }
+                />
+              ))}
+            </PersonalSection>
+          )}
+
+          {organizerEvents.length > 0 && (
+            <PersonalSection
+              icon={<Building2 size={16} className="text-violet-500" />}
+              title="Von Organizern, denen du folgst"
+            >
+              {organizerEvents.map((event) => (
+                <CompactEventCard
+                  key={event.id}
+                  event={event}
+                  contextBadge={event.organizer_name ?? undefined}
+                />
+              ))}
+            </PersonalSection>
+          )}
+        </div>
+      )}
 
       {/* Sort Chips (when searching) */}
       {isSearching && (
@@ -170,9 +349,11 @@ export default function DiscoverPage() {
 
       {/* Section Title */}
       {!isSearching && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pt-2">
           <Sparkles size={16} className="text-violet-500" />
-          <h2 className="text-base font-heading font-semibold">Events für dich</h2>
+          <h2 className="text-base font-heading font-semibold">
+            {hasAnyPersonal ? 'Mehr entdecken' : 'Events für dich'}
+          </h2>
         </div>
       )}
 
@@ -202,7 +383,114 @@ export default function DiscoverPage() {
           ))}
         </div>
       )}
+
+      {/* Subtle personal-sections loading hint — only shows on first paint */}
+      {personalLoading && user && !hasAnyPersonal && !isSearching && (
+        <div className="sr-only" aria-live="polite">
+          Lade persönliche Empfehlungen…
+        </div>
+      )}
     </div>
+  );
+}
+
+function PersonalSection({
+  icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div className="flex items-baseline gap-2 mb-3">
+        <span className="translate-y-[2px]">{icon}</span>
+        <h2 className="text-base font-heading font-semibold">{title}</h2>
+        {subtitle && (
+          <span className="text-[12px] text-muted-fg">· {subtitle}</span>
+        )}
+      </div>
+      <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function CompactEventCard({
+  event,
+  contextBadge,
+  accent,
+}: {
+  event: Event;
+  contextBadge?: string;
+  accent?: boolean;
+}) {
+  const catColor = getCategoryColor(event.category);
+  return (
+    <Link
+      href={`/app/event/${event.id}`}
+      className={`group flex-shrink-0 w-[280px] snap-start rounded-2xl border bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5 transition-all duration-300 ${
+        accent
+          ? 'border-violet-500/40 hover:border-violet-500/60'
+          : 'border-border-subtle hover:border-border-strong'
+      }`}
+    >
+      <div className="aspect-[16/9] bg-muted relative overflow-hidden">
+        {event.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={event.image_url}
+            alt={event.title}
+            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-elevated/50">
+            <ImageOff size={28} strokeWidth={1.2} className="text-muted-fg/30" />
+          </div>
+        )}
+        {contextBadge && (
+          <span
+            className={`absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold backdrop-blur-sm ${
+              accent
+                ? 'bg-violet-600/90 text-white'
+                : 'bg-black/50 text-white'
+            }`}
+          >
+            {contextBadge}
+          </span>
+        )}
+        <span
+          className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold text-white backdrop-blur-sm"
+          style={{ backgroundColor: `${catColor}dd` }}
+        >
+          {event.category}
+        </span>
+      </div>
+      <div className="p-3 space-y-1.5">
+        <h3 className="font-heading font-semibold text-[14px] leading-snug line-clamp-2">
+          {event.title}
+        </h3>
+        <div className="flex items-center gap-2.5 text-[11.5px] text-muted-fg">
+          <span className="flex items-center gap-1">
+            <Calendar size={11} strokeWidth={1.6} />
+            {formatDate(event.date)}
+          </span>
+          <span className="flex items-center gap-1">
+            <Clock size={11} strokeWidth={1.6} />
+            {formatTime(event.time)}
+          </span>
+        </div>
+        <p className="text-[11.5px] text-muted-fg truncate flex items-center gap-1">
+          <MapPin size={11} strokeWidth={1.6} className="flex-shrink-0" />
+          {event.location}
+        </p>
+      </div>
+    </Link>
   );
 }
 
@@ -216,6 +504,7 @@ function EventCard({ event }: { event: Event }) {
     >
       <div className="aspect-[16/9] bg-muted relative overflow-hidden">
         {event.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={event.image_url}
             alt={event.title}
