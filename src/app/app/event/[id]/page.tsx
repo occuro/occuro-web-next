@@ -95,6 +95,13 @@ export default function EventDetailPage({
   const [friendParticipants, setFriendParticipants] = useState<FriendParticipant[]>([]);
   const [expandedFriendStatus, setExpandedFriendStatus] = useState<FriendParticipant['status'] | null>(null);
 
+  // Authoritative RSVP counts computed live from event_statuses. The
+  // denormalized events.interested_count / confirmed_count columns are
+  // supposed to be kept in sync by DB triggers but we've seen them
+  // drift (e.g. 0 displayed while friends are clearly going), so we
+  // compute from the source of truth every load.
+  const [computedCounts, setComputedCounts] = useState<{ interested: number; confirmed: number }>({ interested: 0, confirmed: 0 });
+
   const today = new Date().toISOString().split('T')[0];
 
   // ── Load everything ──────────────────────────────────────────────
@@ -181,6 +188,18 @@ export default function EventDetailPage({
       (authors ?? []).forEach((a) => { map[a.id] = a as AuthorInfo; });
       setFeedAuthors(map);
     }
+
+    // Authoritative counts — pulled live from event_statuses since the
+    // cached columns on events drift out of sync.
+    const { data: allStatuses } = await supabase
+      .from('event_statuses')
+      .select('status')
+      .eq('event_id', id)
+      .in('status', ['interested', 'confirmed']);
+    setComputedCounts({
+      interested: (allStatuses ?? []).filter((s) => s.status === 'interested').length,
+      confirmed: (allStatuses ?? []).filter((s) => s.status === 'confirmed').length,
+    });
 
     // Friend participation (mobile parity): show which of my accepted
     // friends are interested / confirmed / attended for this event.
@@ -300,13 +319,16 @@ export default function EventDetailPage({
         setPendingInvite(null);
       }
     }
-    // Refresh counts
-    const { data } = await supabase
-      .from('events')
-      .select('interested_count, confirmed_count')
-      .eq('id', event.id)
-      .single();
-    if (data) setEvent((prev) => prev ? { ...prev, ...data } : prev);
+    // Refresh counts from event_statuses (source of truth).
+    const { data: refreshed } = await supabase
+      .from('event_statuses')
+      .select('status')
+      .eq('event_id', event.id)
+      .in('status', ['interested', 'confirmed']);
+    setComputedCounts({
+      interested: (refreshed ?? []).filter((s) => s.status === 'interested').length,
+      confirmed: (refreshed ?? []).filter((s) => s.status === 'confirmed').length,
+    });
 
     // For giveaways, reload entry count (server trigger handles entry creation)
     if (giveaway) {
@@ -531,16 +553,17 @@ export default function EventDetailPage({
           )}
         </div>
 
-        {/* Counts */}
+        {/* Counts — computed live from event_statuses (not the stale
+            denormalized columns on events). */}
         <div className="flex gap-4">
           <div className="flex items-center gap-1.5 text-sm">
             <Heart size={15} className="text-pink-500" />
-            <span className="font-semibold">{event.interested_count}</span>
+            <span className="font-semibold">{computedCounts.interested}</span>
             <span className="text-muted-fg">interessiert</span>
           </div>
           <div className="flex items-center gap-1.5 text-sm">
             <CheckCircle2 size={15} className="text-green-500" />
-            <span className="font-semibold">{event.confirmed_count}</span>
+            <span className="font-semibold">{computedCounts.confirmed}</span>
             <span className="text-muted-fg">bestätigt</span>
           </div>
         </div>
