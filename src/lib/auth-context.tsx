@@ -91,11 +91,28 @@ async function wipeAuthStorage(): Promise<void> {
   } catch {}
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [loading, setLoading] = useState(true);
+interface AuthProviderProps {
+  children: ReactNode;
+  /** Server-resolved user, passed from the root layout. When present,
+   * eliminates the "User" fallback flash after re-login by seeding the
+   * provider with the correct identity on first paint. */
+  initialUser?: User | null;
+  initialProfile?: Profile | null;
+  initialOrganization?: Organization | null;
+}
+
+export function AuthProvider({
+  children,
+  initialUser = null,
+  initialProfile = null,
+  initialOrganization = null,
+}: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [profile, setProfile] = useState<Profile | null>(initialProfile);
+  const [organization, setOrganization] = useState<Organization | null>(initialOrganization);
+  // If the server already resolved a user, skip the loading state so
+  // downstream screens don't flash their skeletons.
+  const [loading, setLoading] = useState(!initialUser);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [supabase] = useState(() => createClient());
   // Distinguishes user-initiated logouts from SDK-initiated ones. The
@@ -267,6 +284,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-recovery safety net: if we end up in the broken state where
+  // `user` is set but `profile` is still null 6s after mount, the
+  // client is stuck (server seed was null AND client-side fetchProfile
+  // didn't succeed). Rather than leave the user looking at a "User"
+  // sidebar with nothing working, automatically wipe auth storage and
+  // hard-reload so the next mount starts clean. Reload-guarded so a
+  // genuinely-broken backend can't produce an infinite loop.
+  useEffect(() => {
+    if (!user || profile) return;
+    if (sessionExpired) return;
+    const timer = setTimeout(async () => {
+      if (recentlyReloaded()) {
+        console.warn('[auth] stuck in user-without-profile, but reload guard is active — skipping auto-recovery');
+        return;
+      }
+      console.warn('[auth] user without profile after 6s — auto-recovering (wipe + reload)');
+      markReloadAttempt();
+      await wipeAuthStorage();
+      resetClient();
+      window.location.reload();
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [user, profile, sessionExpired]);
 
   async function fetchProfile(userId: string, retries = 2) {
     const withTimeout = <T,>(p: Promise<T>, ms: number, label: string): Promise<T | null> =>
