@@ -25,7 +25,11 @@ const AuthContext = createContext<AuthState>({
 });
 
 const RELOAD_GUARD_KEY = 'occuro:auth-reload-ts';
-const RELOAD_GUARD_MS = 30_000;
+// 10s (down from 30s). Just long enough to prevent a tight reload loop
+// on a genuinely-down Supabase, short enough that a transient wedge
+// unsticks itself quickly. For the "I clicked the SOS button" path the
+// guard is ignored anyway.
+const RELOAD_GUARD_MS = 10_000;
 
 function recentlyReloaded(): boolean {
   try {
@@ -311,7 +315,115 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, profile, organization, userType, loading, signOut }}>
       {children}
+      {loading && <StuckLoadingRecovery />}
     </AuthContext.Provider>
+  );
+}
+
+// Last-resort safety net: a visible "App zurücksetzen" button that
+// appears after 6s of continuous loading. Gives users an escape from
+// any stuck state (deadlocked Supabase client, invalidated refresh
+// token cascade, etc.) without needing DevTools. Click = full wipe
+// (localStorage + sessionStorage + client cookies + server sb-*
+// cookies via /api/auth/wipe) + hard navigate to /. Bypasses the
+// RELOAD_GUARD since the user explicitly asked to reset.
+function StuckLoadingRecovery() {
+  const [show, setShow] = useState(false);
+  const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), 6000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!show) return null;
+
+  const onClick = async () => {
+    if (working) return;
+    setWorking(true);
+    try {
+      try {
+        Object.keys(localStorage).forEach((k) => {
+          if (k.startsWith('sb-') || k.startsWith('@occuro') || k === RELOAD_GUARD_KEY) {
+            localStorage.removeItem(k);
+          }
+        });
+        sessionStorage.clear();
+      } catch {}
+      try {
+        document.cookie.split(';').forEach((c) => {
+          const name = c.trim().split('=')[0];
+          if (!name || !name.startsWith('sb-')) return;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+        });
+      } catch {}
+      try {
+        await Promise.race([
+          fetch('/api/auth/wipe', {
+            method: 'POST',
+            credentials: 'include',
+            cache: 'no-store',
+          }),
+          new Promise((r) => setTimeout(r, 2500)),
+        ]);
+      } catch {}
+      resetClient();
+    } finally {
+      window.location.href = '/';
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 16,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 2147483647,
+        maxWidth: 420,
+        width: 'calc(100% - 32px)',
+        padding: 14,
+        borderRadius: 16,
+        background: 'rgba(17, 17, 24, 0.96)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(8px)',
+        color: '#fff',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
+          Die App reagiert nicht?
+        </p>
+        <p style={{ margin: '2px 0 0', fontSize: 11.5, opacity: 0.7, lineHeight: 1.35 }}>
+          Klick hier, um die Sitzung zurückzusetzen und neu zu laden.
+        </p>
+      </div>
+      <button
+        onClick={onClick}
+        disabled={working}
+        style={{
+          flexShrink: 0,
+          padding: '8px 14px',
+          borderRadius: 999,
+          background: working ? 'rgba(255,255,255,0.2)' : '#7c3aed',
+          color: '#fff',
+          border: 'none',
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: working ? 'default' : 'pointer',
+          transition: 'background 0.15s',
+        }}
+      >
+        {working ? 'Setzt zurück…' : 'Zurücksetzen'}
+      </button>
+    </div>
   );
 }
 
