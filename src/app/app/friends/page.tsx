@@ -433,7 +433,13 @@ export default function FriendsPage() {
                             <img
                               src={org.avatar_url}
                               alt=""
-                              className="w-full h-full object-cover object-center"
+                              // object-contain (not cover) so the full
+                              // logo is always visible. object-cover was
+                              // cropping off the top of non-centered
+                              // logos like the occuro badge. The soft
+                              // violet-tint background fills any empty
+                              // space left inside the circle.
+                              className="w-full h-full object-contain p-1"
                             />
                           ) : (
                             <span className="text-violet-400 text-[15px]">
