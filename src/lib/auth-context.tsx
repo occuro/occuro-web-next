@@ -165,30 +165,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     );
 
-    // Stuck-client recovery: after a long tab suspend / laptop sleep the
-    // Supabase client can deadlock on an internal token refresh, which
-    // hangs every subsequent query (profile *and* events). When the tab
-    // becomes visible again, probe the session with a short timeout; if
-    // the probe doesn't return, the client is stuck — drop the singleton
-    // and hard-reload so we come back on fresh cookies via middleware.
-    let stuckCheckInFlight = false;
+    // Tab-return recovery: background tabs get their setInterval callbacks
+    // throttled by browsers, which means Supabase's autoRefreshToken
+    // timer may not have fired while we were away. On tab-return, the
+    // JWT can already be expired — queries 401 until the next refresh
+    // cycle, the profile stays in React state but looks broken ("User"
+    // fallback), and users end up manually reloading.
+    //
+    // Strategy: on visibility=visible, proactively kick a session
+    // refresh AND a profile re-fetch. If the refresh fails (revoked on
+    // another device, network dead), we leave the existing state alone
+    // so the user isn't suddenly "logged out" — they can still see
+    // their last known profile while deciding to manually reload. A
+    // nuclear wipe on every tab-switch was producing false positives.
+    let visibilityCheckInFlight = false;
     const onVisibility = async () => {
       if (document.visibilityState !== 'visible') return;
-      if (stuckCheckInFlight) return;
-      stuckCheckInFlight = true;
+      if (visibilityCheckInFlight) return;
+      visibilityCheckInFlight = true;
       try {
-        const probe = await Promise.race<'ok' | 'stuck'>([
-          supabase.auth.getSession().then(() => 'ok' as const).catch(() => 'ok' as const),
-          new Promise<'stuck'>((r) => setTimeout(() => r('stuck'), 3000)),
+        // Refresh the JWT. If the tab was away long enough that the
+        // token expired, this renews it. If there's no valid refresh
+        // token (revoked), it fails quickly and we just return —
+        // subsequent queries will surface a proper auth error and the
+        // user can react.
+        await Promise.race([
+          supabase.auth.refreshSession().catch(() => null),
+          new Promise((r) => setTimeout(r, 4000)),
         ]);
-        if (probe === 'stuck' && !recentlyReloaded()) {
-          console.warn('[auth] supabase client stuck after tab focus — resetting + reloading');
-          markReloadAttempt();
-          resetClient();
-          window.location.reload();
+        // Best-effort profile re-sync so the sidebar name / avatar
+        // reflect any changes made in another tab.
+        const { data } = await supabase.auth.getSession();
+        const uid = data.session?.user?.id;
+        if (uid) {
+          void fetchProfile(uid);
         }
       } finally {
-        stuckCheckInFlight = false;
+        visibilityCheckInFlight = false;
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
