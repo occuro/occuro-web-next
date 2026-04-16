@@ -12,6 +12,10 @@ interface AuthState {
   organization: Organization | null;
   userType: UserType | null;
   loading: boolean;
+  // True when the SDK reported the session as invalid AND we couldn't
+  // recover it. Shown as a non-destructive modal so the user can
+  // choose to re-authenticate instead of being silently redirected.
+  sessionExpired: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -21,6 +25,7 @@ const AuthContext = createContext<AuthState>({
   organization: null,
   userType: null,
   loading: true,
+  sessionExpired: false,
   signOut: async () => {},
 });
 
@@ -91,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [supabase] = useState(() => createClient());
   // Distinguishes user-initiated logouts from SDK-initiated ones. The
   // Supabase SDK fires SIGNED_OUT for both "user clicked logout" AND
@@ -175,11 +181,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const u = session?.user ?? null;
 
         // If the SDK says we're signed out but the user didn't click
-        // logout, try to recover the session before nuking state. This
-        // is the main defence against the spontaneous-logout bug — a
-        // transient SIGNED_OUT (failed refresh, network blip, etc.)
-        // no longer throws the user onto the login page if the
-        // session is actually still recoverable.
+        // logout, try to recover the session before surfacing any UI
+        // change. A transient SIGNED_OUT (failed refresh, network
+        // blip, etc.) should never produce a visible logout.
         if (event === 'SIGNED_OUT' && !intentionalSignOutRef.current) {
           console.warn('[auth] SIGNED_OUT received without user intent — attempting recovery');
           const recovery = await Promise.race<'ok' | 'fail'>([
@@ -187,16 +191,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             new Promise<'fail'>((r) => setTimeout(() => r('fail'), 4000)),
           ]);
           if (recovery === 'ok') {
-            // Session came back — refetch profile so any stale state
-            // from the interim is corrected. Leave user state alone;
-            // the successful refresh will fire TOKEN_REFRESHED next
-            // which hits the branch below.
             console.warn('[auth] recovery succeeded, keeping user state');
+            setSessionExpired(false);
             return;
           }
-          console.warn('[auth] recovery failed, clearing state');
+          // Recovery failed → show the non-destructive modal instead
+          // of silently clearing user state + redirecting. Keeping
+          // user/profile populated means the sidebar still shows
+          // their name etc. while the modal invites them to
+          // re-authenticate. This replaces the previous "User"
+          // fallback flash + auto-redirect.
+          console.warn('[auth] recovery failed — flagging session as expired, leaving user state');
+          setSessionExpired(true);
+          return;
         }
 
+        // Intentional logout or any other event (SIGNED_IN,
+        // TOKEN_REFRESHED, USER_UPDATED): write state normally.
+        setSessionExpired(false);
         setUser(u);
         if (u) {
           await fetchProfile(u.id);
@@ -399,10 +411,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const userType = profile?.user_type ?? null;
 
   return (
-    <AuthContext.Provider value={{ user, profile, organization, userType, loading, signOut }}>
+    <AuthContext.Provider
+      value={{ user, profile, organization, userType, loading, sessionExpired, signOut }}
+    >
       {children}
       {loading && <StuckLoadingRecovery />}
+      {sessionExpired && <SessionExpiredModal onReAuth={signOut} />}
     </AuthContext.Provider>
+  );
+}
+
+// Non-destructive "session expired" overlay. Shown instead of silently
+// redirecting to /login when a refresh fails. Keeps the sidebar /
+// current page rendered behind it so the user's context is preserved
+// and they understand what's happening.
+function SessionExpiredModal({ onReAuth }: { onReAuth: () => Promise<void> }) {
+  const [working, setWorking] = useState(false);
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 2147483646,
+        background: 'rgba(0,0,0,0.55)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 380,
+          width: '100%',
+          background: 'rgba(17,17,24,0.98)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 18,
+          padding: 22,
+          color: '#fff',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+        }}
+      >
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+          Deine Sitzung ist abgelaufen
+        </p>
+        <p style={{ margin: '8px 0 18px', fontSize: 13, lineHeight: 1.45, color: 'rgba(255,255,255,0.7)' }}>
+          Aus Sicherheitsgründen musst du dich neu anmelden. Deine Daten sind nicht verloren — die App lädt dich gleich zum Login weiter.
+        </p>
+        <button
+          onClick={async () => {
+            if (working) return;
+            setWorking(true);
+            await onReAuth();
+          }}
+          disabled={working}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderRadius: 12,
+            background: working ? 'rgba(124,58,237,0.6)' : '#7c3aed',
+            color: '#fff',
+            border: 'none',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: working ? 'default' : 'pointer',
+            transition: 'background 0.15s',
+          }}
+        >
+          {working ? 'Einen Moment…' : 'Neu anmelden'}
+        </button>
+      </div>
+    </div>
   );
 }
 
