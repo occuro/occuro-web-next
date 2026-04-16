@@ -146,6 +146,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(verifiedUser);
       await fetchProfile(verifiedUser.id);
       setLoading(false);
+      // Safety retry: profile fetch right after login occasionally
+      // races with server-side cookie propagation and comes back empty
+      // or with a transient auth error, leaving the sidebar on "User".
+      // Kick a delayed refetch if that happened.
+      setTimeout(() => {
+        void (async () => {
+          const { data } = await supabase.auth.getSession();
+          const uid = data.session?.user?.id;
+          if (uid) void fetchProfile(uid);
+        })();
+      }, 3000);
     })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
