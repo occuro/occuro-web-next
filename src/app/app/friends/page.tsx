@@ -241,11 +241,16 @@ export default function FriendsPage() {
       setSearching(true);
       const q = `%${search.trim().replace(/%/g, '\\%')}%`;
       const [peopleRes, orgRes] = await Promise.all([
+        // Individual profiles only. Without the user_type filter,
+        // organizer-owned profiles would show up in "Personen" results
+        // and clicking them would open the individual-user UI (with
+        // Nachricht + Freund-Buttons) instead of the organizer page.
         supabase
           .from('profiles')
           .select('id, full_name, username, avatar_url, bio')
           .or(`full_name.ilike.${q},username.ilike.${q}`)
           .neq('id', user!.id)
+          .eq('user_type', 'individual')
           .limit(30),
         supabase
           .from('organizations')

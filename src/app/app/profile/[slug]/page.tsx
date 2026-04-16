@@ -484,8 +484,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
             </div>
           )}
 
-          {/* Action bar */}
-          {!isSelf && user && (
+          {/* Action bar — only for individual users. Organizations
+              shouldn't reach this page at all (the load() redirect
+              catches them), but we double-check user_type here so a
+              stale render can't expose broken Nachricht/Freund
+              buttons for an org. */}
+          {!isSelf && user && profile.user_type !== 'organization' && (
             <div className="flex gap-2 mt-5">
               <button
                 onClick={openDirectMessage}
