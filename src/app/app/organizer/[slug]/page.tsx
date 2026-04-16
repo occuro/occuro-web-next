@@ -38,9 +38,11 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
 
   const [org, setOrg] = useState<FullOrg | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [pastEvents, setPastEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [showAllPast, setShowAllPast] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,7 +62,7 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
     setOrg(orgData as FullOrg);
 
     const today = new Date().toISOString().split('T')[0];
-    const [eventsRes, followRes] = await Promise.all([
+    const [eventsRes, pastEventsRes, followRes] = await Promise.all([
       supabase
         .from('events')
         .select('*')
@@ -69,6 +71,14 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
         .gte('date', today)
         .order('date', { ascending: true })
         .limit(20),
+      supabase
+        .from('events')
+        .select('*')
+        .eq('organizer_org_id', slug)
+        .eq('visibility', 'public')
+        .lt('date', today)
+        .order('date', { ascending: false })
+        .limit(30),
       user
         ? supabase
             .from('organizer_follows')
@@ -80,6 +90,7 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
     ]);
 
     setEvents((eventsRes.data ?? []) as Event[]);
+    setPastEvents((pastEventsRes.data ?? []) as Event[]);
     setFollowing(Boolean(followRes.data));
     setLoading(false);
   }, [slug, user, supabase]);
@@ -233,25 +244,55 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
         ) : (
           <div className="space-y-2">
             {events.map((event) => (
-              <Link
-                key={event.id}
-                href={`/app/event/${event.id}`}
-                className="flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-colors"
-              >
-                <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
-                  <EventBanner event={event} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold truncate">{event.title}</p>
-                  <p className="text-[12px] text-muted-fg truncate">
-                    {formatDate(event.date)} · {event.location}
-                  </p>
-                </div>
-              </Link>
+              <EventRow key={event.id} event={event} />
             ))}
           </div>
         )}
       </div>
+
+      {/* Past events */}
+      {pastEvents.length > 0 && (
+        <div>
+          <h2 className="text-[11px] font-semibold text-muted-fg uppercase tracking-wider mb-3">
+            Vergangene Events
+          </h2>
+          <div className="space-y-2">
+            {(showAllPast ? pastEvents : pastEvents.slice(0, 5)).map((event) => (
+              <EventRow key={event.id} event={event} dim />
+            ))}
+          </div>
+          {pastEvents.length > 5 && !showAllPast && (
+            <button
+              type="button"
+              onClick={() => setShowAllPast(true)}
+              className="mt-3 w-full py-2 rounded-xl border border-border-subtle text-[12px] font-medium text-muted-fg hover:text-foreground hover:bg-elevated/50 transition-colors"
+            >
+              {pastEvents.length - 5} weitere anzeigen
+            </button>
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+// Reusable row for both upcoming and past events. `dim` gives past
+// events a muted look without hiding them.
+function EventRow({ event, dim = false }: { event: Event; dim?: boolean }) {
+  return (
+    <Link
+      href={`/app/event/${event.id}`}
+      className={`flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong transition-colors ${dim ? 'opacity-70 hover:opacity-100' : ''}`}
+    >
+      <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+        <EventBanner event={event} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[14px] font-semibold truncate">{event.title}</p>
+        <p className="text-[12px] text-muted-fg truncate">
+          {formatDate(event.date)} · {event.location}
+        </p>
+      </div>
+    </Link>
   );
 }
