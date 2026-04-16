@@ -10,10 +10,24 @@ import { EventBanner } from '@/components/event-banner';
 import {
   Search, Heart, CheckCircle2, MapPin, Clock, Calendar,
   ArrowUpDown, X, Sparkles, CalendarPlus,
-  Mail, Users, Building2,
+  Mail, Users, Building2, LocateFixed, Loader2,
 } from 'lucide-react';
 
 type SortMode = 'relevance' | 'soonest' | 'latest';
+
+// Haversine great-circle distance between two lat/lng points, in km.
+// Used to filter events within the user's selected radius without a
+// round-trip to the server.
+function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const toRad = (v: number) => (v * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+}
 
 type InvitationRow = {
   id: string;
@@ -38,6 +52,13 @@ export default function DiscoverPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>('soonest');
+  // Location / distance filter. userLocation is populated from the
+  // browser's Geolocation API when the user taps "In der Nähe"; the
+  // radius determines which events appear in the grid via haversine
+  // distance from that point. `null` userLocation disables the filter.
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [radiusKm, setRadiusKm] = useState<number>(25);
+  const [locatingStatus, setLocatingStatus] = useState<'idle' | 'loading' | 'denied'>('idle');
   const supabase = createClient();
 
   const categories = [
@@ -193,6 +214,16 @@ export default function DiscoverPage() {
           (e.description ?? '').toLowerCase().includes(q),
       );
     }
+    // Distance filter — only applied when the user has opted in by
+    // tapping "In der Nähe" (which populates userLocation via browser
+    // geolocation). Events without coordinates are kept out of a
+    // distance-filtered view since we can't measure them.
+    if (userLocation) {
+      result = result.filter((e) => {
+        if (e.latitude == null || e.longitude == null) return false;
+        return distanceKm(userLocation, { lat: Number(e.latitude), lng: Number(e.longitude) }) <= radiusKm;
+      });
+    }
     // Sort — guard date as well so a row with date=null can't crash
     // localeCompare on the whole list.
     if (sort === 'soonest') result = [...result].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
@@ -200,6 +231,33 @@ export default function DiscoverPage() {
     if (sort === 'relevance') result = [...result].sort((a, b) => ((b.interested_count ?? 0) + (b.confirmed_count ?? 0)) - ((a.interested_count ?? 0) + (a.confirmed_count ?? 0)));
     return result;
   })();
+
+  // Request the user's location. Browsers prompt for permission the
+  // first time; denial is permanent for the session (short of changing
+  // site settings), so we track it separately from "loading".
+  const requestNearby = () => {
+    if (userLocation) {
+      // Toggle off
+      setUserLocation(null);
+      setLocatingStatus('idle');
+      return;
+    }
+    if (!('geolocation' in navigator)) {
+      setLocatingStatus('denied');
+      return;
+    }
+    setLocatingStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocatingStatus('idle');
+      },
+      () => {
+        setLocatingStatus('denied');
+      },
+      { enableHighAccuracy: false, maximumAge: 5 * 60 * 1000, timeout: 8000 },
+    );
+  };
 
   const isSearching = search.length >= 2;
   const hasAnyPersonal =
@@ -319,6 +377,47 @@ export default function DiscoverPage() {
           </span>
         </div>
       )}
+
+      {/* Location / distance filter — opt-in. Tapping "In der Nähe"
+          requests the browser's current position and limits the grid
+          to events within the selected radius. Denied permission
+          surfaces a small hint instead of a silent no-op. */}
+      <div className="flex gap-2 flex-wrap items-center">
+        <button
+          type="button"
+          onClick={requestNearby}
+          disabled={locatingStatus === 'loading'}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200 disabled:opacity-60 ${
+            userLocation
+              ? 'bg-violet-600 text-white shadow-sm'
+              : 'bg-surface border border-border-subtle text-foreground/70 hover:text-foreground hover:border-border-strong'
+          }`}
+          title={userLocation ? 'Umkreis-Filter aktiv — klicken zum Deaktivieren' : 'Events in deiner Nähe anzeigen'}
+        >
+          {locatingStatus === 'loading' ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : (
+            <LocateFixed size={13} />
+          )}
+          In der Nähe
+        </button>
+        {userLocation && (
+          <select
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(Number(e.target.value))}
+            className="px-3 py-2 rounded-full text-[13px] font-medium bg-surface border border-border-subtle text-foreground/70 hover:border-border-strong focus:outline-none focus:border-violet-500/40"
+          >
+            {[5, 10, 25, 50, 100].map((km) => (
+              <option key={km} value={km}>{km} km</option>
+            ))}
+          </select>
+        )}
+        {locatingStatus === 'denied' && (
+          <span className="text-[11.5px] text-muted-fg">
+            Standortzugriff verweigert. Aktiviere ihn in den Browser-Einstellungen.
+          </span>
+        )}
+      </div>
 
       {/* Category Chips */}
       <div className="flex gap-2 flex-wrap">
