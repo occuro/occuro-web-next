@@ -147,10 +147,14 @@ function MapPageInner() {
   async function fetchEvents() {
     setLoading(true);
     const bounds = dateRangeToBounds(dateRange);
+    // No visibility filter — RLS on events already restricts what a
+    // user can read: public events for everyone, private events only
+    // for invitees / participants / the organizer. Filtering by
+    // visibility='public' client-side was hiding private events from
+    // the very users who SHOULD see them on the map.
     let query = supabase
       .from('events')
       .select('*')
-      .eq('visibility', 'public')
       .gte('date', bounds.gte)
       .order('date', { ascending: true })
       .limit(200);
