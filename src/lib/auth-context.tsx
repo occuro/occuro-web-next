@@ -46,11 +46,15 @@ function markReloadAttempt(): void {
 
 // Nuclear recovery: wipe all sb-* auth storage so the next client mount
 // starts from a blank slate. Used when the Supabase SDK is deadlocked on
-// its own internal refresh — the usual cause is a corrupt/half-written
-// sb-<ref>-auth-token in localStorage that the SDK tries to refresh on
-// construction and then hangs forever, queueing every subsequent call
-// (getSession, from().select(), everything) behind the stuck refresh.
-function wipeAuthStorage(): void {
+// its own internal refresh.
+//
+// CRUCIALLY: the Supabase SSR client stores its session in httpOnly
+// cookies, which JavaScript cannot delete via document.cookie. We HAVE
+// to POST to /api/auth/wipe so the server clears them — otherwise the
+// middleware immediately re-establishes the bad session on the next
+// request and the reload loops back to the same deadlock, with the
+// reload-guard then blocking any further recovery.
+async function wipeAuthStorage(): Promise<void> {
   try {
     Object.keys(localStorage).forEach((k) => {
       if (k.startsWith('sb-')) localStorage.removeItem(k);
@@ -63,6 +67,18 @@ function wipeAuthStorage(): void {
       document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
       document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
     });
+  } catch {}
+  // Server-side wipe of httpOnly sb-* cookies — timeout-guarded so a
+  // hung endpoint can't block the reload we're about to trigger.
+  try {
+    await Promise.race([
+      fetch('/api/auth/wipe', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      }),
+      new Promise((r) => setTimeout(r, 2000)),
+    ]);
   } catch {}
 }
 
@@ -106,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!recentlyReloaded()) {
           console.warn('[auth] getSession hung — wiping auth storage + reload');
           markReloadAttempt();
-          wipeAuthStorage();
+          await wipeAuthStorage();
           resetClient();
           window.location.reload();
           return;
@@ -217,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!profile && !recentlyReloaded()) {
         console.warn('[auth] fetchProfile hard-failed with no prior profile — wiping + reload');
         markReloadAttempt();
-        wipeAuthStorage();
+        await wipeAuthStorage();
         resetClient();
         window.location.reload();
         return;
