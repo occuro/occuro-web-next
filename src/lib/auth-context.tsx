@@ -141,29 +141,32 @@ export function AuthProvider({
       ]);
 
     (async () => {
-      // Fast path: getSession() reads from localStorage/cookies without
-      // hitting the network, so it can't hang on Supabase-Auth latency.
-      // Middleware (proxy.ts) already validates the session server-side on
-      // every request, so the session we see here is trustworthy — we
-      // don't need a network-verified getUser() on initial render.
-      const sessRes = await withTimeout(supabase.auth.getSession(), 3000, 'getSession');
-      // sessRes === null means getSession itself hung — getSession is a
-      // pure localStorage read, so a hang here means the SDK is stuck in
-      // an internal refresh lock (usually due to a corrupted sb-*-auth
-      // token). The client is unrecoverable; wipe auth storage and reload
-      // so the next mount starts clean.
+      // If the server layout already seeded us with a user, trust it.
+      // The client-side getSession() can deadlock on the SDK's internal
+      // refresh lock right after a deploy — since the server already
+      // validated cookies via getUser() in the root layout, we don't
+      // need a second round of verification here. The onAuthStateChange
+      // listener below keeps state fresh going forward.
+      if (initialUser) {
+        // Profile may already be seeded, but kick a background refetch
+        // to pick up any changes made in another tab.
+        void fetchProfile(initialUser.id);
+        return;
+      }
+
+      // No server seed: fall back to client-side getSession. Use a
+      // longer (8s) timeout since we're on the first client-only render
+      // and a short hang is less likely to be a genuine deadlock than
+      // just the SDK finishing its initialization.
+      const sessRes = await withTimeout(supabase.auth.getSession(), 8000, 'getSession');
+      // sessRes === null means getSession itself hung. Rather than
+      // destroying the session (which logs the user out even though
+      // their refresh token is probably fine), we just proceed unauthed
+      // and let either the onAuthStateChange listener or a user action
+      // retry. A hard wipe here was producing the "deploy → logged out"
+      // regression users complained about.
       if (sessRes === null) {
-        if (!recentlyReloaded()) {
-          console.warn('[auth] getSession hung — wiping auth storage + reload');
-          markReloadAttempt();
-          await wipeAuthStorage();
-          resetClient();
-          window.location.reload();
-          return;
-        }
-        // Already tried once within the guard window — fall through to
-        // unauth state so the login page can handle it without looping.
-        setUser(null);
+        console.warn('[auth] getSession timed out — proceeding unauthed, listener will recover');
         setLoading(false);
         return;
       }
