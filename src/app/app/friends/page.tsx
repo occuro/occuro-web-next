@@ -411,7 +411,7 @@ export default function FriendsPage() {
               {/* Followed Organizers (only when no search active) */}
               {!isSearching && followedOrgs.length > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-6">
                     <h2 className="text-[12px] font-semibold text-muted-fg uppercase tracking-wider">
                       Gefolgte Veranstalter
                     </h2>
@@ -424,15 +424,8 @@ export default function FriendsPage() {
                         onClick={() => openOrgProfile(org)}
                         className="flex flex-col items-center gap-2 min-w-[72px] group"
                       >
-                        {/* Organizer avatars use rounded-square, not
-                            circle. Rectangular brand logos consistently
-                            lose their top/edges when masked into a
-                            circle — a squircle tile fits them much
-                            better and matches the "person = circle,
-                            org = square" convention used by Instagram,
-                            Twitter, the App Store etc. */}
                         <div
-                          className="w-16 h-16 rounded-2xl flex items-center justify-center text-sm font-semibold overflow-hidden ring-1 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
+                          className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
                           style={{ backgroundColor: 'rgba(124,58,237,0.12)' }}
                         >
                           {org.avatar_url && org.avatar_url.trim() ? (
@@ -440,11 +433,10 @@ export default function FriendsPage() {
                             <img
                               src={org.avatar_url}
                               alt=""
-                              className="w-full h-full object-contain object-center"
-                              style={{ padding: '6px' }}
+                              className="w-full h-full object-cover object-center"
                             />
                           ) : (
-                            <span className="text-violet-400 text-[18px]">
+                            <span className="text-violet-400 text-[15px]">
                               {(org.name ?? '?').trim().charAt(0).toUpperCase() || '?'}
                             </span>
                           )}
