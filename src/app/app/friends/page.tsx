@@ -424,8 +424,15 @@ export default function FriendsPage() {
                         onClick={() => openOrgProfile(org)}
                         className="flex flex-col items-center gap-2 min-w-[72px] group"
                       >
+                        {/* Organizer avatars use rounded-square, not
+                            circle. Rectangular brand logos consistently
+                            lose their top/edges when masked into a
+                            circle — a squircle tile fits them much
+                            better and matches the "person = circle,
+                            org = square" convention used by Instagram,
+                            Twitter, the App Store etc. */}
                         <div
-                          className="w-16 h-16 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
+                          className="w-16 h-16 rounded-2xl flex items-center justify-center text-sm font-semibold overflow-hidden ring-1 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
                           style={{ backgroundColor: 'rgba(124,58,237,0.12)' }}
                         >
                           {org.avatar_url && org.avatar_url.trim() ? (
@@ -433,17 +440,11 @@ export default function FriendsPage() {
                             <img
                               src={org.avatar_url}
                               alt=""
-                              // Object-contain + explicit center origin +
-                              // generous padding. Bigger container (w-16
-                              // instead of w-14) gives the logo breathing
-                              // room — whatever cropping was perceived
-                              // before was the logo butting up against
-                              // the circle's border at a too-small ring.
                               className="w-full h-full object-contain object-center"
-                              style={{ padding: '10px' }}
+                              style={{ padding: '6px' }}
                             />
                           ) : (
-                            <span className="text-violet-400 text-[16px]">
+                            <span className="text-violet-400 text-[18px]">
                               {(org.name ?? '?').trim().charAt(0).toUpperCase() || '?'}
                             </span>
                           )}
