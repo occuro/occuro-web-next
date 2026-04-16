@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createClient, resetClient } from '@/lib/supabase/client';
 import { purgeOldSchemas } from '@/lib/versioned-storage';
 import type { Profile, Organization, UserType } from '@/types/occuro';
@@ -92,6 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [supabase] = useState(() => createClient());
+  // Distinguishes user-initiated logouts from SDK-initiated ones. The
+  // Supabase SDK fires SIGNED_OUT for both "user clicked logout" AND
+  // "token refresh failed transiently" — the second case is what
+  // produces the frustrating spontaneous-logout bug. When set to true
+  // by our signOut(), the listener knows to clear state immediately;
+  // otherwise it tries to recover the session before giving up.
+  const intentionalSignOutRef = useRef(false);
 
   useEffect(() => {
     purgeOldSchemas();
@@ -166,6 +173,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (event === 'INITIAL_SESSION') return;
 
         const u = session?.user ?? null;
+
+        // If the SDK says we're signed out but the user didn't click
+        // logout, try to recover the session before nuking state. This
+        // is the main defence against the spontaneous-logout bug — a
+        // transient SIGNED_OUT (failed refresh, network blip, etc.)
+        // no longer throws the user onto the login page if the
+        // session is actually still recoverable.
+        if (event === 'SIGNED_OUT' && !intentionalSignOutRef.current) {
+          console.warn('[auth] SIGNED_OUT received without user intent — attempting recovery');
+          const recovery = await Promise.race<'ok' | 'fail'>([
+            supabase.auth.refreshSession().then((r) => (r.data.session ? 'ok' : 'fail')).catch(() => 'fail'),
+            new Promise<'fail'>((r) => setTimeout(() => r('fail'), 4000)),
+          ]);
+          if (recovery === 'ok') {
+            // Session came back — refetch profile so any stale state
+            // from the interim is corrected. Leave user state alone;
+            // the successful refresh will fire TOKEN_REFRESHED next
+            // which hits the branch below.
+            console.warn('[auth] recovery succeeded, keeping user state');
+            return;
+          }
+          console.warn('[auth] recovery failed, clearing state');
+        }
+
         setUser(u);
         if (u) {
           await fetchProfile(u.id);
@@ -317,6 +348,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    // Mark this as an intentional sign-out so the onAuthStateChange
+    // listener clears state immediately instead of trying to recover
+    // the session.
+    intentionalSignOutRef.current = true;
+
     // Try the SDK signOut first, but RACE it against a 2s timeout so a
     // hung supabase client (the actual root cause of "kann mich nicht
     // ausloggen") can't block the cleanup. The cleanup below is the
