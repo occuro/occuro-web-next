@@ -79,17 +79,31 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
     }
   }, [drawerOpen]);
 
+  // Clicking the brand should land on the user's app home (the
+  // Entdecken feed for users, the dashboard for organizers) — NOT
+  // the public landing page, which was producing a jarring flash of
+  // marketing content before routing back.
+  const brandHref = variant === 'organizer' ? '/organizer' : '/app';
+
   const navContent = (
     <>
       {/* Logo */}
       <div className="px-6 py-6">
-        <Link href="/" className="group flex flex-col">
-          <span className="text-xl font-heading font-bold tracking-tight group-hover:opacity-70 transition-opacity">
-            occuro
-          </span>
-          <p className="text-[11px] font-medium text-muted-fg mt-1 uppercase tracking-widest">
-            {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
-          </p>
+        <Link href={brandHref} className="group flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/occuro-logo-white.png"
+            alt="occuro"
+            className="w-7 h-7 object-contain group-hover:opacity-80 transition-opacity"
+          />
+          <div className="flex flex-col">
+            <span className="text-xl font-heading font-bold tracking-tight group-hover:opacity-70 transition-opacity">
+              occuro
+            </span>
+            <p className="text-[11px] font-medium text-muted-fg mt-0.5 uppercase tracking-widest">
+              {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
+            </p>
+          </div>
         </Link>
       </div>
 
@@ -191,7 +205,9 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
             <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-violet-500 ring-2 ring-surface" />
           )}
         </button>
-        <Link href="/" className="flex-1 flex items-center justify-center">
+        <Link href={brandHref} className="flex-1 flex items-center justify-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/occuro-logo-white.png" alt="" className="w-6 h-6 object-contain" />
           <span className="text-lg font-heading font-bold tracking-tight">occuro</span>
         </Link>
         <Link
