@@ -5,8 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import type { Event } from '@/types/occuro';
+import Link from 'next/link';
 import { formatDate, getCategoryColor } from '@/lib/utils';
-import { MapPin, X, CalendarRange, Sparkles, Sun, Sunrise, Wine, CalendarDays } from 'lucide-react';
+import { MapPin, X, CalendarRange, Sparkles, Sun, Sunrise, Wine, CalendarDays, ArrowRight, Clock } from 'lucide-react';
 
 // Both map providers are heavy (mapkit script / maplibre bundle), so we
 // dynamic-import them client-only to keep them out of the initial bundle.
@@ -393,13 +394,55 @@ function MapPageInner() {
             />
           )}
 
+          {/* Pin-click: floating card over the map with event summary +
+              CTA to open the detail page. Replaces the old bare
+              "Schließen" button which gave users no way to actually
+              open the event they tapped on. */}
           {selected && (
-            <button
-              onClick={() => setSelected(null)}
-              className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-surface/90 border border-border-subtle backdrop-blur text-[12px] font-medium hover:bg-elevated transition-colors flex items-center gap-1.5 z-10"
-            >
-              <X size={13} /> Schließen
-            </button>
+            <div className="absolute top-4 left-4 right-4 sm:right-auto sm:max-w-[360px] z-10 animate-fade-in">
+              <div className="flex gap-3 p-3 rounded-2xl bg-surface/95 border border-border-subtle backdrop-blur-md shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)]">
+                <div
+                  className="w-1.5 self-stretch rounded-full flex-shrink-0"
+                  style={{ backgroundColor: getCategoryColor(selected.category) }}
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[14px] font-semibold leading-snug line-clamp-1">
+                    {selected.title}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1 text-[11.5px] text-muted-fg">
+                    <span className="flex items-center gap-1">
+                      <CalendarDays size={11} />
+                      {formatDate(selected.date)}
+                    </span>
+                    {selected.time && (
+                      <span className="flex items-center gap-1">
+                        <Clock size={11} />
+                        {selected.time.slice(0, 5)}
+                      </span>
+                    )}
+                  </div>
+                  {selected.location && (
+                    <p className="text-[11.5px] text-muted-fg truncate flex items-center gap-1 mt-0.5">
+                      <MapPin size={11} className="flex-shrink-0" />
+                      {selected.location}
+                    </p>
+                  )}
+                  <Link
+                    href={`/app/event/${selected.id}`}
+                    className="inline-flex items-center gap-1 mt-2.5 px-3 py-1.5 rounded-full text-[11.5px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+                  >
+                    Event-Details <ArrowRight size={12} />
+                  </Link>
+                </div>
+                <button
+                  onClick={() => setSelected(null)}
+                  aria-label="Schließen"
+                  className="p-1.5 rounded-full text-muted-fg hover:text-foreground hover:bg-elevated transition-colors self-start flex-shrink-0"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
