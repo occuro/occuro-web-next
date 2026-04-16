@@ -495,7 +495,10 @@ export function EventForm({
           organizer sees who's already been asked (with current status)
           and can only select new friends from the picker below. */}
       {isIndividual && (
-        <div className="rounded-2xl border border-border-subtle bg-elevated/30 p-4 space-y-3">
+        <div
+          id="invites"
+          className="rounded-2xl border border-border-subtle bg-elevated/30 p-4 space-y-3 scroll-mt-20"
+        >
           {isEdit && alreadyInvitedFriends.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground/80">

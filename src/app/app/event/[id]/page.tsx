@@ -546,6 +546,14 @@ export default function EventDetailPage({
                 <Flag size={15} />
               </button>
             )}
+            {isOwnEvent && event.visibility === 'private' && (
+              <Link
+                href={`/app/events/${event.id}/edit#invites`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+              >
+                <Users size={13} strokeWidth={2} /> Freunde einladen
+              </Link>
+            )}
             {isOwnEvent && (
               <Link
                 href={
