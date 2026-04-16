@@ -101,6 +101,9 @@ function MapPageInner() {
   // Total fetched (with or without coords) so the empty-state can
   // distinguish "no events at all" from "events exist but no coords yet".
   const [fetchedCount, setFetchedCount] = useState(0);
+  // Surface fetch errors in the empty state so a dead supabase client
+  // (auth deadlock, network loss) can't be mistaken for "no events".
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Deeplink: ?event=… — when the user clicks an event's location on
   // the detail page we land here, fetch that event by id, and select
@@ -162,6 +165,9 @@ function MapPageInner() {
     const { data, error } = await query;
     if (error) {
       console.warn('[map] events fetch failed:', error.message);
+      setFetchError(error.message);
+    } else {
+      setFetchError(null);
     }
     // CRITICAL: supabase-js returns numeric columns (like latitude /
     // longitude on the events table) as STRINGS by default to preserve
@@ -315,8 +321,23 @@ function MapPageInner() {
           {events.length === 0 ? (
             <div className="text-center py-16 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
               <CalendarDays size={32} strokeWidth={1.2} className="mx-auto mb-3 opacity-40" />
-              <p className="text-sm font-medium">Keine anstehenden Events</p>
-              <p className="text-[11px] mt-1">Versuche einen anderen Zeitraum.</p>
+              {fetchError ? (
+                <>
+                  <p className="text-sm font-medium">Events konnten nicht geladen werden</p>
+                  <p className="text-[11px] mt-1 mb-4">Prüfe deine Verbindung und versuch es erneut.</p>
+                  <button
+                    onClick={() => void fetchEvents()}
+                    className="px-4 py-2 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+                  >
+                    Neu laden
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">Keine anstehenden Events</p>
+                  <p className="text-[11px] mt-1">Versuche einen anderen Zeitraum.</p>
+                </>
+              )}
             </div>
           ) : (
             events.map((event) => {
