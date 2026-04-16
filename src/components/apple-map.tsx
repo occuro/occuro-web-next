@@ -230,7 +230,13 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
       map.setCenterAnimated(new mapkit.Coordinate(e.latitude!, e.longitude!), false);
       didFitRef.current = true;
     }
-  }, [events]);
+    // mapReady MUST be in the deps: events often arrive before the
+    // mapkit instance finishes loading (geocode cache hits, small
+    // DACH-region feed, etc.), in which case this effect's first pass
+    // bails at "if (!map) return;" and would never re-run. Re-triggering
+    // when mapReady flips ensures the annotations actually land on the
+    // map instead of silently missing.
+  }, [events, mapReady]);
 
   // ── Fly to selected event ──────────────────────────────────────────
   // mapReady is in the deps so this fires both when selected changes
