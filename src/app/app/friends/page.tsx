@@ -425,7 +425,7 @@ export default function FriendsPage() {
                         className="flex flex-col items-center gap-2 min-w-[72px] group"
                       >
                         <div
-                          className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
+                          className="w-16 h-16 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
                           style={{ backgroundColor: 'rgba(124,58,237,0.12)' }}
                         >
                           {org.avatar_url && org.avatar_url.trim() ? (
@@ -433,16 +433,17 @@ export default function FriendsPage() {
                             <img
                               src={org.avatar_url}
                               alt=""
-                              // object-contain (not cover) so the full
-                              // logo is always visible. object-cover was
-                              // cropping off the top of non-centered
-                              // logos like the occuro badge. The soft
-                              // violet-tint background fills any empty
-                              // space left inside the circle.
-                              className="w-full h-full object-contain p-1"
+                              // Object-contain + explicit center origin +
+                              // generous padding. Bigger container (w-16
+                              // instead of w-14) gives the logo breathing
+                              // room — whatever cropping was perceived
+                              // before was the logo butting up against
+                              // the circle's border at a too-small ring.
+                              className="w-full h-full object-contain object-center"
+                              style={{ padding: '10px' }}
                             />
                           ) : (
-                            <span className="text-violet-400 text-[15px]">
+                            <span className="text-violet-400 text-[16px]">
                               {(org.name ?? '?').trim().charAt(0).toUpperCase() || '?'}
                             </span>
                           )}
