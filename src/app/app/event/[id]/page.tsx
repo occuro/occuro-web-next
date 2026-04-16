@@ -473,40 +473,69 @@ export default function EventDetailPage({
         <ArrowLeft size={15} /> Zurück
       </Link>
 
-      {/* Banner */}
-      <div className="aspect-[191/100] rounded-3xl bg-muted overflow-hidden relative shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
+      {/* Cinematic hero — title + date imprinted on banner with a
+          bottom gradient for legibility. Replaces the old separate
+          "banner + h1 below" pair that felt disjointed. */}
+      <div className="aspect-[191/100] rounded-3xl bg-muted overflow-hidden relative shadow-[0_24px_60px_-20px_rgba(0,0,0,0.55)]">
         <EventBanner event={event} />
 
-        <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex flex-col gap-2">
+        {/* Bottom gradient for text legibility */}
+        <div className="absolute inset-x-0 bottom-0 h-[75%] bg-gradient-to-t from-black/85 via-black/45 to-transparent pointer-events-none" />
+
+        {/* Top-right badges stacked: private, category, past */}
+        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+          {event.visibility === 'private' && (
+            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-amber-500/90 text-white backdrop-blur-md">
+              <Lock size={10} strokeWidth={2.5} /> Privat
+            </span>
+          )}
           {event.category && event.category.trim() ? (
             <span
-              className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold text-white backdrop-blur-sm"
-              style={{ backgroundColor: `${catColor}dd` }}
+              className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold text-white backdrop-blur-md"
+              style={{ backgroundColor: `${catColor}e6` }}
             >
               {event.category}
             </span>
           ) : null}
-          {event.visibility === 'private' && (
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium bg-amber-500/90 text-white">
-              <Lock size={10} /> Privat
+          {isPast && (
+            <span className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-black/70 text-white backdrop-blur-md">
+              Vergangen
             </span>
           )}
         </div>
-        {isPast && (
-          <span className="absolute top-3 sm:top-4 right-3 sm:right-4 px-3 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold bg-black/60 text-white backdrop-blur-sm">
-            Vergangen
-          </span>
-        )}
+
+        {/* Title + date overlay */}
+        <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8 text-white">
+          <div className="flex items-center gap-2 text-[11px] sm:text-[12px] font-medium uppercase tracking-[0.15em] text-white/85 mb-3">
+            <Calendar size={12} strokeWidth={2} />
+            <span>
+              {formatDate(event.date)}
+              {event.end_date && event.end_date !== event.date ? ` – ${formatDate(event.end_date)}` : ''}
+            </span>
+            <span className="opacity-50">·</span>
+            <Clock size={12} strokeWidth={2} />
+            <span>
+              {formatTime(event.time)}
+              {event.end_time ? ` – ${formatTime(event.end_time)}` : ''}
+            </span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold tracking-tight leading-[1.05] drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+            {event.title}
+          </h1>
+          {event.slogan && (
+            <p className="text-[14px] sm:text-[15px] text-white/80 italic mt-3 line-clamp-2 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)]">
+              {event.slogan}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Title + meta */}
+      {/* Action row — flag / edit. The title used to share this row but
+          now lives inside the hero, so the row only needs to carry
+          controls. Right-aligned. */}
       <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight">{event.title}</h1>
-            {event.slogan && <p className="text-muted-fg mt-1">{event.slogan}</p>}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+        {(user && (!isOwnEvent || isOwnEvent)) && (
+          <div className="flex items-center justify-end gap-2">
             {!isOwnEvent && user && (
               <button
                 onClick={() => setReportOpen(true)}
@@ -530,19 +559,12 @@ export default function EventDetailPage({
               </Link>
             )}
           </div>
-        </div>
+        )}
 
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-muted-fg">
-          <span className="flex items-center gap-1.5">
-            <Calendar size={14} strokeWidth={1.6} />
-            {formatDate(event.date)}
-            {event.end_date && event.end_date !== event.date && ` – ${formatDate(event.end_date)}`}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Clock size={14} strokeWidth={1.6} />
-            {formatTime(event.time)}
-            {event.end_time && ` – ${formatTime(event.end_time)}`}
-          </span>
+          {/* Date + time already shown in the hero overlay above;
+              only location / capacity live here now so the row
+              doesn't duplicate what's visually right above it. */}
           {event.latitude != null && event.longitude != null ? (
             <Link
               href={`/app/map?lat=${event.latitude}&lng=${event.longitude}&event=${event.id}`}

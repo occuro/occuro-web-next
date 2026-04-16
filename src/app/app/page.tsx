@@ -10,7 +10,7 @@ import { EventBanner } from '@/components/event-banner';
 import {
   Search, Heart, CheckCircle2, MapPin, Clock, Calendar,
   ArrowUpDown, X, Sparkles, CalendarPlus,
-  Mail, Users, Building2, LocateFixed, Loader2,
+  Mail, Users, Building2, LocateFixed, Loader2, Lock,
 } from 'lucide-react';
 
 type SortMode = 'relevance' | 'soonest' | 'latest';
@@ -668,56 +668,75 @@ function CompactEventCard({
 function EventCard({ event }: { event: Event }) {
   const catColor = getCategoryColor(event.category);
 
+  const isPrivate = event.visibility === 'private';
+  const socialCount = (event.confirmed_count ?? 0) + (event.interested_count ?? 0);
+
   return (
     <Link
       href={`/app/event/${event.id}`}
-      className="group rounded-3xl border border-border-subtle bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:border-border-strong hover:-translate-y-0.5 transition-all duration-300"
+      style={{
+        // CSS custom property drives the hover glow color. Tailwind
+        // hover:shadow-[...] can interpolate CSS vars at runtime but
+        // not JS values, so we stash the category color here.
+        ['--cat-glow' as string]: `${catColor}55`,
+      } as React.CSSProperties}
+      className="group relative rounded-3xl border border-border-subtle bg-surface overflow-hidden hover:border-border-strong hover:-translate-y-1 hover:shadow-[0_24px_48px_-18px_var(--cat-glow)] transition-all duration-300"
     >
+      {/* Banner with overlaid title + date. Gradient fades the bottom
+          ~60% of the image to near-black so the headline stays legible
+          regardless of what's in the uploaded cover. */}
       <div className="aspect-[191/100] bg-muted relative overflow-hidden">
-        <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+        <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.04]">
           <EventBanner event={event} />
         </div>
-        {event.category && event.category.trim() ? (
+
+        {/* Bottom gradient for text legibility */}
+        <div className="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
+
+        {/* Single top-right badge: private > category. Stacking both
+            was visual noise; private beats category as a signal. */}
+        {isPrivate ? (
+          <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white backdrop-blur-md bg-amber-500/90">
+            <Lock size={10} strokeWidth={2.5} /> Privat
+          </span>
+        ) : event.category && event.category.trim() ? (
           <span
-            className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-[12px] font-semibold text-white backdrop-blur-sm"
-            style={{ backgroundColor: `${catColor}dd` }}
+            className="absolute top-4 right-4 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white backdrop-blur-md"
+            style={{ backgroundColor: `${catColor}e6` }}
           >
             {event.category}
           </span>
         ) : null}
+
+        {/* Title + date — imprinted bottom-left, over the gradient */}
+        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+          <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-white/85 mb-2">
+            <Calendar size={11} strokeWidth={2} />
+            <span>{formatDate(event.date)}</span>
+            <span className="opacity-50">·</span>
+            <Clock size={11} strokeWidth={2} />
+            <span>{formatTime(event.time)}</span>
+          </div>
+          <h3 className="font-heading font-bold text-[22px] leading-tight line-clamp-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+            {event.title}
+          </h3>
+        </div>
       </div>
 
-      <div className="p-5 space-y-3">
-        <h3 className="font-heading font-semibold text-[18px] leading-snug line-clamp-2 group-hover:text-foreground/80 transition-colors">
-          {event.title}
-        </h3>
-        {event.slogan && (
-          <p className="text-[13px] text-muted-fg line-clamp-1">{event.slogan}</p>
-        )}
-        <div className="flex items-center gap-3 text-[13px] text-muted-fg">
-          <span className="flex items-center gap-1.5">
-            <Calendar size={13} strokeWidth={1.6} />
-            {formatDate(event.date)}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Clock size={13} strokeWidth={1.6} />
-            {formatTime(event.time)}
-          </span>
-        </div>
-        <p className="text-[13px] text-muted-fg truncate flex items-center gap-1.5">
+      {/* Below-banner strip: location + social proof. Stripped down
+          from the previous stats rows — confirmed/interested counts
+          get one compact indicator instead of two separate lines. */}
+      <div className="px-5 py-4 flex items-center justify-between gap-3">
+        <p className="flex items-center gap-1.5 text-[13px] text-muted-fg truncate min-w-0">
           <MapPin size={13} strokeWidth={1.6} className="flex-shrink-0" />
-          {event.location}
+          <span className="truncate">{event.location}</span>
         </p>
-        <div className="flex items-center gap-5 text-[12px] text-muted-fg pt-3 border-t border-border-subtle">
-          <span className="flex items-center gap-1.5">
-            <Heart size={12} strokeWidth={1.6} />
-            {event.interested_count} interessiert
+        {socialCount > 0 && (
+          <span className="flex items-center gap-1.5 text-[12px] text-muted-fg flex-shrink-0">
+            <Users size={12} strokeWidth={1.6} />
+            {socialCount}
           </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 size={12} strokeWidth={1.6} />
-            {event.confirmed_count} bestätigt
-          </span>
-        </div>
+        )}
       </div>
     </Link>
   );
