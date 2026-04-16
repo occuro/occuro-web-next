@@ -24,6 +24,26 @@ const AuthContext = createContext<AuthState>({
   signOut: async () => {},
 });
 
+const RELOAD_GUARD_KEY = 'occuro:auth-reload-ts';
+const RELOAD_GUARD_MS = 30_000;
+
+function recentlyReloaded(): boolean {
+  try {
+    const ts = Number(sessionStorage.getItem(RELOAD_GUARD_KEY) ?? 0);
+    return ts > 0 && Date.now() - ts < RELOAD_GUARD_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markReloadAttempt(): void {
+  try {
+    sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -49,8 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ]);
 
     (async () => {
-      const result = await withTimeout(supabase.auth.getUser(), 4000, 'getUser');
-      const verifiedUser = result?.data?.user ?? null;
+      // Fast path: getSession() reads from localStorage/cookies without
+      // hitting the network, so it can't hang on Supabase-Auth latency.
+      // Middleware (proxy.ts) already validates the session server-side on
+      // every request, so the session we see here is trustworthy — we
+      // don't need a network-verified getUser() on initial render.
+      const sessRes = await withTimeout(supabase.auth.getSession(), 3000, 'getSession');
+      const verifiedUser = sessRes?.data?.session?.user ?? null;
       if (!verifiedUser) {
         setUser(null);
         setLoading(false);
@@ -94,8 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           supabase.auth.getSession().then(() => 'ok' as const).catch(() => 'ok' as const),
           new Promise<'stuck'>((r) => setTimeout(() => r('stuck'), 3000)),
         ]);
-        if (probe === 'stuck') {
+        if (probe === 'stuck' && !recentlyReloaded()) {
           console.warn('[auth] supabase client stuck after tab focus — resetting + reloading');
+          markReloadAttempt();
           resetClient();
           window.location.reload();
         }
@@ -139,6 +165,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (retries > 0) {
         await new Promise((r) => setTimeout(r, 1000));
         return fetchProfile(userId, retries - 1);
+      }
+      // Out of retries — if we never had a profile to begin with, the
+      // client is effectively dead (can't fetch anything). Reset the
+      // singleton + hard-reload so middleware re-establishes the session
+      // on a fresh client. If we already had a profile, keep it and hope
+      // it's a transient blip; the visibility handler can still recover.
+      // Guard against infinite reload loops if Supabase itself is down.
+      if (!profile && !recentlyReloaded()) {
+        console.warn('[auth] fetchProfile hard-failed with no prior profile — resetting client + reload');
+        markReloadAttempt();
+        resetClient();
+        window.location.reload();
+        return;
       }
       console.warn('[auth] fetchProfile failed — keeping previous profile state');
       return;
