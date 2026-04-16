@@ -478,12 +478,14 @@ export default function EventDetailPage({
         <EventBanner event={event} />
 
         <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex flex-col gap-2">
-          <span
-            className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold text-white backdrop-blur-sm"
-            style={{ backgroundColor: `${catColor}dd` }}
-          >
-            {event.category}
-          </span>
+          {event.category && event.category.trim() ? (
+            <span
+              className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold text-white backdrop-blur-sm"
+              style={{ backgroundColor: `${catColor}dd` }}
+            >
+              {event.category}
+            </span>
+          ) : null}
           {event.visibility === 'private' && (
             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium bg-amber-500/90 text-white">
               <Lock size={10} /> Privat

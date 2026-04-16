@@ -555,12 +555,14 @@ function CompactEventCard({
             {contextBadge}
           </span>
         )}
-        <span
-          className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold text-white backdrop-blur-sm"
-          style={{ backgroundColor: `${catColor}dd` }}
-        >
-          {event.category}
-        </span>
+        {event.category && event.category.trim() ? (
+          <span
+            className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold text-white backdrop-blur-sm"
+            style={{ backgroundColor: `${catColor}dd` }}
+          >
+            {event.category}
+          </span>
+        ) : null}
       </div>
       <div className="p-3 space-y-1.5">
         <h3 className="font-heading font-semibold text-[14px] leading-snug line-clamp-2">
@@ -597,12 +599,14 @@ function EventCard({ event }: { event: Event }) {
         <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
           <EventBanner event={event} />
         </div>
-        <span
-          className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-[12px] font-semibold text-white backdrop-blur-sm"
-          style={{ backgroundColor: `${catColor}dd` }}
-        >
-          {event.category}
-        </span>
+        {event.category && event.category.trim() ? (
+          <span
+            className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-[12px] font-semibold text-white backdrop-blur-sm"
+            style={{ backgroundColor: `${catColor}dd` }}
+          >
+            {event.category}
+          </span>
+        ) : null}
       </div>
 
       <div className="p-5 space-y-3">
