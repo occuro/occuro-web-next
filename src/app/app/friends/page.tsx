@@ -413,12 +413,21 @@ export default function FriendsPage() {
                         onClick={() => openOrgProfile(org)}
                         className="flex flex-col items-center gap-2 min-w-[72px] group"
                       >
-                        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all">
-                          {org.avatar_url ? (
+                        <div
+                          className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
+                          style={{ backgroundColor: 'rgba(124,58,237,0.12)' }}
+                        >
+                          {org.avatar_url && org.avatar_url.trim() ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={org.avatar_url} alt="" className="w-full h-full object-cover" />
+                            <img
+                              src={org.avatar_url}
+                              alt=""
+                              className="w-full h-full object-cover object-center"
+                            />
                           ) : (
-                            <span className="text-foreground/70">{org.name.charAt(0).toUpperCase()}</span>
+                            <span className="text-violet-400 text-[15px]">
+                              {(org.name ?? '?').trim().charAt(0).toUpperCase() || '?'}
+                            </span>
                           )}
                         </div>
                         <span className="text-[10px] text-center font-medium truncate w-full group-hover:text-violet-400 transition-colors">{org.name}</span>
