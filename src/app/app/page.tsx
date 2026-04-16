@@ -264,7 +264,7 @@ export default function DiscoverPage() {
     invitations.length > 0 || friendEvents.length > 0 || organizerEvents.length > 0;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       {!isSearching && (
         <div className="flex items-end justify-between gap-4 flex-wrap pt-2">
           <div>
@@ -301,9 +301,11 @@ export default function DiscoverPage() {
         )}
       </div>
 
-      {/* Personal sections — only on the default landing (not while searching) */}
+      {/* Personal sections on MOBILE only — horizontal carousels above
+          the main feed. Desktop renders them as a right-column sidebar
+          further down so they live next to the "Mehr entdecken" grid. */}
       {!isSearching && user && hasAnyPersonal && (
-        <div className="space-y-8">
+        <div className="space-y-8 lg:hidden">
           {invitations.length > 0 && (
             <PersonalSection
               icon={<Mail size={16} className="text-violet-500" />}
@@ -447,42 +449,105 @@ export default function DiscoverPage() {
         ))}
       </div>
 
-      {/* Section Title */}
-      {!isSearching && (
-        <div className="flex items-center gap-2 pt-2">
-          <Sparkles size={16} className="text-violet-500" />
-          <h2 className="text-base font-heading font-semibold">
-            {hasAnyPersonal ? 'Mehr entdecken' : 'Events für dich'}
-          </h2>
-        </div>
-      )}
-
-      {/* Events Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="rounded-2xl bg-surface border border-border-subtle overflow-hidden">
-              <div className="aspect-[16/9] bg-muted animate-pulse" />
-              <div className="p-4 space-y-3">
-                <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
-                <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
-              </div>
+      {/* Main area — single column on mobile, two-column on desktop with
+          the personal sections acting as a right-hand sidebar so the
+          "Mehr entdecken" feed sits next to "Freunde gehen hin" etc
+          instead of below them. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
+        {/* Main feed */}
+        <div className="space-y-5">
+          {!isSearching && (
+            <div className="flex items-center gap-2 pt-2">
+              <Sparkles size={16} className="text-violet-500" />
+              <h2 className="text-lg font-heading font-semibold">
+                {hasAnyPersonal ? 'Mehr entdecken' : 'Events für dich'}
+              </h2>
             </div>
-          ))}
+          )}
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="rounded-3xl bg-surface border border-border-subtle overflow-hidden">
+                  <div className="aspect-[5/3] bg-muted animate-pulse" />
+                  <div className="p-5 space-y-3">
+                    <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
+              <Search size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
+              <p className="text-base font-medium">Keine Events gefunden</p>
+              <p className="text-[13px] mt-1.5">Versuche einen anderen Suchbegriff oder eine andere Kategorie.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
+              {filtered.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
+          )}
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
-          <Search size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
-          <p className="text-base font-medium">Keine Events gefunden</p>
-          <p className="text-[13px] mt-1.5">Versuche einen anderen Suchbegriff oder eine andere Kategorie.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
-          {filtered.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
-      )}
+
+        {/* Desktop-only personal sidebar */}
+        {!isSearching && user && hasAnyPersonal && (
+          <aside className="hidden lg:block space-y-6 pt-2">
+            {invitations.length > 0 && (
+              <PersonalSection
+                orientation="vertical"
+                icon={<Mail size={15} className="text-violet-500" />}
+                title="Einladungen"
+                subtitle={`${invitations.length}`}
+              >
+                {invitations.map((inv) => (
+                  <CompactEventCard
+                    key={inv.id}
+                    event={inv.event}
+                    contextBadge="Eingeladen"
+                    accent
+                    fullWidth
+                  />
+                ))}
+              </PersonalSection>
+            )}
+            {friendEvents.length > 0 && (
+              <PersonalSection
+                orientation="vertical"
+                icon={<Users size={15} className="text-violet-500" />}
+                title="Freunde gehen hin"
+              >
+                {friendEvents.map(({ event, friendCount }) => (
+                  <CompactEventCard
+                    key={event.id}
+                    event={event}
+                    contextBadge={friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`}
+                    fullWidth
+                  />
+                ))}
+              </PersonalSection>
+            )}
+            {organizerEvents.length > 0 && (
+              <PersonalSection
+                orientation="vertical"
+                icon={<Building2 size={15} className="text-violet-500" />}
+                title="Gefolgte Organizer"
+              >
+                {organizerEvents.map((event) => (
+                  <CompactEventCard
+                    key={event.id}
+                    event={event}
+                    contextBadge={event.organizer_name ?? undefined}
+                    fullWidth
+                  />
+                ))}
+              </PersonalSection>
+            )}
+          </aside>
+        )}
+      </div>
 
       {/* Subtle personal-sections loading hint — only shows on first paint */}
       {personalLoading && user && !hasAnyPersonal && !isSearching && (
@@ -499,24 +564,30 @@ function PersonalSection({
   title,
   subtitle,
   children,
+  orientation = 'horizontal',
 }: {
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  orientation?: 'horizontal' | 'vertical';
 }) {
   return (
     <section>
       <div className="flex items-baseline gap-2 mb-3">
         <span className="translate-y-[2px]">{icon}</span>
-        <h2 className="text-base font-heading font-semibold">{title}</h2>
+        <h2 className="text-[15px] font-heading font-semibold">{title}</h2>
         {subtitle && (
           <span className="text-[12px] text-muted-fg">· {subtitle}</span>
         )}
       </div>
-      <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {children}
-      </div>
+      {orientation === 'vertical' ? (
+        <div className="flex flex-col gap-3">{children}</div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {children}
+        </div>
+      )}
     </section>
   );
 }
@@ -525,16 +596,23 @@ function CompactEventCard({
   event,
   contextBadge,
   accent,
+  fullWidth,
 }: {
   event: Event;
   contextBadge?: string;
   accent?: boolean;
+  fullWidth?: boolean;
 }) {
   const catColor = getCategoryColor(event.category);
+  // Horizontal scroll uses a fixed width to snap nicely; vertical
+  // sidebar column takes the parent's full width instead.
+  const sizingClass = fullWidth
+    ? 'w-full'
+    : 'flex-shrink-0 w-[300px] snap-start';
   return (
     <Link
       href={`/app/event/${event.id}`}
-      className={`group flex-shrink-0 w-[280px] snap-start rounded-2xl border bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5 transition-all duration-300 ${
+      className={`group ${sizingClass} rounded-2xl border bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5 transition-all duration-300 ${
         accent
           ? 'border-violet-500/40 hover:border-violet-500/60'
           : 'border-border-subtle hover:border-border-strong'
@@ -546,7 +624,7 @@ function CompactEventCard({
         </div>
         {contextBadge && (
           <span
-            className={`absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold backdrop-blur-sm ${
+            className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-semibold backdrop-blur-sm ${
               accent
                 ? 'bg-violet-600/90 text-white'
                 : 'bg-black/50 text-white'
@@ -557,29 +635,29 @@ function CompactEventCard({
         )}
         {event.category && event.category.trim() ? (
           <span
-            className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10.5px] font-semibold text-white backdrop-blur-sm"
+            className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white backdrop-blur-sm"
             style={{ backgroundColor: `${catColor}dd` }}
           >
             {event.category}
           </span>
         ) : null}
       </div>
-      <div className="p-3 space-y-1.5">
-        <h3 className="font-heading font-semibold text-[14px] leading-snug line-clamp-2">
+      <div className="p-4 space-y-2">
+        <h3 className="font-heading font-semibold text-[15px] leading-snug line-clamp-2">
           {event.title}
         </h3>
-        <div className="flex items-center gap-2.5 text-[11.5px] text-muted-fg">
-          <span className="flex items-center gap-1">
-            <Calendar size={11} strokeWidth={1.6} />
+        <div className="flex items-center gap-3 text-[12px] text-muted-fg">
+          <span className="flex items-center gap-1.5">
+            <Calendar size={12} strokeWidth={1.6} />
             {formatDate(event.date)}
           </span>
-          <span className="flex items-center gap-1">
-            <Clock size={11} strokeWidth={1.6} />
+          <span className="flex items-center gap-1.5">
+            <Clock size={12} strokeWidth={1.6} />
             {formatTime(event.time)}
           </span>
         </div>
-        <p className="text-[11.5px] text-muted-fg truncate flex items-center gap-1">
-          <MapPin size={11} strokeWidth={1.6} className="flex-shrink-0" />
+        <p className="text-[12px] text-muted-fg truncate flex items-center gap-1.5">
+          <MapPin size={12} strokeWidth={1.6} className="flex-shrink-0" />
           {event.location}
         </p>
       </div>
