@@ -394,13 +394,14 @@ function MapPageInner() {
             />
           )}
 
-          {/* Pin-click: floating card over the map with event summary +
-              CTA to open the detail page. Replaces the old bare
-              "Schließen" button which gave users no way to actually
-              open the event they tapped on. */}
+          {/* Pin-click card — bottom-center, mobile-map convention.
+              Doesn't fight with the top search bar or close button,
+              matches the pattern Google / Apple Maps use. On mobile
+              it takes the full bottom width; on desktop it caps at
+              ~420px and centres horizontally. */}
           {selected && (
-            <div className="absolute top-4 left-4 right-4 sm:right-auto sm:max-w-[360px] z-10 animate-fade-in">
-              <div className="flex gap-3 p-3 rounded-2xl bg-surface/95 border border-border-subtle backdrop-blur-md shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)]">
+            <div className="absolute bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-[420px] z-10 animate-fade-in">
+              <div className="flex gap-3 p-3 rounded-2xl bg-surface/95 border border-border-subtle backdrop-blur-md shadow-[0_12px_40px_-8px_rgba(0,0,0,0.6)]">
                 <div
                   className="w-1.5 self-stretch rounded-full flex-shrink-0"
                   style={{ backgroundColor: getCategoryColor(selected.category) }}
