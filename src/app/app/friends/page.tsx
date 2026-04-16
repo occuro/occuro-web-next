@@ -416,7 +416,11 @@ export default function FriendsPage() {
                       Gefolgte Veranstalter
                     </h2>
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                  {/* pt-2 is mandatory here: overflow-x-auto implicitly
+                      clips overflow-y too (CSS quirk), which was
+                      cropping the top of the ring-2 around each
+                      avatar. Gives the ring breathing room. */}
+                  <div className="flex gap-3 overflow-x-auto pt-2 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                     {followedOrgs.map((org) => (
                       <button
                         key={org.id}

@@ -25,12 +25,17 @@ interface FullProfile {
   website: string | null;
   instagram: string | null;
   interests: string[] | null;
+  user_type: string | null;
 }
 
 // Fields we KNOW exist on the live DB. The optional schema columns
 // (website, instagram, interests) might not be there yet — they're
 // fetched in a second optional select that swallows errors.
-const SAFE_PROFILE_COLS = 'id, full_name, username, avatar_url, banner_url, bio, location';
+// user_type is included so we can redirect organization profiles to
+// the dedicated /app/organizer/[id] page instead of showing the
+// individual-user UI (which has a "Nachricht" button and friend
+// actions that don't apply to organizations).
+const SAFE_PROFILE_COLS = 'id, full_name, username, avatar_url, banner_url, bio, location, user_type';
 const OPTIONAL_PROFILE_COLS = 'website, instagram, interests';
 
 type EventGroup = 'attending' | 'hosting';
@@ -60,11 +65,34 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   // RLS / network errors — without needing the user to open DevTools.
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [messageBusy, setMessageBusy] = useState(false);
   const [eventGroup, setEventGroup] = useState<EventGroup>('attending');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
   const isSelf = user?.id === profile?.id;
+
+  // Resolve (or create) the DM room between the current user and this
+  // profile, then navigate into it. Uses the `find_or_create_dm_room`
+  // RPC (same one the mobile app uses) so there's exactly one DM row
+  // per pair regardless of who initiated.
+  const openDirectMessage = async () => {
+    if (!user || !profile || messageBusy) return;
+    setMessageBusy(true);
+    try {
+      const { data: roomId, error } = await supabase.rpc('find_or_create_dm_room', {
+        other_user_id: profile.id,
+      });
+      if (error || !roomId) {
+        console.error('[profile] find_or_create_dm_room failed:', error);
+        alert('Chat konnte nicht geöffnet werden. Bitte versuche es erneut.');
+        return;
+      }
+      router.push(`/app/chat/${roomId}`);
+    } finally {
+      setMessageBusy(false);
+    }
+  };
 
   // ── Load everything ──────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -106,7 +134,17 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
       setLoading(false);
       return;
     }
-    log(`resolved id=${resolved.id} username=${resolved.username ?? 'null'}`);
+    log(`resolved id=${resolved.id} username=${resolved.username ?? 'null'} type=${resolved.user_type ?? 'null'}`);
+
+    // If this is an organization profile, kick the user over to the
+    // dedicated organizer page. The individual-profile UI doesn't
+    // apply: you can't friend or DM an org (org comms happen through
+    // event chats only), so we'd just be showing broken buttons.
+    if (resolved.user_type === 'organization') {
+      log('profile is an organization — redirecting to /app/organizer');
+      router.replace(`/app/organizer/${resolved.id}`);
+      return;
+    }
 
     // Step 2: optional columns — try once, swallow errors. If the DB
     // doesn't have them yet the user just sees the safe columns.
@@ -437,12 +475,13 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           {/* Action bar */}
           {!isSelf && user && (
             <div className="flex gap-2 mt-5">
-              <Link
-                href={`/app/chat?with=${profile.id}`}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-500 transition-colors"
+              <button
+                onClick={openDirectMessage}
+                disabled={messageBusy}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-500 transition-colors disabled:opacity-60"
               >
-                <MessageCircle size={14} /> Nachricht
-              </Link>
+                {messageBusy ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />} Nachricht
+              </button>
               {friendshipStatus === 'friends' && (
                 <button
                   onClick={removeFriend}
