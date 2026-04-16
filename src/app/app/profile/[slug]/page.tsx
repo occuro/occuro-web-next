@@ -140,9 +140,21 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
     // dedicated organizer page. The individual-profile UI doesn't
     // apply: you can't friend or DM an org (org comms happen through
     // event chats only), so we'd just be showing broken buttons.
-    if (resolved.user_type === 'organization') {
-      log('profile is an organization — redirecting to /app/organizer');
-      router.replace(`/app/organizer/${resolved.id}`);
+    //
+    // We check BOTH user_type='organization' AND whether an
+    // organizations row exists with this profile as owner — older
+    // org profiles may have user_type=null, in which case the
+    // presence of an organizations row is the ground truth.
+    const orgCheckRes = await supabase
+      .from('organizations')
+      .select('id')
+      .eq('owner_id', resolved.id)
+      .maybeSingle();
+    log(`organization check: ${orgCheckRes.data ? `HIT org=${orgCheckRes.data.id}` : 'miss'}`);
+    if (resolved.user_type === 'organization' || orgCheckRes.data?.id) {
+      const targetOrgId = orgCheckRes.data?.id ?? resolved.id;
+      log(`redirecting to /app/organizer/${targetOrgId}`);
+      router.replace(`/app/organizer/${targetOrgId}`);
       return;
     }
 
