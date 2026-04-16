@@ -459,7 +459,7 @@ export default function DiscoverPage() {
 
       {/* Events Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="rounded-2xl bg-surface border border-border-subtle overflow-hidden">
               <div className="aspect-[16/9] bg-muted animate-pulse" />
@@ -477,7 +477,7 @@ export default function DiscoverPage() {
           <p className="text-[13px] mt-1.5">Versuche einen anderen Suchbegriff oder eine andere Kategorie.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 stagger-children">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
           {filtered.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
@@ -591,48 +591,48 @@ function EventCard({ event }: { event: Event }) {
   return (
     <Link
       href={`/app/event/${event.id}`}
-      className="group rounded-2xl border border-border-subtle bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:border-border-strong hover:-translate-y-0.5 transition-all duration-300"
+      className="group rounded-3xl border border-border-subtle bg-surface overflow-hidden hover:shadow-[var(--shadow-lg)] hover:border-border-strong hover:-translate-y-0.5 transition-all duration-300"
     >
-      <div className="aspect-[16/9] bg-muted relative overflow-hidden">
+      <div className="aspect-[5/3] bg-muted relative overflow-hidden">
         <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
           <EventBanner event={event} />
         </div>
         <span
-          className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-semibold text-white backdrop-blur-sm"
+          className="absolute top-4 left-4 px-3 py-1.5 rounded-full text-[12px] font-semibold text-white backdrop-blur-sm"
           style={{ backgroundColor: `${catColor}dd` }}
         >
           {event.category}
         </span>
       </div>
 
-      <div className="p-4 space-y-2.5">
-        <h3 className="font-heading font-semibold text-[15px] leading-snug line-clamp-2 group-hover:text-foreground/80 transition-colors">
+      <div className="p-5 space-y-3">
+        <h3 className="font-heading font-semibold text-[18px] leading-snug line-clamp-2 group-hover:text-foreground/80 transition-colors">
           {event.title}
         </h3>
         {event.slogan && (
-          <p className="text-[12px] text-muted-fg line-clamp-1">{event.slogan}</p>
+          <p className="text-[13px] text-muted-fg line-clamp-1">{event.slogan}</p>
         )}
-        <div className="flex items-center gap-3 text-[12px] text-muted-fg">
-          <span className="flex items-center gap-1">
-            <Calendar size={12} strokeWidth={1.6} />
+        <div className="flex items-center gap-3 text-[13px] text-muted-fg">
+          <span className="flex items-center gap-1.5">
+            <Calendar size={13} strokeWidth={1.6} />
             {formatDate(event.date)}
           </span>
-          <span className="flex items-center gap-1">
-            <Clock size={12} strokeWidth={1.6} />
+          <span className="flex items-center gap-1.5">
+            <Clock size={13} strokeWidth={1.6} />
             {formatTime(event.time)}
           </span>
         </div>
-        <p className="text-[12px] text-muted-fg truncate flex items-center gap-1">
-          <MapPin size={12} strokeWidth={1.6} className="flex-shrink-0" />
+        <p className="text-[13px] text-muted-fg truncate flex items-center gap-1.5">
+          <MapPin size={13} strokeWidth={1.6} className="flex-shrink-0" />
           {event.location}
         </p>
-        <div className="flex items-center gap-4 text-[11px] text-muted-fg pt-2 border-t border-border-subtle">
-          <span className="flex items-center gap-1">
-            <Heart size={11} strokeWidth={1.6} />
+        <div className="flex items-center gap-5 text-[12px] text-muted-fg pt-3 border-t border-border-subtle">
+          <span className="flex items-center gap-1.5">
+            <Heart size={12} strokeWidth={1.6} />
             {event.interested_count} interessiert
           </span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 size={11} strokeWidth={1.6} />
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 size={12} strokeWidth={1.6} />
             {event.confirmed_count} bestätigt
           </span>
         </div>
