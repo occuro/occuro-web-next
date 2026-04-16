@@ -94,11 +94,32 @@ export function useNotifications(userId: string | null | undefined) {
     };
   }, [supabase, userId, load]);
 
+  // Local sync: every useNotifications instance is independent, so the
+  // sidebar bell and the notifications page each hold their own state.
+  // When one mutates (markAsRead, markAllAsRead, delete, deleteAll), it
+  // dispatches a window event so sibling instances refetch immediately
+  // — without waiting for the Supabase realtime round-trip that may or
+  // may not fire depending on the publication config. This is what
+  // kept the sidebar badge "stuck on unread" after opening a notif.
+  useEffect(() => {
+    if (!userId) return;
+    const handler = () => { void load(); };
+    window.addEventListener('occuro:notifications-changed', handler);
+    return () => window.removeEventListener('occuro:notifications-changed', handler);
+  }, [userId, load]);
+
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const broadcast = () => {
+    try {
+      window.dispatchEvent(new Event('occuro:notifications-changed'));
+    } catch {}
+  };
 
   const markAsRead = useCallback(async (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
     await supabase.from('notifications').update({ read: true }).eq('id', id);
+    broadcast();
   }, [supabase]);
 
   const markAllAsRead = useCallback(async () => {
@@ -109,17 +130,20 @@ export function useNotifications(userId: string | null | undefined) {
       .update({ read: true })
       .eq('user_id', userId)
       .eq('read', false);
+    broadcast();
   }, [supabase, userId]);
 
   const deleteNotification = useCallback(async (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     await supabase.from('notifications').delete().eq('id', id);
+    broadcast();
   }, [supabase]);
 
   const deleteAll = useCallback(async () => {
     if (!userId) return;
     setNotifications([]);
     await supabase.from('notifications').delete().eq('user_id', userId);
+    broadcast();
   }, [supabase, userId]);
 
   return {
