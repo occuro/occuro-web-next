@@ -18,3 +18,12 @@ export function createClient(): SupabaseClient {
   );
   return cachedClient;
 }
+
+// Resets the cached browser client. Call this when the client is detected
+// to be stuck (e.g. a token refresh deadlock after long idle / tab suspend)
+// so the next createClient() spins up a fresh instance with fresh internal
+// state. Typically paired with a window.location.reload() — without a
+// reload, existing React hooks still hold references to the old client.
+export function resetClient(): void {
+  cachedClient = null;
+}

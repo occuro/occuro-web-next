@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, resetClient } from '@/lib/supabase/client';
 import { purgeOldSchemas } from '@/lib/versioned-storage';
 import type { Profile, Organization, UserType } from '@/types/occuro';
 import type { User } from '@supabase/supabase-js';
@@ -48,31 +48,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }, ms)),
       ]);
 
-    let initialLoadDone = false;
-
     (async () => {
       const result = await withTimeout(supabase.auth.getUser(), 4000, 'getUser');
       const verifiedUser = result?.data?.user ?? null;
       if (!verifiedUser) {
         setUser(null);
         setLoading(false);
-        initialLoadDone = true;
         return;
       }
       setUser(verifiedUser);
       await fetchProfile(verifiedUser.id);
       setLoading(false);
-      initialLoadDone = true;
     })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        // INITIAL_SESSION is handled by the IIFE above via the secure
+        // getUser() path. Skip it here to avoid a redundant profile fetch.
+        if (event === 'INITIAL_SESSION') return;
+
         const u = session?.user ?? null;
         setUser(u);
         if (u) {
-          if (initialLoadDone) {
-            await fetchProfile(u.id);
-          }
+          await fetchProfile(u.id);
         } else {
           setProfile(null);
           setOrganization(null);
@@ -80,9 +78,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     );
 
+    // Stuck-client recovery: after a long tab suspend / laptop sleep the
+    // Supabase client can deadlock on an internal token refresh, which
+    // hangs every subsequent query (profile *and* events). When the tab
+    // becomes visible again, probe the session with a short timeout; if
+    // the probe doesn't return, the client is stuck — drop the singleton
+    // and hard-reload so we come back on fresh cookies via middleware.
+    let stuckCheckInFlight = false;
+    const onVisibility = async () => {
+      if (document.visibilityState !== 'visible') return;
+      if (stuckCheckInFlight) return;
+      stuckCheckInFlight = true;
+      try {
+        const probe = await Promise.race<'ok' | 'stuck'>([
+          supabase.auth.getSession().then(() => 'ok' as const).catch(() => 'ok' as const),
+          new Promise<'stuck'>((r) => setTimeout(() => r('stuck'), 3000)),
+        ]);
+        if (probe === 'stuck') {
+          console.warn('[auth] supabase client stuck after tab focus — resetting + reloading');
+          resetClient();
+          window.location.reload();
+        }
+      } finally {
+        stuckCheckInFlight = false;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     return () => {
       clearTimeout(forceReady);
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', onVisibility);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -105,8 +131,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       5000,
       'fetchProfile.profiles',
     );
-    const prof = profRes?.data ?? null;
 
+    // profRes === null means the query itself failed (timeout / network /
+    // expired JWT). Retry without overwriting the current profile — blowing
+    // it away on a transient error is what caused the "User" fallback bug.
+    if (!profRes) {
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1000));
+        return fetchProfile(userId, retries - 1);
+      }
+      console.warn('[auth] fetchProfile failed — keeping previous profile state');
+      return;
+    }
+
+    const prof = profRes.data ?? null;
+
+    // Query succeeded but no row yet (DB replication lag on fresh signup).
     if (!prof && retries > 0) {
       await new Promise((r) => setTimeout(r, 1000));
       return fetchProfile(userId, retries - 1);
@@ -120,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         5000,
         'fetchProfile.organizations',
       );
-      setOrganization(orgRes?.data ?? null);
+      if (orgRes) setOrganization(orgRes.data ?? null);
     }
   }
 
