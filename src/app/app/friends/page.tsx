@@ -102,15 +102,26 @@ export default function FriendsPage() {
     ]);
 
     const friendships = (friendshipsRes.data ?? []) as Array<{ user_id: string; friend_id: string; status: string }>;
-    const acceptedIds = friendships
-      .filter((f) => f.status === 'accepted')
-      .map((f) => (f.user_id === user.id ? f.friend_id : f.user_id));
-    const incomingIds = friendships
-      .filter((f) => f.status === 'pending' && f.friend_id === user.id)
-      .map((f) => f.user_id);
-    const outgoingPendingIds = friendships
-      .filter((f) => f.status === 'pending' && f.user_id === user.id)
-      .map((f) => f.friend_id);
+    // Dedupe across both directions: if the friendships table stores a
+    // row for each side of the relationship (A→B and B→A), the naive
+    // extraction below would list the same friend twice. Using a Set
+    // here is the bare minimum to keep the UI from rendering duplicate
+    // rows regardless of how the table is modelled.
+    const acceptedIds = Array.from(new Set(
+      friendships
+        .filter((f) => f.status === 'accepted')
+        .map((f) => (f.user_id === user.id ? f.friend_id : f.user_id))
+    ));
+    const incomingIds = Array.from(new Set(
+      friendships
+        .filter((f) => f.status === 'pending' && f.friend_id === user.id)
+        .map((f) => f.user_id)
+    ));
+    const outgoingPendingIds = Array.from(new Set(
+      friendships
+        .filter((f) => f.status === 'pending' && f.user_id === user.id)
+        .map((f) => f.friend_id)
+    ));
 
     setOutgoingIds(new Set(outgoingPendingIds));
 
