@@ -425,7 +425,7 @@ export default function FriendsPage() {
                         className="flex flex-col items-center gap-2 min-w-[72px] group"
                       >
                         <div
-                          className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all"
+                          className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-semibold ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all p-[5px]"
                           style={{ backgroundColor: 'rgba(124,58,237,0.12)' }}
                         >
                           {org.avatar_url && org.avatar_url.trim() ? (
@@ -433,7 +433,13 @@ export default function FriendsPage() {
                             <img
                               src={org.avatar_url}
                               alt=""
-                              className="w-full h-full object-cover object-center"
+                              // 5px padding on the outer container + the
+                              // image rounded-full on its own creates a
+                              // clear gap between logo edge and the outer
+                              // ring, so edge-to-edge logos (like the
+                              // occuro badge) don't look cropped at the
+                              // top where the ring hugs the image.
+                              className="w-full h-full object-cover object-center rounded-full"
                             />
                           ) : (
                             <span className="text-violet-400 text-[15px]">
