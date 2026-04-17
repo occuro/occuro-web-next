@@ -275,17 +275,20 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Action row: Freunde + Teilen.
-                Bearbeiten + Einstellungen sitzen schon oben rechts auf
-                dem Banner — hier nochmal wäre Doppelmoppel. */}
             <div className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap">
+              <button
+                onClick={() => setEditOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+              >
+                <Pencil size={13} />
+                <span className="text-[12px] font-medium">Bearbeiten</span>
+              </button>
               <Link
                 href="/app/friends"
                 className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
               >
-                <Users size={14} className="text-violet-400" />
-                <span className="text-[13px] font-semibold">{friendCount}</span>
-                <span className="text-[12px] text-muted-fg">Freunde</span>
+                <Users size={13} className="text-violet-400" />
+                <span className="text-[12px] font-medium">Freunde</span>
               </Link>
               <ShareProfileButton profile={profile} />
             </div>

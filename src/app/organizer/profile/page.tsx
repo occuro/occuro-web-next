@@ -8,7 +8,7 @@ import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
   MapPin, BadgeCheck, Users, Pencil, Settings, Clock, Calendar,
-  Plus, X, Save, Loader2, Tag,
+  Plus, X, Save, Loader2, Tag, Share2, Check,
   CalendarRange, TrendingUp,
 } from 'lucide-react';
 import { ImageUpload } from '@/components/image-upload';
@@ -142,6 +142,25 @@ export default function OrganizerProfilePage() {
                   <BadgeCheck size={13} strokeWidth={1.6} /> Verifiziert
                 </span>
               )}
+            </div>
+
+            {/* Action row */}
+            <div className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap">
+              <button
+                onClick={() => setEditOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+              >
+                <Pencil size={13} />
+                <span className="text-[12px] font-medium">Bearbeiten</span>
+              </button>
+              <Link
+                href="/organizer/followers"
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+              >
+                <Users size={13} className="text-violet-400" />
+                <span className="text-[12px] font-medium">Follower</span>
+              </Link>
+              <ShareOrgButton organization={organization} />
             </div>
 
             {/* Stats */}
@@ -406,5 +425,54 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <p className="text-[10px] text-muted-fg">{hint}</p>}
     </div>
+  );
+}
+
+function ShareOrgButton({ organization }: { organization: ReturnType<typeof useAuth>['organization'] }) {
+  const [copied, setCopied] = useState(false);
+
+  const orgUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/app/organizer/${organization?.id ?? ''}`
+    : `https://app.occuroapp.com/app/organizer/${organization?.id ?? ''}`;
+
+  async function handleShare() {
+    if ('share' in navigator) {
+      try {
+        await navigator.share({
+          title: organization?.name ?? 'occuro Veranstalter',
+          text: `Schau dir ${organization?.name ?? 'diesen Veranstalter'} auf occuro an`,
+          url: orgUrl,
+        });
+        return;
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(orgUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      window.open(orgUrl, '_blank');
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+    >
+      {copied ? (
+        <>
+          <Check size={13} className="text-green-400" />
+          <span className="text-[12px] font-medium text-green-400">Kopiert</span>
+        </>
+      ) : (
+        <>
+          <Share2 size={13} />
+          <span className="text-[12px] font-medium">Teilen</span>
+        </>
+      )}
+    </button>
   );
 }
