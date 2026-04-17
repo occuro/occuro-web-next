@@ -4,9 +4,10 @@ import { use, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { User, Download, Smartphone } from 'lucide-react';
+import { User, Download, ExternalLink } from 'lucide-react';
 
 const APP_STORE_URL = 'https://apps.apple.com/app/occuro/id6760317905';
+const APP_SCHEME = 'occuro://';
 
 interface PublicProfile {
   full_name: string | null;
@@ -76,16 +77,19 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
 
         <div className="space-y-3 pt-4">
           <a
-            href={APP_STORE_URL}
+            href={`${APP_SCHEME}profile/${slug}`}
             className="flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-2xl transition-colors"
           >
-            <Download size={20} />
-            occuro App herunterladen
+            <ExternalLink size={18} />
+            In der App öffnen
           </a>
-          <p className="text-gray-500 text-xs flex items-center justify-center gap-1.5">
-            <Smartphone size={14} />
-            Profil in der App ansehen
-          </p>
+          <a
+            href={APP_STORE_URL}
+            className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 font-medium rounded-2xl transition-colors text-sm"
+          >
+            <Download size={16} />
+            App noch nicht installiert? Herunterladen
+          </a>
         </div>
 
         <div className="pt-6">
