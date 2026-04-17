@@ -6,9 +6,14 @@ import { createClient } from '@/lib/supabase/server';
 import type { Profile, Organization } from '@/types/occuro';
 import type { User } from '@supabase/supabase-js';
 
+const SITE_URL = 'https://app.occuroapp.com';
+const SITE_TITLE = 'occuro — Entdecke Events in deiner Nähe';
+const SITE_DESCRIPTION = 'Events entdecken, Tickets kaufen, Freunde treffen. Die Plattform für Veranstalter und Eventbesucher.';
+
 export const metadata: Metadata = {
-  title: 'occuro — Entdecke Events in deiner Nähe',
-  description: 'Events entdecken, Tickets kaufen, Freunde treffen. Die Plattform für Veranstalter und Eventbesucher.',
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   manifest: '/manifest.webmanifest',
   applicationName: 'occuro',
   appleWebApp: {
@@ -16,13 +21,23 @@ export const metadata: Metadata = {
     title: 'occuro',
     statusBarStyle: 'black-translucent',
   },
-  // Favicon comes from src/app/icon.svg via Next.js file-based icon
-  // convention — same ring logo as the homepage. Keeping the apple
-  // touch icon explicit because iOS doesn't pick up SVGs reliably.
   icons: {
     apple: [
       { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
+  },
+  openGraph: {
+    type: 'website',
+    url: SITE_URL,
+    siteName: 'occuro',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: 'de_DE',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
 };
 
