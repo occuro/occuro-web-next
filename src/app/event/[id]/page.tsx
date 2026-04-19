@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { Calendar, MapPin, Download, ExternalLink } from 'lucide-react';
+import { Calendar, MapPin, Download, ExternalLink, Globe } from 'lucide-react';
 
 const APP_STORE_URL = 'https://apps.apple.com/app/occuro/id6760317905';
 const APP_SCHEME = 'occuro://';
@@ -101,6 +101,13 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
           >
             <ExternalLink size={18} />
             In der App öffnen
+          </a>
+          <a
+            href={`/app/event/${id}`}
+            className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-violet-500/40 text-violet-200 hover:text-white hover:border-violet-400 hover:bg-violet-600/10 font-medium rounded-2xl transition-colors text-sm"
+          >
+            <Globe size={16} />
+            Im Browser öffnen
           </a>
           <a
             href={APP_STORE_URL}

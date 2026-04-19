@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { User, Download, ExternalLink } from 'lucide-react';
+import { User, Download, ExternalLink, Globe } from 'lucide-react';
 
 const APP_STORE_URL = 'https://apps.apple.com/app/occuro/id6760317905';
 const APP_SCHEME = 'occuro://';
@@ -82,6 +82,13 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           >
             <ExternalLink size={18} />
             In der App öffnen
+          </a>
+          <a
+            href={`/app/profile/${slug}`}
+            className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-violet-500/40 text-violet-200 hover:text-white hover:border-violet-400 hover:bg-violet-600/10 font-medium rounded-2xl transition-colors text-sm"
+          >
+            <Globe size={16} />
+            Im Browser öffnen
           </a>
           <a
             href={APP_STORE_URL}
