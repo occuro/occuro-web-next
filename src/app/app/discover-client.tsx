@@ -67,6 +67,7 @@ export default function DiscoverClient({
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(25);
   const [locatingStatus, setLocatingStatus] = useState<'idle' | 'loading' | 'denied'>('idle');
+  const [activeTab, setActiveTab] = useState<'discover' | 'friends' | 'invitations'>('discover');
   const supabase = createClient();
 
   const categories = [
@@ -315,58 +316,32 @@ export default function DiscoverClient({
         )}
       </div>
 
-      {/* Personal sections on MOBILE only — horizontal carousels above
-          the main feed. Desktop renders them as a right-column sidebar
-          further down so they live next to the "Mehr entdecken" grid. */}
-      {!isSearching && user && hasAnyPersonal && (
-        <div className="space-y-8 lg:hidden">
+      {/* Tab navigation — split the feed into Entdecken / Freunde / Einladungen.
+          Hidden during search: the search bar scopes across all events. */}
+      {!isSearching && user && (
+        <div className="flex gap-1 border-b border-border-subtle overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+          <TabButton
+            active={activeTab === 'discover'}
+            onClick={() => setActiveTab('discover')}
+            icon={<Sparkles size={15} />}
+            label="Entdecken"
+          />
+          <TabButton
+            active={activeTab === 'friends'}
+            onClick={() => setActiveTab('friends')}
+            icon={<Users size={15} />}
+            label="Freunde gehen hin"
+            count={friendEvents.length || undefined}
+          />
           {invitations.length > 0 && (
-            <PersonalSection
-              icon={<Mail size={16} className="text-violet-500" />}
-              title="Einladungen"
-              subtitle={`${invitations.length} ${invitations.length === 1 ? 'offene Einladung' : 'offene Einladungen'}`}
-            >
-              {invitations.map((inv) => (
-                <CompactEventCard
-                  key={inv.id}
-                  event={inv.event}
-                  contextBadge="Eingeladen"
-                  accent
-                />
-              ))}
-            </PersonalSection>
-          )}
-
-          {friendEvents.length > 0 && (
-            <PersonalSection
-              icon={<Users size={16} className="text-violet-500" />}
-              title="Deine Freunde gehen hin"
-            >
-              {friendEvents.map(({ event, friendCount }) => (
-                <CompactEventCard
-                  key={event.id}
-                  event={event}
-                  contextBadge={
-                    friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`
-                  }
-                />
-              ))}
-            </PersonalSection>
-          )}
-
-          {organizerEvents.length > 0 && (
-            <PersonalSection
-              icon={<Building2 size={16} className="text-violet-500" />}
-              title="Von Organizern, denen du folgst"
-            >
-              {organizerEvents.map((event) => (
-                <CompactEventCard
-                  key={event.id}
-                  event={event}
-                  contextBadge={event.organizer_name ?? undefined}
-                />
-              ))}
-            </PersonalSection>
+            <TabButton
+              active={activeTab === 'invitations'}
+              onClick={() => setActiveTab('invitations')}
+              icon={<Mail size={15} />}
+              label="Einladungen"
+              count={invitations.length}
+              accent
+            />
           )}
         </div>
       )}
@@ -463,105 +438,95 @@ export default function DiscoverClient({
         ))}
       </div>
 
-      {/* Main area — single column on mobile, two-column on desktop with
-          the personal sections acting as a right-hand sidebar so the
-          "Mehr entdecken" feed sits next to "Freunde gehen hin" etc
-          instead of below them. */}
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
-        {/* Main feed */}
-        <div className="space-y-5">
-          {!isSearching && (
-            <div className="flex items-center gap-2 pt-2">
-              <Sparkles size={16} className="text-violet-500" />
-              <h2 className="text-lg font-heading font-semibold">
-                {hasAnyPersonal ? 'Mehr entdecken' : 'Events für dich'}
-              </h2>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="rounded-3xl bg-surface border border-border-subtle overflow-hidden">
-                  <div className="aspect-[191/100] bg-muted animate-pulse" />
-                  <div className="p-5 space-y-3">
-                    <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
-                    <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
-                  </div>
+      {/* Main feed — active tab drives the grid contents. During search
+          we always show the discover grid filtered by the query. */}
+      <div className="space-y-5">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="rounded-3xl bg-surface border border-border-subtle overflow-hidden">
+                <div className="aspect-[191/100] bg-muted animate-pulse" />
+                <div className="p-5 space-y-3">
+                  <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
                 </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
+              </div>
+            ))}
+          </div>
+        ) : (isSearching || activeTab === 'discover') ? (
+          filtered.length === 0 ? (
             <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
               <Search size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
               <p className="text-base font-medium">Keine Events gefunden</p>
               <p className="text-[13px] mt-1.5">Versuche einen anderen Suchbegriff oder eine andere Kategorie.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-children">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
               {filtered.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </div>
-          )}
-        </div>
-
-        {/* Desktop-only personal sidebar */}
-        {!isSearching && user && hasAnyPersonal && (
-          <aside className="hidden lg:block space-y-6 pt-2">
-            {invitations.length > 0 && (
-              <PersonalSection
-                orientation="vertical"
-                icon={<Mail size={15} className="text-violet-500" />}
-                title="Einladungen"
-                subtitle={`${invitations.length}`}
-              >
-                {invitations.map((inv) => (
-                  <CompactEventCard
-                    key={inv.id}
-                    event={inv.event}
-                    contextBadge="Eingeladen"
-                    accent
-                    fullWidth
-                  />
-                ))}
-              </PersonalSection>
-            )}
-            {friendEvents.length > 0 && (
-              <PersonalSection
-                orientation="vertical"
-                icon={<Users size={15} className="text-violet-500" />}
-                title="Freunde gehen hin"
-              >
-                {friendEvents.map(({ event, friendCount }) => (
-                  <CompactEventCard
-                    key={event.id}
-                    event={event}
-                    contextBadge={friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`}
-                    fullWidth
-                  />
-                ))}
-              </PersonalSection>
-            )}
-            {organizerEvents.length > 0 && (
-              <PersonalSection
-                orientation="vertical"
-                icon={<Building2 size={15} className="text-violet-500" />}
-                title="Gefolgte Organizer"
-              >
-                {organizerEvents.map((event) => (
-                  <CompactEventCard
-                    key={event.id}
-                    event={event}
-                    contextBadge={event.organizer_name ?? undefined}
-                    fullWidth
-                  />
-                ))}
-              </PersonalSection>
-            )}
-          </aside>
-        )}
+          )
+        ) : activeTab === 'friends' ? (
+          friendEvents.length === 0 ? (
+            <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
+              <Users size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
+              <p className="text-base font-medium">Noch keine Events mit deinen Freunden</p>
+              <p className="text-[13px] mt-1.5">Wenn Freunde Events merken oder bestätigen, erscheinen sie hier.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+              {friendEvents.map(({ event, friendCount }) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  contextBadge={friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`}
+                />
+              ))}
+            </div>
+          )
+        ) : activeTab === 'invitations' ? (
+          invitations.length === 0 ? (
+            <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
+              <Mail size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
+              <p className="text-base font-medium">Keine offenen Einladungen</p>
+              <p className="text-[13px] mt-1.5">Wenn dich jemand zu einem Event einlädt, siehst du es hier.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+              {invitations.map((inv) => (
+                <EventCard
+                  key={inv.id}
+                  event={inv.event}
+                  contextBadge="Eingeladen"
+                  accent
+                />
+              ))}
+            </div>
+          )
+        ) : null}
       </div>
+
+      {/* Gefolgte Organizer — compact section below the main grid,
+          only on the Entdecken tab when the user follows organizers
+          with upcoming events. */}
+      {!isSearching && activeTab === 'discover' && organizerEvents.length > 0 && (
+        <section className="pt-8 border-t border-border-subtle">
+          <div className="flex items-baseline gap-2 mb-4">
+            <Building2 size={15} className="text-violet-500 translate-y-[2px]" />
+            <h2 className="text-[15px] font-heading font-semibold">Von Organizern, denen du folgst</h2>
+          </div>
+          <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {organizerEvents.map((event) => (
+              <CompactEventCard
+                key={event.id}
+                event={event}
+                contextBadge={event.organizer_name ?? undefined}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Subtle personal-sections loading hint — only shows on first paint */}
       {personalLoading && user && !hasAnyPersonal && !isSearching && (
@@ -573,36 +538,52 @@ export default function DiscoverClient({
   );
 }
 
-function PersonalSection({
+function TabButton({
+  active,
+  onClick,
   icon,
-  title,
-  subtitle,
-  children,
-  orientation = 'horizontal',
+  label,
+  count,
+  accent,
 }: {
+  active: boolean;
+  onClick: () => void;
   icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-  orientation?: 'horizontal' | 'vertical';
+  label: string;
+  count?: number;
+  accent?: boolean;
 }) {
   return (
-    <section>
-      <div className="flex items-baseline gap-2 mb-3">
-        <span className="translate-y-[2px]">{icon}</span>
-        <h2 className="text-[15px] font-heading font-semibold">{title}</h2>
-        {subtitle && (
-          <span className="text-[12px] text-muted-fg">· {subtitle}</span>
-        )}
-      </div>
-      {orientation === 'vertical' ? (
-        <div className="flex flex-col gap-3">{children}</div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {children}
-        </div>
+    <button
+      onClick={onClick}
+      className={`group relative inline-flex items-center gap-2 px-4 py-3 text-[13px] font-medium whitespace-nowrap transition-colors ${
+        active
+          ? 'text-foreground'
+          : 'text-muted-fg hover:text-foreground'
+      }`}
+    >
+      <span className={active ? 'text-violet-500' : ''}>{icon}</span>
+      {label}
+      {typeof count === 'number' && count > 0 && (
+        <span
+          className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-semibold ${
+            accent
+              ? 'bg-violet-600 text-white'
+              : active
+                ? 'bg-violet-500/15 text-violet-500'
+                : 'bg-muted text-muted-fg'
+          }`}
+        >
+          {count}
+        </span>
       )}
-    </section>
+      {/* Active indicator */}
+      <span
+        className={`absolute left-0 right-0 bottom-[-1px] h-[2px] transition-all ${
+          active ? 'bg-violet-500' : 'bg-transparent'
+        }`}
+      />
+    </button>
   );
 }
 
@@ -679,7 +660,15 @@ function CompactEventCard({
   );
 }
 
-function EventCard({ event }: { event: Event }) {
+function EventCard({
+  event,
+  contextBadge,
+  accent,
+}: {
+  event: Event;
+  contextBadge?: string;
+  accent?: boolean;
+}) {
   const catColor = getCategoryColor(event.category);
 
   const isPrivate = event.visibility === 'private';
@@ -694,7 +683,11 @@ function EventCard({ event }: { event: Event }) {
         // not JS values, so we stash the category color here.
         ['--cat-glow' as string]: `${catColor}55`,
       } as React.CSSProperties}
-      className="group relative rounded-3xl border border-border-subtle bg-surface overflow-hidden hover:border-border-strong hover:-translate-y-1 hover:shadow-[0_24px_48px_-18px_var(--cat-glow)] transition-all duration-300"
+      className={`group relative rounded-3xl border bg-surface overflow-hidden hover:-translate-y-1 hover:shadow-[0_24px_48px_-18px_var(--cat-glow)] transition-all duration-300 ${
+        accent
+          ? 'border-violet-500/50 hover:border-violet-500/70'
+          : 'border-border-subtle hover:border-border-strong'
+      }`}
     >
       {/* Banner with overlaid title + date. Gradient fades the bottom
           ~60% of the image to near-black so the headline stays legible
@@ -706,6 +699,17 @@ function EventCard({ event }: { event: Event }) {
 
         {/* Bottom gradient for text legibility */}
         <div className="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
+
+        {/* Context badge (top-left) — "3 Freunde", "Eingeladen" etc. */}
+        {contextBadge && (
+          <span
+            className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-[11px] font-semibold backdrop-blur-md ${
+              accent ? 'bg-violet-600/95 text-white' : 'bg-black/55 text-white'
+            }`}
+          >
+            {contextBadge}
+          </span>
+        )}
 
         {/* Single top-right badge: private > category. Stacking both
             was visual noise; private beats category as a signal. */}
