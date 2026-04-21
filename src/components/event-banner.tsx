@@ -1,5 +1,53 @@
 import type { CSSProperties } from 'react';
+import {
+  Beer, Disc3, Dumbbell, Guitar, HeartPulse, Mic2, Music, Music2,
+  PartyPopper, Skull, Sparkles, Theater, TreePine, Trophy, Users,
+  UtensilsCrossed,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Event } from '@/types/occuro';
+
+// Pick the icon that best represents an event — subcategory is most
+// specific, then event_type, then the broad category. Mirrors the
+// mapping in occuroapp/src/components/EventImagePlaceholder.tsx.
+function getBannerIcon(
+  category?: string | null,
+  subcategory?: string | null,
+  eventType?: string | null,
+): LucideIcon | null {
+  const sub = (subcategory ?? '').toLowerCase();
+  const type = (eventType ?? '').toLowerCase();
+  const cat = (category ?? '').toLowerCase();
+
+  if (sub.includes('techno') || sub.includes('house') || sub.includes('electronic')) return Disc3;
+  if (sub.includes('rock')) return Guitar;
+  if (sub.includes('metal')) return Skull;
+  if (sub.includes('pop')) return Music;
+  if (sub.includes('hip') || sub.includes('hop')) return Mic2;
+  if (sub.includes('jazz')) return Music2;
+  if (sub.includes('classical') || sub.includes('orchestra')) return Music2;
+  if (sub.includes('indie')) return Music;
+  if (sub.includes('yoga') || sub.includes('meditation') || sub.includes('wellness') || sub.includes('mental')) return Sparkles;
+  if (sub.includes('fitness')) return Dumbbell;
+  if (sub.includes('football') || sub.includes('soccer') || sub.includes('basketball') || sub.includes('tennis')) return Trophy;
+  if (sub.includes('traditional')) return Beer;
+  if (sub.includes('theater') || sub.includes('theatre')) return Theater;
+
+  if (type === 'volksfest') return Beer;
+  if (type === 'festival') return PartyPopper;
+  if (type === 'party') return Disc3;
+  if (type === 'concert') return Music;
+
+  if (cat === 'music') return Music;
+  if (cat === 'sports') return Trophy;
+  if (cat === 'health' || cat === 'wellness') return HeartPulse;
+  if (cat === 'food' || cat === 'kulinarik') return UtensilsCrossed;
+  if (cat === 'outdoor') return TreePine;
+  if (cat === 'community') return Users;
+  if (cat === 'culture') return Sparkles;
+
+  return null;
+}
 
 type DecorStyle = 'circles' | 'dots' | 'rings' | 'diagonal';
 interface BannerCfg {
@@ -170,6 +218,7 @@ export function EventBanner({
     );
   }
   const cfg = getBannerCfg(event.category, event.subcategory, event.event_type);
+  const Icon = getBannerIcon(event.category, event.subcategory, event.event_type);
   return (
     <div
       className={`w-full h-full relative overflow-hidden ${className}`}
@@ -179,6 +228,20 @@ export function EventBanner({
       {cfg.decor === 'rings' && <Rings accent={cfg.accent} />}
       {cfg.decor === 'dots' && <Dots accent={cfg.accent} />}
       {cfg.decor === 'diagonal' && <Diagonal accent={cfg.accent} />}
+      {Icon && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -16,
+            right: -16,
+            opacity: 0.22,
+            transform: 'rotate(-8deg)',
+            pointerEvents: 'none',
+          }}
+        >
+          <Icon size={140} color={cfg.accent} strokeWidth={1.5} />
+        </div>
+      )}
       {showText && (
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 }}>
           {event.category && (
