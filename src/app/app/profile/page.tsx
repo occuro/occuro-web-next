@@ -14,7 +14,7 @@ import {
 import { ImageUpload } from '@/components/image-upload';
 import { EventBanner } from '@/components/event-banner';
 
-type ProfileTab = 'events' | 'private' | 'saved';
+type ProfileTab = 'events' | 'private';
 type EventStatusFilter = 'interested' | 'attending' | 'past';
 type PrivateTimeFilter = 'upcoming' | 'past';
 
@@ -311,7 +311,6 @@ export default function ProfilePage() {
         {([
           { key: 'events', label: 'Events', icon: Grid3X3 },
           { key: 'private', label: 'Privat', icon: Lock },
-          { key: 'saved', label: 'Gespeichert', icon: Bookmark },
         ] as const).map((t) => {
           const Icon = t.icon;
           const active = profileTab === t.key;
@@ -423,17 +422,6 @@ export default function ProfilePage() {
             emptyIcon={Lock}
           />
         </>
-      )}
-
-      {/* ─── Saved events tab ─── */}
-      {profileTab === 'saved' && (
-        <EventsListSection
-          loading={loading}
-          events={savedEventsList}
-          statuses={statuses}
-          emptyText="Du hast noch keine Events gespeichert."
-          emptyIcon={Bookmark}
-        />
       )}
 
       {/* ─── Edit profile modal ─── */}

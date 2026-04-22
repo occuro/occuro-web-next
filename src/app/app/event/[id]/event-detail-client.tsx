@@ -679,10 +679,15 @@ export default function EventDetailClient({
             </button>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2 sm:gap-3">
+          // Mobile parity: Interessiert oben (im Row mit Nicht-
+          // Interessiert links, Interessiert rechts) + Zusagen unten
+          // full-width. Web hat aktuell keine Nicht-Interessiert-
+          // Option, daher Interessiert als einziges Element in der
+          // oberen Reihe und Zusagen darunter.
+          <div className="flex flex-col gap-2 sm:gap-3">
             <button
               onClick={() => updateStatus('interested')}
-              className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
                 status === 'interested'
                   ? 'bg-pink-500 text-white shadow-sm'
                   : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
@@ -693,7 +698,7 @@ export default function EventDetailClient({
             </button>
             <button
               onClick={() => updateStatus('confirmed')}
-              className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
                 status === 'confirmed' || status === 'attended'
                   ? 'bg-green-500 text-white shadow-sm'
                   : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
@@ -701,16 +706,6 @@ export default function EventDetailClient({
             >
               <CheckCircle2 size={16} strokeWidth={status === 'confirmed' ? 2.5 : 1.8} />
               Zusagen
-            </button>
-            <button
-              onClick={() => updateStatus('saved')}
-              className={`py-3 px-4 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
-                status === 'saved'
-                  ? 'bg-violet-500 text-white shadow-sm'
-                  : 'border border-border-subtle bg-surface text-foreground hover:border-border-strong'
-              }`}
-            >
-              Speichern
             </button>
           </div>
         )
