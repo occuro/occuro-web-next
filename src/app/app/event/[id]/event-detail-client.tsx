@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Calendar, Clock, MapPin, Heart, CheckCircle2,
   Users, Globe, Ticket, ExternalLink, Lock,
@@ -70,6 +71,18 @@ export default function EventDetailClient({
 }) {
   const { user } = useAuth();
   const supabase = createClient();
+  const router = useRouter();
+
+  // "Zurück" should return to wherever the user came from (profile,
+  // friends list, Entdecken, …). If there's no history — e.g. the user
+  // opened the event via a direct share link — fall back to Entdecken.
+  const handleBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/app');
+    }
+  }, [router]);
 
   // Seed state from the server-prefetched event so the page renders
   // immediately with correct data — even if the client auth is in a
@@ -461,9 +474,13 @@ export default function EventDetailClient({
     return (
       <div className="max-w-3xl mx-auto text-center py-20 animate-fade-in">
         <p className="text-base font-medium text-muted-fg">Event nicht gefunden</p>
-        <Link href="/app" className="inline-flex items-center gap-1 mt-3 text-[13px] font-medium hover:opacity-70 transition-opacity">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-1 mt-3 text-[13px] font-medium hover:opacity-70 transition-opacity"
+        >
           <ArrowLeft size={14} /> Zurück
-        </Link>
+        </button>
       </div>
     );
   }
@@ -473,12 +490,13 @@ export default function EventDetailClient({
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       {/* Back */}
-      <Link
-        href="/app"
+      <button
+        type="button"
+        onClick={handleBack}
         className="inline-flex items-center gap-1.5 text-[13px] text-muted-fg hover:text-foreground transition-colors"
       >
         <ArrowLeft size={15} /> Zurück
-      </Link>
+      </button>
 
       {/* Cinematic hero — title + date imprinted on banner with a
           bottom gradient for legibility. Replaces the old separate

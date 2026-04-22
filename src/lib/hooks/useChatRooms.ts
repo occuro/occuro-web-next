@@ -57,13 +57,18 @@ export function useChatRooms(userId: string | null | undefined) {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadRooms = useCallback(async () => {
+  const loadRooms = useCallback(async (options?: { background?: boolean }) => {
     if (!userId) {
       setRooms([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    // Only show the skeleton on the very first load (or when we have no
+    // rooms yet). Background refetches — triggered by tab-visibility,
+    // focus, or realtime events — should NOT flip the list back into
+    // skeleton state, otherwise switching browser tabs makes the chat
+    // list disappear for several seconds until Supabase answers.
+    if (!options?.background) setLoading(true);
 
     // 1. Find all rooms the user is participant in (excluding 'left')
     const { data: participantRows } = await supabase
@@ -241,9 +246,9 @@ export function useChatRooms(userId: string | null | undefined) {
   useEffect(() => {
     if (!userId) return;
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void loadRooms();
+      if (document.visibilityState === 'visible') void loadRooms({ background: true });
     };
-    const onFocus = () => { void loadRooms(); };
+    const onFocus = () => { void loadRooms({ background: true }); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onFocus);
     return () => {
@@ -266,7 +271,7 @@ export function useChatRooms(userId: string | null | undefined) {
       pending = true;
       queueMicrotask(() => {
         pending = false;
-        void loadRooms();
+        void loadRooms({ background: true });
       });
     };
     const channel = supabase

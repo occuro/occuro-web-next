@@ -520,7 +520,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
       {/* Events tabs */}
       {(hostedEvents.length > 0 || attendingEvents.length > 0) && (
         <div>
-          <div className="flex rounded-2xl bg-muted p-1 max-w-md">
+          <div className="flex rounded-2xl bg-muted p-1">
             <button
               type="button"
               onClick={() => setEventGroup('attending')}

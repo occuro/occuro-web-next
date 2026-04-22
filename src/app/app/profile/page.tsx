@@ -8,7 +8,7 @@ import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import {
   MapPin, Globe, AtSign, Settings, Heart, CheckCircle2,
-  Bookmark, Calendar, Clock, Lock, Pencil,
+  Bookmark, Building2, Calendar, Clock, Lock, Pencil,
   Grid3X3, X, Save, Loader2, Users, Share2, Check, Plus,
 } from 'lucide-react';
 import { ImageUpload } from '@/components/image-upload';
@@ -31,6 +31,7 @@ export default function ProfilePage() {
   const [savedEventIds, setSavedEventIds] = useState<string[]>([]);
   const [acceptedInviteEventIds, setAcceptedInviteEventIds] = useState<string[]>([]);
   const [friendCount, setFriendCount] = useState(0);
+  const [followedOrganizerCount, setFollowedOrganizerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -62,7 +63,7 @@ export default function ProfilePage() {
 
   async function fetchData() {
     setLoading(true);
-    const [statusesRes, friendsRes, savedRes, invitesRes] = await Promise.all([
+    const [statusesRes, friendsRes, savedRes, invitesRes, followsRes] = await Promise.all([
       supabase.from('event_statuses').select('event_id, status').eq('user_id', user!.id),
       // Fetch accepted friendship rows then dedupe in JS — a `count`
       // query with .or().eq() was returning the wrong number because
@@ -81,7 +82,15 @@ export default function ProfilePage() {
         .select('event_id')
         .eq('invited_user_id', user!.id)
         .eq('status', 'accepted'),
+      // Count matches the /app/friends "Veranstalter" tab, which only
+      // surfaces organisation follows — keeping both screens aligned.
+      supabase
+        .from('organizer_follows')
+        .select('organizer_org_id', { count: 'exact', head: true })
+        .eq('follower_id', user!.id)
+        .not('organizer_org_id', 'is', null),
     ]);
+    setFollowedOrganizerCount(followsRes.count ?? 0);
 
     const statusData = statusesRes.data ?? [];
     const map: Record<string, EventStatus> = {};
@@ -209,14 +218,10 @@ export default function ProfilePage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />
           )}
-          <div className="absolute top-3 right-3 flex gap-2">
-            <button
-              onClick={() => setEditOpen(true)}
-              className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
-              aria-label="Profil bearbeiten"
-            >
-              <Pencil size={15} />
-            </button>
+          {/* Only Settings lives in the banner overlay — "Bearbeiten"
+              is a dedicated button below next to Freunde/Veranstalter
+              so we don't double up on pencils. */}
+          <div className="absolute top-3 right-3">
             <Link
               href="/app/settings"
               className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
@@ -288,7 +293,18 @@ export default function ProfilePage() {
                 className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
               >
                 <Users size={13} className="text-violet-400" />
-                <span className="text-[12px] font-medium">Freunde</span>
+                <span className="text-[12px] font-medium">
+                  {friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`}
+                </span>
+              </Link>
+              <Link
+                href="/app/friends"
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+              >
+                <Building2 size={13} className="text-violet-400" />
+                <span className="text-[12px] font-medium">
+                  {followedOrganizerCount === 1 ? '1 Veranstalter' : `${followedOrganizerCount} Veranstalter`}
+                </span>
               </Link>
               <ShareProfileButton profile={profile} />
             </div>

@@ -55,7 +55,9 @@ export default function DiscoverClient({
   const [invitations, setInvitations] = useState<InvitationRow[]>([]);
   const [friendEvents, setFriendEvents] = useState<FriendEventRow[]>([]);
   const [organizerEvents, setOrganizerEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Start loading if we don't have seed events — avoids the brief
+  // "Keine Events gefunden" flash between mount and the fetch firing.
+  const [loading, setLoading] = useState(initialEvents.length === 0);
   const [personalLoading, setPersonalLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | null>(null);
@@ -468,7 +470,19 @@ export default function DiscoverClient({
             </div>
           )
         ) : activeTab === 'friends' ? (
-          friendEvents.length === 0 ? (
+          personalLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="rounded-3xl bg-surface border border-border-subtle overflow-hidden">
+                  <div className="aspect-[191/100] bg-muted animate-pulse" />
+                  <div className="p-5 space-y-3">
+                    <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : friendEvents.length === 0 ? (
             <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
               <Users size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
               <p className="text-base font-medium">Noch keine Events mit deinen Freunden</p>
@@ -486,7 +500,19 @@ export default function DiscoverClient({
             </div>
           )
         ) : activeTab === 'invitations' ? (
-          invitations.length === 0 ? (
+          personalLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="rounded-3xl bg-surface border border-border-subtle overflow-hidden">
+                  <div className="aspect-[191/100] bg-muted animate-pulse" />
+                  <div className="p-5 space-y-3">
+                    <div className="h-5 w-3/4 bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : invitations.length === 0 ? (
             <div className="text-center py-20 text-muted-fg rounded-2xl border border-border-subtle border-dashed bg-surface">
               <Mail size={40} strokeWidth={1.2} className="mx-auto mb-4 opacity-40" />
               <p className="text-base font-medium">Keine offenen Einladungen</p>
@@ -514,7 +540,7 @@ export default function DiscoverClient({
         <section className="pt-8 border-t border-border-subtle">
           <div className="flex items-baseline gap-2 mb-4">
             <Building2 size={15} className="text-violet-500 translate-y-[2px]" />
-            <h2 className="text-[15px] font-heading font-semibold">Von Organizern, denen du folgst</h2>
+            <h2 className="text-[15px] font-heading font-semibold">Von Veranstaltern, denen du folgst</h2>
           </div>
           <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {organizerEvents.map((event) => (
