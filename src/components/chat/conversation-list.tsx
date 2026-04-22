@@ -76,8 +76,8 @@ export function ConversationList({ basePath }: ConversationListProps) {
       {/* Tabs (only for individual users) */}
       {!isOrgVariant && (
         <div className="flex rounded-2xl bg-muted p-1">
-          <TabButton active={tab === 'dm'} onClick={() => { setTab('dm'); setSearch(''); }} icon={User} label="Direktnachrichten" count={dmRooms.length} />
-          <TabButton active={tab === 'event'} onClick={() => { setTab('event'); setSearch(''); }} icon={Users} label="Event-Chats" count={eventRooms.length} />
+          <TabButton active={tab === 'dm'} onClick={() => { setTab('dm'); setSearch(''); }} icon={User} label="Direktnachrichten" count={dmRooms.reduce((n, r) => n + (r.unread_count ?? 0), 0)} />
+          <TabButton active={tab === 'event'} onClick={() => { setTab('event'); setSearch(''); }} icon={Users} label="Event-Chats" count={eventRooms.reduce((n, r) => n + (r.unread_count ?? 0), 0)} />
         </div>
       )}
 
