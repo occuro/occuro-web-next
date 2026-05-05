@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import type { Event, EventStatus } from '@/types/occuro';
@@ -14,12 +14,42 @@ import {
 import { ImageUpload } from '@/components/image-upload';
 import { EventBanner } from '@/components/event-banner';
 
+// ── Profile data cache (sessionStorage, stale-while-revalidate) ──────
+// Survives same-tab navigation but is cleared on tab close / sign-out.
+interface ProfileDataCache {
+  ts: number;
+  events: Event[];
+  statuses: Record<string, EventStatus>;
+  savedEventIds: string[];
+  acceptedInviteEventIds: string[];
+  friendCount: number;
+  followedOrganizerCount: number;
+}
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
+const cacheKey = (uid: string) => `occuro:profile-data:${uid}`;
+
+function readCache(uid: string): ProfileDataCache | null {
+  try {
+    const raw = sessionStorage.getItem(cacheKey(uid));
+    if (!raw) return null;
+    const c: ProfileDataCache = JSON.parse(raw);
+    if (Date.now() - c.ts > CACHE_TTL_MS) return null;
+    return c;
+  } catch { return null; }
+}
+
+function writeCache(uid: string, data: Omit<ProfileDataCache, 'ts'>): void {
+  try {
+    sessionStorage.setItem(cacheKey(uid), JSON.stringify({ ...data, ts: Date.now() }));
+  } catch {}
+}
+
 type ProfileTab = 'events' | 'private';
 type EventStatusFilter = 'interested' | 'attending' | 'past';
 type PrivateTimeFilter = 'upcoming' | 'past';
 
 export default function ProfilePage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const supabase = createClient();
 
   const [profileTab, setProfileTab] = useState<ProfileTab>('events');
@@ -34,24 +64,41 @@ export default function ProfilePage() {
   const [followedOrganizerCount, setFollowedOrganizerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  // Prevents a second concurrent fetchData from flashing the skeleton
+  // when focus + visibilitychange fire at the same time.
+  const fetchInFlight = useRef(false);
 
   const today = new Date().toISOString().split('T')[0];
 
+  // Wait for auth to finish resolving before fetching. Mirrors the
+  // pattern used in /app/profile/[slug]/page.tsx.
   useEffect(() => {
-    if (user) void fetchData();
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
+
+    const cached = readCache(user.id);
+    if (cached) {
+      // Serve stale data immediately so the page is usable right away,
+      // then silently refresh in the background.
+      applyData(cached);
+      setLoading(false);
+      void fetchData(true);
+    } else {
+      void fetchData(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [authLoading, user]);
 
   // Reload on tab focus / visibility — same pattern as useChatRooms.
   // Without this, RSVPing or saving an event from /app/event/[id] and
-  // navigating back left the profile showing stale tabs because Next.js
-  // App Router keeps the page mounted and useEffect doesn't re-run.
+  // navigating back left the profile showing stale tabs. Always runs
+  // as a background refresh so the skeleton never re-appears on return.
   useEffect(() => {
     if (!user) return;
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void fetchData();
+      if (document.visibilityState === 'visible') void fetchData(true);
     };
-    const onFocus = () => { void fetchData(); };
+    const onFocus = () => { void fetchData(true); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onFocus);
     return () => {
@@ -61,10 +108,24 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  async function fetchData() {
-    setLoading(true);
+  function applyData(d: Omit<ProfileDataCache, 'ts'>) {
+    setFollowedOrganizerCount(d.followedOrganizerCount);
+    setStatuses(d.statuses);
+    setFriendCount(d.friendCount);
+    setSavedEventIds(d.savedEventIds);
+    setAcceptedInviteEventIds(d.acceptedInviteEventIds);
+    setEvents(d.events);
+  }
+
+  async function fetchData(background: boolean) {
+    // Deduplicate concurrent calls (e.g. focus + visibilitychange together).
+    if (fetchInFlight.current) return;
+    fetchInFlight.current = true;
+    if (!background) setLoading(true);
     try {
-      const [statusesRes, friendsRes, savedRes, invitesRes, followsRes] = await Promise.all([
+      // All 6 queries run in parallel — ownEvents is no longer a second
+      // sequential round-trip after the Promise.all.
+      const [statusesRes, friendsRes, savedRes, invitesRes, followsRes, ownEventsRes] = await Promise.all([
         supabase.from('event_statuses').select('event_id, status').eq('user_id', user!.id),
         // Fetch accepted friendship rows then dedupe in JS — a `count`
         // query with .or().eq() was returning the wrong number because
@@ -90,55 +151,63 @@ export default function ProfilePage() {
           .select('organizer_org_id', { count: 'exact', head: true })
           .eq('follower_id', user!.id)
           .not('organizer_org_id', 'is', null),
+        // Own events (private events appear here even without a status).
+        supabase.from('events').select('*').eq('organizer_profile_id', user!.id),
       ]);
-      setFollowedOrganizerCount(followsRes.count ?? 0);
+
+      const followedOrganizerCount = followsRes.count ?? 0;
 
       const statusData = statusesRes.data ?? [];
-      const map: Record<string, EventStatus> = {};
+      const statuses: Record<string, EventStatus> = {};
       statusData.forEach((s: { event_id: string; status: EventStatus }) => {
-        map[s.event_id] = s.status;
+        statuses[s.event_id] = s.status;
       });
-      setStatuses(map);
+
       const friendIds = new Set<string>();
       ((friendsRes.data ?? []) as Array<{ user_id: string; friend_id: string }>).forEach((f) => {
         const otherId = f.user_id === user!.id ? f.friend_id : f.user_id;
         if (otherId) friendIds.add(otherId);
       });
-      setFriendCount(friendIds.size);
+      const friendCount = friendIds.size;
 
-      const savedIds = (savedRes.data ?? []).map((r: { event_id: string }) => r.event_id);
-      setSavedEventIds(savedIds);
+      const savedEventIds = (savedRes.data ?? []).map((r: { event_id: string }) => r.event_id);
+      const acceptedInviteEventIds = ((invitesRes.data ?? []) as Array<{ event_id: string }>).map((r) => r.event_id);
 
-      const inviteIds = ((invitesRes.data ?? []) as Array<{ event_id: string }>).map((r) => r.event_id);
-      setAcceptedInviteEventIds(inviteIds);
+      // Merge all event IDs: own events are already fully loaded — keep
+      // their data and only fetch the remaining IDs to avoid fetching
+      // own events twice.
+      const ownEventsData = (ownEventsRes.data ?? []) as Event[];
+      const ownEventIds = new Set(ownEventsData.map((e) => e.id));
 
-      // Collect all event IDs we need: those with a status, saved ones,
-      // accepted invitations, and own events.
-      const eventIds = new Set<string>([
+      const remainingIds = new Set<string>([
         ...statusData.map((s: { event_id: string }) => s.event_id),
-        ...savedIds,
-        ...inviteIds,
+        ...savedEventIds,
+        ...acceptedInviteEventIds,
       ]);
+      // Remove IDs we already have from ownEvents.
+      ownEventIds.forEach((id) => remainingIds.delete(id));
 
-      // Also fetch events the user owns (private events appear here even without a status)
-      const { data: ownEvents } = await supabase
-        .from('events')
-        .select('*')
-        .eq('organizer_profile_id', user!.id);
-      (ownEvents ?? []).forEach((e: Event) => eventIds.add(e.id));
-
-      if (eventIds.size > 0) {
-        const { data: eventsData } = await supabase
+      let fetchedEvents: Event[] = [];
+      if (remainingIds.size > 0) {
+        const { data } = await supabase
           .from('events')
           .select('*')
-          .in('id', Array.from(eventIds))
+          .in('id', Array.from(remainingIds))
           .order('date', { ascending: true });
-        setEvents(eventsData ?? []);
-      } else {
-        setEvents([]);
+        fetchedEvents = data ?? [];
       }
+
+      const events = [
+        ...ownEventsData,
+        ...fetchedEvents,
+      ].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+
+      const payload = { events, statuses, savedEventIds, acceptedInviteEventIds, friendCount, followedOrganizerCount };
+      applyData(payload);
+      writeCache(user!.id, payload);
     } finally {
-      setLoading(false);
+      fetchInFlight.current = false;
+      if (!background) setLoading(false);
     }
   }
 
