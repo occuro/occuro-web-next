@@ -54,10 +54,19 @@ export function ConversationList({ basePath }: ConversationListProps) {
     setVisibleCount(INITIAL_COUNT);
   }, [tab, search]);
 
-  // Load more when the sentinel scrolls into view
+  // When searching, show all matches — user is looking for something specific.
+  // Otherwise only render the first visibleCount rooms.
+  const visibleRooms = search ? filtered : filtered.slice(0, visibleCount);
+  const hasMore = !search && visibleCount < filtered.length;
+
+  // Load more when the sentinel scrolls into view.
+  // hasMore is a dependency so the observer reconnects whenever it becomes
+  // true (tab switch, initial load). IntersectionObserver only fires on
+  // state changes, so reconnecting is the only way to get an immediate
+  // callback when the sentinel is already in the viewport.
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el) return;
+    if (!el || !hasMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -68,12 +77,7 @@ export function ConversationList({ basePath }: ConversationListProps) {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
-
-  // When searching, show all matches — user is looking for something specific.
-  // Otherwise only render the first visibleCount rooms.
-  const visibleRooms = search ? filtered : filtered.slice(0, visibleCount);
-  const hasMore = !search && visibleCount < filtered.length;
+  }, [hasMore]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
