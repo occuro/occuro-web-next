@@ -63,80 +63,83 @@ export default function ProfilePage() {
 
   async function fetchData() {
     setLoading(true);
-    const [statusesRes, friendsRes, savedRes, invitesRes, followsRes] = await Promise.all([
-      supabase.from('event_statuses').select('event_id, status').eq('user_id', user!.id),
-      // Fetch accepted friendship rows then dedupe in JS — a `count`
-      // query with .or().eq() was returning the wrong number because
-      // some pairs exist as duplicate bidirectional rows. Counting
-      // distinct *friend ids* is the only safe approach.
-      supabase
-        .from('friendships')
-        .select('user_id, friend_id, status')
-        .or(`user_id.eq.${user!.id},friend_id.eq.${user!.id}`)
-        .eq('status', 'accepted'),
-      supabase.from('saved_events').select('event_id').eq('user_id', user!.id),
-      // Accepted invitations to private events — these should land in
-      // the "Privat" tab even though we're not the organizer.
-      supabase
-        .from('event_invitations')
-        .select('event_id')
-        .eq('invited_user_id', user!.id)
-        .eq('status', 'accepted'),
-      // Count matches the /app/friends "Veranstalter" tab, which only
-      // surfaces organisation follows — keeping both screens aligned.
-      supabase
-        .from('organizer_follows')
-        .select('organizer_org_id', { count: 'exact', head: true })
-        .eq('follower_id', user!.id)
-        .not('organizer_org_id', 'is', null),
-    ]);
-    setFollowedOrganizerCount(followsRes.count ?? 0);
+    try {
+      const [statusesRes, friendsRes, savedRes, invitesRes, followsRes] = await Promise.all([
+        supabase.from('event_statuses').select('event_id, status').eq('user_id', user!.id),
+        // Fetch accepted friendship rows then dedupe in JS — a `count`
+        // query with .or().eq() was returning the wrong number because
+        // some pairs exist as duplicate bidirectional rows. Counting
+        // distinct *friend ids* is the only safe approach.
+        supabase
+          .from('friendships')
+          .select('user_id, friend_id, status')
+          .or(`user_id.eq.${user!.id},friend_id.eq.${user!.id}`)
+          .eq('status', 'accepted'),
+        supabase.from('saved_events').select('event_id').eq('user_id', user!.id),
+        // Accepted invitations to private events — these should land in
+        // the "Privat" tab even though we're not the organizer.
+        supabase
+          .from('event_invitations')
+          .select('event_id')
+          .eq('invited_user_id', user!.id)
+          .eq('status', 'accepted'),
+        // Count matches the /app/friends "Veranstalter" tab, which only
+        // surfaces organisation follows — keeping both screens aligned.
+        supabase
+          .from('organizer_follows')
+          .select('organizer_org_id', { count: 'exact', head: true })
+          .eq('follower_id', user!.id)
+          .not('organizer_org_id', 'is', null),
+      ]);
+      setFollowedOrganizerCount(followsRes.count ?? 0);
 
-    const statusData = statusesRes.data ?? [];
-    const map: Record<string, EventStatus> = {};
-    statusData.forEach((s: { event_id: string; status: EventStatus }) => {
-      map[s.event_id] = s.status;
-    });
-    setStatuses(map);
-    const friendIds = new Set<string>();
-    ((friendsRes.data ?? []) as Array<{ user_id: string; friend_id: string }>).forEach((f) => {
-      const otherId = f.user_id === user!.id ? f.friend_id : f.user_id;
-      if (otherId) friendIds.add(otherId);
-    });
-    setFriendCount(friendIds.size);
+      const statusData = statusesRes.data ?? [];
+      const map: Record<string, EventStatus> = {};
+      statusData.forEach((s: { event_id: string; status: EventStatus }) => {
+        map[s.event_id] = s.status;
+      });
+      setStatuses(map);
+      const friendIds = new Set<string>();
+      ((friendsRes.data ?? []) as Array<{ user_id: string; friend_id: string }>).forEach((f) => {
+        const otherId = f.user_id === user!.id ? f.friend_id : f.user_id;
+        if (otherId) friendIds.add(otherId);
+      });
+      setFriendCount(friendIds.size);
 
-    const savedIds = (savedRes.data ?? []).map((r: { event_id: string }) => r.event_id);
-    setSavedEventIds(savedIds);
+      const savedIds = (savedRes.data ?? []).map((r: { event_id: string }) => r.event_id);
+      setSavedEventIds(savedIds);
 
-    const inviteIds = ((invitesRes.data ?? []) as Array<{ event_id: string }>).map((r) => r.event_id);
-    setAcceptedInviteEventIds(inviteIds);
+      const inviteIds = ((invitesRes.data ?? []) as Array<{ event_id: string }>).map((r) => r.event_id);
+      setAcceptedInviteEventIds(inviteIds);
 
-    // Collect all event IDs we need: those with a status, saved ones,
-    // accepted invitations, and own events.
-    const eventIds = new Set<string>([
-      ...statusData.map((s: { event_id: string }) => s.event_id),
-      ...savedIds,
-      ...inviteIds,
-    ]);
+      // Collect all event IDs we need: those with a status, saved ones,
+      // accepted invitations, and own events.
+      const eventIds = new Set<string>([
+        ...statusData.map((s: { event_id: string }) => s.event_id),
+        ...savedIds,
+        ...inviteIds,
+      ]);
 
-    // Also fetch events the user owns (private events appear here even without a status)
-    const { data: ownEvents } = await supabase
-      .from('events')
-      .select('*')
-      .eq('organizer_profile_id', user!.id);
-    (ownEvents ?? []).forEach((e: Event) => eventIds.add(e.id));
-
-    if (eventIds.size > 0) {
-      const { data: eventsData } = await supabase
+      // Also fetch events the user owns (private events appear here even without a status)
+      const { data: ownEvents } = await supabase
         .from('events')
         .select('*')
-        .in('id', Array.from(eventIds))
-        .order('date', { ascending: true });
-      setEvents(eventsData ?? []);
-    } else {
-      setEvents([]);
+        .eq('organizer_profile_id', user!.id);
+      (ownEvents ?? []).forEach((e: Event) => eventIds.add(e.id));
+
+      if (eventIds.size > 0) {
+        const { data: eventsData } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', Array.from(eventIds))
+          .order('date', { ascending: true });
+        setEvents(eventsData ?? []);
+      } else {
+        setEvents([]);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   // ── Derived event lists ─────────────────────────────────────────
