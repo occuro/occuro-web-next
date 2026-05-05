@@ -70,6 +70,7 @@ export default function DiscoverClient({
   const [radiusKm, setRadiusKm] = useState<number>(25);
   const [locatingStatus, setLocatingStatus] = useState<'idle' | 'loading' | 'denied'>('idle');
   const [activeTab, setActiveTab] = useState<'discover' | 'friends' | 'invitations'>('discover');
+  const [visibleCount, setVisibleCount] = useState(12);
   const supabase = createClient();
 
   const categories = [
@@ -277,6 +278,12 @@ export default function DiscoverClient({
   };
 
   const isSearching = search.length >= 2;
+
+  // Reset pagination when the visible set changes
+  useEffect(() => {
+    setVisibleCount(12);
+  }, [activeTab, search, category, sort, userLocation, radiusKm]);
+
   const hasAnyPersonal =
     invitations.length > 0 || friendEvents.length > 0 || organizerEvents.length > 0;
 
@@ -321,7 +328,7 @@ export default function DiscoverClient({
       {/* Tab navigation — split the feed into Entdecken / Freunde / Einladungen.
           Hidden during search: the search bar scopes across all events. */}
       {!isSearching && user && (
-        <div className="flex gap-1 border-b border-border-subtle overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+        <div className="flex gap-1 border-b border-border-subtle overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabButton
             active={activeTab === 'discover'}
             onClick={() => setActiveTab('discover')}
@@ -463,11 +470,23 @@ export default function DiscoverClient({
               <p className="text-[13px] mt-1.5">Versuche einen anderen Suchbegriff oder eine andere Kategorie.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-              {filtered.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+                {filtered.slice(0, visibleCount).map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+              {visibleCount < filtered.length && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => setVisibleCount((n) => n + 12)}
+                    className="px-6 py-2.5 rounded-full text-[13px] font-semibold bg-surface border border-border-subtle text-foreground/70 hover:text-foreground hover:border-border-strong transition-all duration-200"
+                  >
+                    Weitere Events laden ({filtered.length - visibleCount} verbleibend)
+                  </button>
+                </div>
+              )}
+            </>
           )
         ) : activeTab === 'friends' ? (
           personalLoading ? (
@@ -489,15 +508,27 @@ export default function DiscoverClient({
               <p className="text-[13px] mt-1.5">Wenn Freunde Events merken oder bestätigen, erscheinen sie hier.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-              {friendEvents.map(({ event, friendCount }) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  contextBadge={friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+                {friendEvents.slice(0, visibleCount).map(({ event, friendCount }) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    contextBadge={friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`}
+                  />
+                ))}
+              </div>
+              {visibleCount < friendEvents.length && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => setVisibleCount((n) => n + 12)}
+                    className="px-6 py-2.5 rounded-full text-[13px] font-semibold bg-surface border border-border-subtle text-foreground/70 hover:text-foreground hover:border-border-strong transition-all duration-200"
+                  >
+                    Weitere Events laden ({friendEvents.length - visibleCount} verbleibend)
+                  </button>
+                </div>
+              )}
+            </>
           )
         ) : activeTab === 'invitations' ? (
           personalLoading ? (
