@@ -131,11 +131,9 @@ export function ConversationList({ basePath }: ConversationListProps) {
               <ConversationRow key={room.id} room={room} basePath={basePath} />
             ))}
           </div>
-          {hasMore && (
-            <div ref={sentinelRef} className="flex justify-center py-4">
-              <Loader2 size={18} className="animate-spin text-muted-fg" />
-            </div>
-          )}
+          <div ref={sentinelRef} className="flex justify-center py-4">
+            {hasMore && <Loader2 size={18} className="animate-spin text-muted-fg" />}
+          </div>
         </>
       )}
     </div>
