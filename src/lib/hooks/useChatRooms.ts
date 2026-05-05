@@ -105,7 +105,7 @@ export function useChatRooms(userId: string | null | undefined) {
         .in('room_id', roomIds)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(Math.max(roomIds.length * 5, 50)),
+        .limit(Math.min(Math.max(roomIds.length * 5, 50), 200)),
       supabase
         .from('chat_messages')
         .select('id, room_id, sender_id, created_at, deleted_at')
