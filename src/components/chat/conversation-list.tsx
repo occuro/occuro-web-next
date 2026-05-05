@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useChatRooms, type ChatRoom } from '@/lib/hooks/useChatRooms';
 import {
   MessageCircle, Search, X, User, Users, Megaphone, Loader2,
 } from 'lucide-react';
+
+const INITIAL_COUNT = 12;
+const PAGE_SIZE = 12;
 
 interface ConversationListProps {
   /**
@@ -24,6 +27,8 @@ export function ConversationList({ basePath }: ConversationListProps) {
   const { rooms, loading } = useChatRooms(user?.id);
   const [tab, setTab] = useState<Tab>('dm');
   const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const dmRooms = rooms.filter((r) => r.type === 'dm');
   const eventRooms = rooms.filter((r) => r.type === 'event_group' || r.type === 'organizer_announcement');
@@ -43,6 +48,32 @@ export function ConversationList({ basePath }: ConversationListProps) {
         );
       })
     : currentRooms;
+
+  // Reset pagination when switching tabs or starting/clearing a search
+  useEffect(() => {
+    setVisibleCount(INITIAL_COUNT);
+  }, [tab, search]);
+
+  // Load more when the sentinel scrolls into view
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((c) => c + PAGE_SIZE);
+        }
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // When searching, show all matches — user is looking for something specific.
+  // Otherwise only render the first visibleCount rooms.
+  const visibleRooms = search ? filtered : filtered.slice(0, visibleCount);
+  const hasMore = !search && visibleCount < filtered.length;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -94,11 +125,18 @@ export function ConversationList({ basePath }: ConversationListProps) {
           tab={isOrgVariant ? 'event' : tab}
         />
       ) : (
-        <div className="space-y-1 stagger-children">
-          {filtered.map((room) => (
-            <ConversationRow key={room.id} room={room} basePath={basePath} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-1 stagger-children">
+            {visibleRooms.map((room) => (
+              <ConversationRow key={room.id} room={room} basePath={basePath} />
+            ))}
+          </div>
+          {hasMore && (
+            <div ref={sentinelRef} className="flex justify-center py-4">
+              <Loader2 size={18} className="animate-spin text-muted-fg" />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -180,7 +218,7 @@ function ChatAvatar({ room }: { room: ChatRoom }) {
       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
         {room.other_user_avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={room.other_user_avatar} alt="" className="w-full h-full object-cover" />
+          <img src={room.other_user_avatar} alt="" className="w-full h-full object-cover" loading="lazy" />
         ) : (
           <span className="text-sm font-semibold text-foreground/70">
             {(room.other_user_name ?? 'U').charAt(0).toUpperCase()}
@@ -203,7 +241,7 @@ function ChatAvatar({ room }: { room: ChatRoom }) {
     return (
       <div className="w-12 h-12 rounded-2xl bg-muted overflow-hidden flex-shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={room.event_banner_url} alt="" className="w-full h-full object-cover" />
+        <img src={room.event_banner_url} alt="" className="w-full h-full object-cover" loading="lazy" />
       </div>
     );
   }
