@@ -218,16 +218,20 @@ export default function ProfilePage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />
           )}
-          {/* Only Settings lives in the banner overlay — "Bearbeiten"
-              is a dedicated button below next to Freunde/Veranstalter
-              so we don't double up on pencils. */}
-          <div className="absolute top-3 right-3">
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <button
+              onClick={() => setEditOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors text-[12px] font-medium"
+            >
+              <Pencil size={13} />
+              Bearbeiten
+            </button>
             <Link
               href="/app/settings"
-              className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors"
-              aria-label="Einstellungen"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-colors text-[12px] font-medium"
             >
-              <Settings size={15} />
+              <Settings size={13} />
+              Einstellung
             </Link>
           </div>
         </div>
@@ -281,13 +285,6 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap">
-              <button
-                onClick={() => setEditOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
-              >
-                <Pencil size={13} />
-                <span className="text-[12px] font-medium">Bearbeiten</span>
-              </button>
               <Link
                 href="/app/friends"
                 className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
