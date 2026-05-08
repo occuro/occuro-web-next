@@ -74,19 +74,15 @@ export default async function RootLayout({
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       initialUser = user;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-      initialProfile = (profile ?? null) as Profile | null;
+      // Run profile and organization queries in parallel instead of
+      // sequentially — saves one round-trip for org users.
+      const [profileRes, orgRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        supabase.from('organizations').select('*').eq('owner_id', user.id).maybeSingle(),
+      ]);
+      initialProfile = (profileRes.data ?? null) as Profile | null;
       if (initialProfile?.user_type === 'organization') {
-        const { data: org } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('owner_id', user.id)
-          .maybeSingle();
-        initialOrganization = (org ?? null) as Organization | null;
+        initialOrganization = (orgRes.data ?? null) as Organization | null;
       }
     }
   } catch {
