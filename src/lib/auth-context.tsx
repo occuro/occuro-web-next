@@ -154,11 +154,10 @@ export function AuthProvider({
         return;
       }
 
-      // No server seed: fall back to client-side getSession. Use a
-      // longer (8s) timeout since we're on the first client-only render
-      // and a short hang is less likely to be a genuine deadlock than
-      // just the SDK finishing its initialization.
-      const sessRes = await withTimeout(supabase.auth.getSession(), 8000, 'getSession');
+      // No server seed: fall back to client-side getSession. Timeout
+      // matches forceReady (5s) so both resolve together — avoids a
+      // window where loading=false but user is still null mid-flight.
+      const sessRes = await withTimeout(supabase.auth.getSession(), 5000, 'getSession');
       // sessRes === null means getSession itself hung. Rather than
       // destroying the session (which logs the user out even though
       // their refresh token is probably fine), we just proceed unauthed
