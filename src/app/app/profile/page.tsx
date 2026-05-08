@@ -277,6 +277,7 @@ export default function ProfilePage() {
     : pastEvents;
 
   return (
+    <>
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       {/* ─── Profile header card ───
           Banner und Avatar sind komplett getrennt — kein Overlap.
@@ -509,7 +510,11 @@ export default function ProfilePage() {
         </>
       )}
 
+    </div>
+
       {/* ─── Edit profile modal ─── */}
+      {/* Rendered outside the animated wrapper so that `position: fixed`
+          is relative to the viewport, not the transform-animated container. */}
       {editOpen && (
         <EditProfileModal
           profile={profile}
@@ -524,7 +529,7 @@ export default function ProfilePage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
