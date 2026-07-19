@@ -38,23 +38,27 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   useEffect(() => {
     const supabase = createClient();
     async function load() {
-      const { data: link } = await supabase
-        .from('event_invite_links')
-        .select('event_id')
-        .eq('token', token)
+      // Eine `security definer`-RPC statt zwei direkter Tabellenabfragen.
+      //
+      // Vorher wurde erst `event_invite_links` nach dem Token gefragt und
+      // danach `events` nach der id. Das hatte zwei Probleme: die Tabelle
+      // musste dafuer fuer JEDEN lesbar sein (damit waren alle Tokens
+      // auflistbar), und der zweite Schritt schlug fuer nicht angemeldete
+      // Besucher ohnehin fehl — `events` ist per RLS auf `authenticated`
+      // beschraenkt. Einladungslinks funktionierten dadurch nur fuer Leute,
+      // die bereits eingeloggt waren.
+      //
+      // Die RPC nimmt genau ein Token entgegen und gibt ausschliesslich die
+      // Anzeigedaten des zugehoerigen Events zurueck.
+      const { data: ev, error } = await supabase
+        .rpc('resolve_invite_token', { p_token: token })
         .maybeSingle();
-      if (!link?.event_id) {
+      if (error || !ev) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-      const { data: ev } = await supabase
-        .from('events')
-        .select('id, title, date, time, location, banner_url, image_url, description')
-        .eq('id', link.event_id)
-        .maybeSingle();
-      setEvent(ev as InviteEvent | null);
-      setNotFound(!ev);
+      setEvent(ev as InviteEvent);
       setLoading(false);
     }
     load();
