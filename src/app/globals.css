@@ -1,9 +1,10 @@
-/* Inter is the single typeface across the whole product. The three legacy
-   families (Outfit / Poppins / Space Grotesk) are kept as *token names*
-   below but all resolve to Inter, so the ~100 existing font-heading /
-   font-sans / font-mono call sites keep working unchanged. Same remap
-   trick the mobile app already uses in occuroapp/src/theme/fonts.ts. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Zwei Familien: Outfit traegt Ueberschriften und das "occuro"-Wortmark
+   (geometrisch, runde Formen — die Marke bekommt ihr eigenes Gesicht),
+   Inter alles Lesende. `--font-mono` ist ein historischer Token-Name
+   (frueher Space Grotesk) und liefert Inter, damit die bestehenden
+   Aufrufstellen unveraendert weiterlaufen. Gleiche Aufteilung wie in
+   occuroapp/src/theme/fonts.ts. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap');
 @import "tailwindcss";
 
 /* ─── Palette ──────────────────────────────────────────────────────────
@@ -87,9 +88,11 @@
   --color-danger: #EF4444;    /* destruktive aktionen */
   --color-verified: #3B82F6;  /* NUR das verifiziert-badge */
 
-  /* All three map to Inter — see the note at the top of this file. */
+  /* Outfit traegt Ueberschriften und das Wortmark, Inter alles Lesende.
+     --font-mono ist ein historischer Token-Name (frueher Space Grotesk) und
+     liefert bewusst Inter. */
   --font-sans: 'Inter', sans-serif;
-  --font-heading: 'Inter', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
   --font-mono: 'Inter', monospace;
 
   /* Squircle radii — the app never uses full rounding on buttons/chips. */
