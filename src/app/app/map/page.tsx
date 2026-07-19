@@ -271,7 +271,7 @@ function MapPageInner() {
                 <>
                   {eventsWithCoords.length} von {fetchedCount} Events auf der Karte
                   {geocoding > 0 && (
-                    <span className="ml-2 text-violet-400">
+                    <span className="ml-2 text-foreground">
                       · {geocoding} werden geladen…
                     </span>
                   )}
@@ -300,7 +300,7 @@ function MapPageInner() {
               onClick={() => setDateRange(d.key)}
               className={`flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl border transition-all duration-200 ${
                 active
-                  ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-600/20'
+                  ? 'bg-primary-bg text-primary-text border-primary-bg shadow-lg shadow-black/10'
                   : 'bg-surface border-border-subtle text-foreground/70 hover:border-border-strong hover:bg-elevated/50'
               }`}
             >
@@ -328,7 +328,7 @@ function MapPageInner() {
                   <p className="text-[11px] mt-1 mb-4">Prüfe deine Verbindung und versuch es erneut.</p>
                   <button
                     onClick={() => void fetchEvents()}
-                    className="px-4 py-2 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+                    className="px-4 py-2 rounded-xl text-[12px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors"
                   >
                     Neu laden
                   </button>
@@ -350,7 +350,7 @@ function MapPageInner() {
                   disabled={!hasCoords}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 ${
                     selected?.id === event.id
-                      ? 'bg-violet-500/10 border border-violet-500/30'
+                      ? 'bg-muted border border-border-strong'
                       : 'border border-border-subtle bg-surface hover:bg-elevated/50 hover:border-border-strong'
                   } ${!hasCoords ? 'opacity-60 cursor-default' : ''}`}
                   title={hasCoords ? '' : 'Koordinaten werden geladen…'}
@@ -430,7 +430,7 @@ function MapPageInner() {
                   )}
                   <Link
                     href={`/app/event/${selected.id}`}
-                    className="inline-flex items-center gap-1 mt-2.5 px-3 py-1.5 rounded-full text-[11.5px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+                    className="inline-flex items-center gap-1 mt-2.5 px-3 py-1.5 rounded-xl text-[11.5px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors"
                   >
                     Event-Details <ArrowRight size={12} />
                   </Link>

@@ -405,13 +405,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
           <div className="flex gap-2 justify-center">
             <button
               onClick={this.retry}
-              className="px-5 py-2.5 rounded-full text-[13px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-2"
             >
               <RefreshCw size={13} /> Neuladen
             </button>
             <button
               onClick={this.reset}
-              className="px-5 py-2.5 rounded-full text-[13px] font-semibold bg-red-600 text-white hover:bg-red-500 transition-colors"
+              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-red-600 text-white hover:bg-red-500 transition-colors"
             >
               App zurücksetzen
             </button>

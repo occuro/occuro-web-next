@@ -422,7 +422,7 @@ export function EventForm({
       {/* Date + time — wrapped in a labelled group for visual hierarchy */}
       <div className="rounded-2xl border border-border-subtle bg-elevated/30 p-4 space-y-4">
         <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground/80">
-          <Calendar size={13} className="text-violet-400" /> Start
+          <Calendar size={13} className="text-muted-fg" /> Start
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Datum" required>
@@ -502,9 +502,9 @@ export function EventForm({
           {isEdit && alreadyInvitedFriends.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground/80">
-                <Users size={13} className="text-violet-400" />
+                <Users size={13} className="text-muted-fg" />
                 Bereits eingeladen
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-elevated border border-border-subtle text-foreground/70">
+                <span className="px-2 py-0.5 rounded-xl text-[10px] font-bold bg-elevated border border-border-subtle text-foreground/70">
                   {alreadyInvitedFriends.length}
                 </span>
               </div>
@@ -540,7 +540,7 @@ export function EventForm({
                           <p className="text-[10px] text-muted-fg truncate">@{friend.username}</p>
                         )}
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${color}`}>
+                      <span className={`px-2 py-0.5 rounded-xl text-[10px] font-semibold border ${color}`}>
                         {label}
                       </span>
                     </div>
@@ -551,10 +551,10 @@ export function EventForm({
           )}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground/80">
-              <UserPlus size={13} className="text-violet-400" />
+              <UserPlus size={13} className="text-muted-fg" />
               {isEdit && alreadyInvitedFriends.length > 0 ? 'Weitere einladen' : 'Freunde einladen'}
               {selectedFriendIds.size > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-600 text-white">
+                <span className="px-2 py-0.5 rounded-xl text-[10px] font-bold bg-primary-bg text-primary-text">
                   {selectedFriendIds.size}
                 </span>
               )}
@@ -574,7 +574,7 @@ export function EventForm({
                   value={friendSearch}
                   onChange={(e) => setFriendSearch(e.target.value)}
                   placeholder="Freunde suchen…"
-                  className="w-full px-3 py-2 rounded-xl border border-border-subtle bg-surface text-[12px] placeholder:text-muted-fg/60 focus:outline-none focus:border-violet-500/40"
+                  className="w-full px-3 py-2 rounded-xl border border-border-subtle bg-surface text-[12px] placeholder:text-muted-fg/60 focus:outline-none focus:border-focus"
                 />
               )}
               <div className="max-h-60 overflow-y-auto space-y-1.5 -mx-1 px-1">
@@ -592,7 +592,7 @@ export function EventForm({
                         onClick={() => toggleFriend(friend.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors text-left ${
                           checked
-                            ? 'bg-violet-500/10 border-violet-500/40'
+                            ? 'bg-muted border-border-strong'
                             : 'bg-surface border-border-subtle hover:bg-elevated'
                         }`}
                       >
@@ -615,7 +615,7 @@ export function EventForm({
                         <div
                           className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 ${
                             checked
-                              ? 'bg-violet-600 border-violet-600 text-white'
+                              ? 'bg-primary-bg border-primary-bg text-primary-text'
                               : 'border-border-strong'
                           }`}
                         >
@@ -699,7 +699,7 @@ export function EventForm({
             type="checkbox"
             checked={form.chat_enabled}
             onChange={(e) => update('chat_enabled', e.target.checked)}
-            className="w-4 h-4 accent-violet-500"
+            className="w-4 h-4 accent-primary-bg"
           />
           <span className="text-sm">Event-Chat aktivieren</span>
         </label>
@@ -748,7 +748,7 @@ export function EventForm({
         <button
           type="submit"
           disabled={saving || deleting}
-          className="flex-1 px-5 py-3 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          className="flex-1 px-5 py-3 rounded-xl text-sm font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
         >
           {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
           {isEdit ? 'Änderungen speichern' : 'Event erstellen'}
@@ -796,7 +796,7 @@ export function EventForm({
         }
         .datetime-wrap input[type='date'],
         .datetime-wrap input[type='time'] {
-          font-family: 'Space Grotesk', ui-monospace, monospace;
+          font-family: Inter, ui-monospace, monospace;
           font-variant-numeric: tabular-nums;
           font-size: 0.95rem;
           font-weight: 600;

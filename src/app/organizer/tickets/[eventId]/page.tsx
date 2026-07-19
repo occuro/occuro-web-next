@@ -241,7 +241,7 @@ export default function EventTicketsPage({
             <StatTile count={counts.pending} label="Offen" accent="amber" />
             <StatTile count={counts.approved} label="Bestätigt" accent="green" />
             <StatTile count={counts.rejected} label="Abgelehnt" accent="red" />
-            <StatTile count={counts.scanned} label="Gescannt" accent="violet" />
+            <StatTile count={counts.scanned} label="Gescannt" accent="neutral" />
             <StatTile count={counts.all} label="Gesamt" accent="muted" />
           </div>
 
@@ -257,9 +257,9 @@ export default function EventTicketsPage({
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all ${
                   filter === f.key
-                    ? 'bg-violet-600 text-white shadow-sm'
+                    ? 'bg-primary-bg text-primary-text shadow-sm'
                     : 'bg-surface border border-border-subtle text-muted-fg hover:text-foreground'
                 }`}
               >
@@ -276,7 +276,7 @@ export default function EventTicketsPage({
               placeholder="Nach Name oder @username suchen…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-border-subtle bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-border-subtle bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-focus"
             />
           </div>
 
@@ -341,13 +341,13 @@ function StatTile({
 }: {
   count: number;
   label: string;
-  accent: 'amber' | 'green' | 'red' | 'violet' | 'muted';
+  accent: 'amber' | 'green' | 'red' | 'neutral' | 'muted';
 }) {
   const palette = {
     amber: 'text-amber-400',
     green: 'text-green-400',
     red: 'text-red-400',
-    violet: 'text-violet-400',
+    neutral: 'text-foreground',
     muted: 'text-foreground/70',
   }[accent];
   return (
@@ -370,7 +370,7 @@ function TicketCard({
   onPreview: () => void;
 }) {
   const status = ticket.scanned_at
-    ? { label: 'Gescannt', className: 'bg-violet-500/15 text-violet-400 border-violet-500/30' }
+    ? { label: 'Gescannt', className: 'bg-muted text-foreground border-border-strong' }
     : ticket.verification_status === 'approved'
       ? { label: 'Bestätigt', className: 'bg-green-500/15 text-green-400 border-green-500/30' }
       : ticket.verification_status === 'rejected'
@@ -417,7 +417,7 @@ function TicketCard({
           </div>
         </div>
         <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${status.className}`}>
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-xl text-[10px] font-semibold border ${status.className}`}>
             {status.label}
           </span>
           {ticket.rejection_reason && (
@@ -452,7 +452,7 @@ function TicketCard({
           <button
             onClick={onMarkScanned}
             disabled={busy}
-            className="flex-1 sm:flex-initial px-3 py-2 rounded-xl text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 sm:flex-initial px-3 py-2 rounded-xl text-[12px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors flex items-center justify-center gap-1.5"
           >
             {busy ? <Loader2 size={13} className="animate-spin" /> : <ScanLine size={13} />}
             Eingelassen

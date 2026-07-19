@@ -107,11 +107,11 @@ export function Toggle({ checked, onChange, disabled }: { checked: boolean; onCh
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-        checked ? 'bg-violet-600' : 'bg-muted'
+        checked ? 'bg-primary-bg' : 'bg-muted'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <span
-        className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transform transition-transform ${
+        className={`inline-block h-5 w-5 rounded-full bg-surface shadow-sm transform transition-transform ${
           checked ? 'translate-x-5' : 'translate-x-0.5'
         }`}
       />

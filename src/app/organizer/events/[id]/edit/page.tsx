@@ -94,7 +94,7 @@ export default function OrganizerEventEditPage({
             </p>
             <Link
               href="/organizer"
-              className="inline-block mt-2 text-[12px] text-violet-400 hover:underline"
+              className="inline-block mt-2 text-[12px] text-foreground hover:underline"
             >
               Zurück zur Übersicht
             </Link>

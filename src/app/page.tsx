@@ -54,10 +54,11 @@ export default function LandingPage() {
         <div className="max-w-xl text-center space-y-8" data-grid-exclude>
           <div className="space-y-6">
             <OccuroRingLogo size={64} className="mx-auto text-foreground" />
+            {/* Two lines, one per half of the claim — the second is muted,
+                same stepped-contrast logic the three-line version used. */}
             <h2 className="text-[3.2rem] leading-[1.1] font-heading font-bold tracking-tight">
-              Entdecke Events.<br />
-              <span className="text-muted-fg">Verbinde dich.</span><br />
-              <span className="text-muted-fg/60">Teile Momente.</span>
+              Events entdecken,<br />
+              <span className="text-muted-fg">Momente teilen.</span>
             </h2>
             <p className="text-base text-muted-fg max-w-sm mx-auto leading-relaxed">
               Finde Events in deiner Nähe, triff neue Leute und erlebe unvergessliche Momente.
@@ -69,13 +70,13 @@ export default function LandingPage() {
                 across the whole landing page. */}
             <Link
               href="/auth/login"
-              className="px-8 py-3.5 rounded-full text-sm font-semibold border border-border-strong text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all"
+              className="px-8 py-3.5 rounded-xl text-sm font-semibold border border-border-strong text-foreground hover:bg-muted/50 active:scale-[0.98] transition-all"
             >
               Anmelden
             </Link>
             <Link
               href="/auth/register"
-              className="px-8 py-3.5 rounded-full text-sm font-semibold bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm"
+              className="px-8 py-3.5 rounded-xl text-sm font-semibold bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm"
             >
               Registrieren
             </Link>

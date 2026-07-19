@@ -52,7 +52,7 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
   }, [id]);
 
   if (authLoading || (!authLoading && user)) {
-    return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>;
+    return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /></div>;
   }
 
   const bannerUrl = event?.banner_url ?? event?.image_url ?? null;
@@ -68,8 +68,8 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
         ) : bannerUrl ? (
           <img src={bannerUrl} alt="" className="w-full aspect-video rounded-2xl object-cover" />
         ) : (
-          <div className="w-full aspect-video rounded-2xl bg-violet-600/10 flex items-center justify-center">
-            <Calendar size={40} className="text-violet-400" />
+          <div className="w-full aspect-video rounded-2xl bg-white/5 flex items-center justify-center">
+            <Calendar size={40} className="text-gray-400" />
           </div>
         )}
 
@@ -97,14 +97,14 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
         <div className="space-y-3 pt-4">
           <a
             href={`${APP_SCHEME}event/${id}`}
-            className="flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-2xl transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#111114] font-semibold rounded-2xl transition-colors"
           >
             <ExternalLink size={18} />
             In der App öffnen
           </a>
           <a
             href={`/app/event/${id}`}
-            className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-violet-500/40 text-violet-200 hover:text-white hover:border-violet-400 hover:bg-violet-600/10 font-medium rounded-2xl transition-colors text-sm"
+            className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-white/25 text-gray-300 hover:text-white hover:border-white/50 hover:bg-white/5 font-medium rounded-2xl transition-colors text-sm"
           >
             <Globe size={16} />
             Im Browser öffnen
@@ -119,7 +119,7 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <div className="pt-4">
-          <p className="text-gray-600 text-xs">occuro — Entdecke Events & triff echte Menschen</p>
+          <p className="text-gray-600 text-xs">occuro — Events entdecken, Momente teilen.</p>
         </div>
       </div>
     </div>

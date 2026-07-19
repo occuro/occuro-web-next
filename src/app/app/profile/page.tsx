@@ -286,7 +286,7 @@ export default function ProfilePage() {
           dem Banner als kleine Glass-Pills. */}
       <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden">
         {/* Banner */}
-        <div className="h-32 sm:h-40 bg-gradient-to-br from-violet-500/15 to-purple-600/15 relative">
+        <div className="h-32 sm:h-40 bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02] relative">
           {profile?.banner_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />
@@ -360,18 +360,18 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap">
               <Link
                 href="/app/friends"
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle bg-elevated hover:bg-muted transition-colors"
               >
-                <Users size={13} className="text-violet-400" />
+                <Users size={13} className="text-muted-fg" />
                 <span className="text-[12px] font-medium">
                   {friendCount === 1 ? '1 Freund' : `${friendCount} Freunde`}
                 </span>
               </Link>
               <Link
                 href="/app/friends"
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle bg-elevated hover:bg-muted transition-colors"
               >
-                <Building2 size={13} className="text-violet-400" />
+                <Building2 size={13} className="text-muted-fg" />
                 <span className="text-[12px] font-medium">
                   {followedOrganizerCount === 1 ? '1 Veranstalter' : `${followedOrganizerCount} Veranstalter`}
                 </span>
@@ -382,7 +382,7 @@ export default function ProfilePage() {
             {profile?.interests && profile.interests.length > 0 && (
               <div className="flex gap-2 flex-wrap pt-1">
                 {profile.interests.map((interest) => (
-                  <span key={interest} className="px-3 py-1.5 rounded-full text-[11px] font-medium bg-muted text-foreground/70">
+                  <span key={interest} className="px-3 py-1.5 rounded-xl text-[11px] font-medium bg-muted text-foreground/70">
                     {interest}
                   </span>
                 ))}
@@ -430,10 +430,10 @@ export default function ProfilePage() {
                   key={key}
                   onClick={() => setStatusFilter(key)}
                   className={`flex flex-col items-center py-2.5 rounded-xl transition-all ${
-                    active ? 'bg-violet-500/15 text-violet-400' : 'bg-elevated text-muted-fg hover:text-foreground'
+                    active ? 'bg-muted text-foreground' : 'bg-elevated text-muted-fg hover:text-foreground'
                   }`}
                 >
-                  <span className={`text-base font-heading font-bold ${active ? 'text-violet-400' : 'text-foreground'}`}>{count}</span>
+                  <span className={`text-base font-heading font-bold ${active ? 'text-foreground' : 'text-muted-fg'}`}>{count}</span>
                   <span className="text-[10px] mt-0.5">{label}</span>
                 </button>
               );
@@ -459,7 +459,7 @@ export default function ProfilePage() {
           {/* Quick CTA: create new private event */}
           <Link
             href="/app/events/create"
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-primary-bg text-primary-text text-[13px] font-semibold hover:bg-primary-hover transition-colors shadow-lg shadow-black/10"
           >
             <Plus size={15} /> Neues privates Event erstellen
           </Link>
@@ -484,10 +484,10 @@ export default function ProfilePage() {
                     key={key}
                     onClick={() => setPrivateTimeFilter(key)}
                     className={`flex flex-col items-center py-2.5 rounded-xl transition-all ${
-                      active ? 'bg-violet-500/15 text-violet-400' : 'bg-elevated text-muted-fg hover:text-foreground'
+                      active ? 'bg-muted text-foreground' : 'bg-elevated text-muted-fg hover:text-foreground'
                     }`}
                   >
-                    <span className={`text-base font-heading font-bold ${active ? 'text-violet-400' : 'text-foreground'}`}>{count}</span>
+                    <span className={`text-base font-heading font-bold ${active ? 'text-foreground' : 'text-muted-fg'}`}>{count}</span>
                     <span className="text-[10px] mt-0.5">{label}</span>
                   </button>
                 );
@@ -587,7 +587,7 @@ function ShareProfileButton({
   return (
     <button
       onClick={handleShare}
-      className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle bg-elevated hover:bg-muted transition-colors"
     >
       {copied ? (
         <>
@@ -645,7 +645,7 @@ function EventsListSection({ loading, events, statuses, emptyText, emptyIcon: Ic
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
               {event.visibility === 'private' && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 flex-shrink-0">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800 flex-shrink-0">
                   <Lock size={9} /> Privat
                 </span>
               )}
@@ -661,7 +661,7 @@ function EventsListSection({ loading, events, statuses, emptyText, emptyIcon: Ic
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             <span
-              className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white"
+              className="px-2.5 py-1 rounded-xl text-[10px] font-semibold text-white"
               style={{ backgroundColor: getCategoryColor(event.category) }}
             >
               {event.category}
@@ -670,7 +670,7 @@ function EventsListSection({ loading, events, statuses, emptyText, emptyIcon: Ic
               <span className={`flex items-center gap-1 text-[10px] font-medium ${
                 statuses[event.id] === 'confirmed' || statuses[event.id] === 'attended' ? 'text-green-600' :
                 statuses[event.id] === 'interested' ? 'text-pink-500' :
-                statuses[event.id] === 'saved' ? 'text-violet-500' : 'text-muted-fg'
+                statuses[event.id] === 'saved' ? 'text-foreground' : 'text-muted-fg'
               }`}>
                 {statuses[event.id] === 'confirmed' || statuses[event.id] === 'attended' ? <><CheckCircle2 size={10} /> Bestätigt</> :
                  statuses[event.id] === 'interested' ? <><Heart size={10} /> Interessiert</> :
@@ -772,7 +772,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Dein Name"
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Username" hint="Eindeutig, nur Buchstaben, Zahlen und Unterstriche.">
@@ -783,7 +783,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
                 value={username}
                 onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                 placeholder="username"
-                className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+                className="w-full pl-7 pr-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
               />
             </div>
           </Field>
@@ -793,7 +793,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
               onChange={(e) => setBio(e.target.value)}
               placeholder="Kurzbeschreibung über dich"
               rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Standort">
@@ -802,7 +802,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="z.B. Wien, Österreich"
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Website">
@@ -811,7 +811,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
               placeholder="https://deine-seite.com"
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Instagram">
@@ -820,7 +820,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
               value={instagram}
               onChange={(e) => setInstagram(e.target.value)}
               placeholder="dein_instagram"
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Profilbild">
@@ -860,7 +860,7 @@ function EditProfileModal({ profile, onClose, onSaved }: EditProfileModalProps) 
           <button
             onClick={handleSave}
             disabled={saving || !fullName.trim()}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-primary-bg text-primary-text text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             Speichern

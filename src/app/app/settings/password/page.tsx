@@ -64,7 +64,7 @@ export default function PasswordSettingsPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
               />
             </div>
             {newPassword.length > 0 && (
@@ -92,7 +92,7 @@ export default function PasswordSettingsPage() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
               />
             </div>
           </div>
@@ -113,7 +113,7 @@ export default function PasswordSettingsPage() {
           <button
             type="submit"
             disabled={loading || !newPassword || !confirm}
-            className="w-full px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full px-4 py-2.5 rounded-xl bg-primary-bg text-primary-text text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Speichern…' : 'Passwort ändern'}
           </button>

@@ -128,8 +128,8 @@ export default function OrganizerDashboardPage() {
         <>
           {/* ─── KPI grid ─── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-            <StatCard label="Follower" value={followerCount} icon={Users} accent="violet" />
-            <StatCard label="Events gesamt" value={stats.total} icon={CalendarDays} accent="violet" />
+            <StatCard label="Follower" value={followerCount} icon={Users} accent="neutral" />
+            <StatCard label="Events gesamt" value={stats.total} icon={CalendarDays} accent="neutral" />
             <StatCard label="Interessenten" value={stats.totalInterested} icon={Heart} accent="pink" />
             <StatCard label="Bestätigungen" value={stats.totalConfirmed} icon={CheckCircle2} accent="green" />
           </div>
@@ -138,7 +138,7 @@ export default function OrganizerDashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="p-5 rounded-2xl border border-border-subtle bg-surface">
               <div className="flex items-center gap-2 mb-3">
-                <Target size={15} className="text-violet-500" />
+                <Target size={15} className="text-muted-fg" />
                 <p className="text-[11px] font-medium text-muted-fg uppercase tracking-wide">Ø Interessenten</p>
               </div>
               <p className="text-3xl font-heading font-bold tracking-tight">{stats.avgInterested}</p>
@@ -146,7 +146,7 @@ export default function OrganizerDashboardPage() {
             </div>
             <div className="p-5 rounded-2xl border border-border-subtle bg-surface">
               <div className="flex items-center gap-2 mb-3">
-                <Award size={15} className="text-violet-500" />
+                <Award size={15} className="text-muted-fg" />
                 <p className="text-[11px] font-medium text-muted-fg uppercase tracking-wide">Ø Bestätigt</p>
               </div>
               <p className="text-3xl font-heading font-bold tracking-tight">{stats.avgConfirmed}</p>
@@ -154,7 +154,7 @@ export default function OrganizerDashboardPage() {
             </div>
             <div className="p-5 rounded-2xl border border-border-subtle bg-surface">
               <div className="flex items-center gap-2 mb-3">
-                <Percent size={15} className="text-violet-500" />
+                <Percent size={15} className="text-muted-fg" />
                 <p className="text-[11px] font-medium text-muted-fg uppercase tracking-wide">Conversion Rate</p>
               </div>
               <div className="flex items-end gap-2">
@@ -162,7 +162,7 @@ export default function OrganizerDashboardPage() {
               </div>
               <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-violet-500 rounded-full transition-all duration-500"
+                  className="h-full bg-foreground rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(stats.conversionRate, 100)}%` }}
                 />
               </div>
@@ -173,7 +173,7 @@ export default function OrganizerDashboardPage() {
           {/* ─── Follower growth chart ─── */}
           <div className="p-5 rounded-2xl border border-border-subtle bg-surface">
             <div className="flex items-center gap-2 mb-4">
-              <TrendingUp size={15} className="text-violet-500" />
+              <TrendingUp size={15} className="text-muted-fg" />
               <p className="text-[12px] font-semibold text-foreground">Follower-Wachstum</p>
               <span className="text-[11px] text-muted-fg ml-auto">Letzte 6 Wochen</span>
             </div>
@@ -182,7 +182,7 @@ export default function OrganizerDashboardPage() {
                 <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
                   <div className="text-[10px] text-muted-fg/70 font-medium">{val}</div>
                   <div
-                    className="w-full bg-violet-500/80 hover:bg-violet-500 rounded-t-lg transition-all duration-300 min-h-[4px]"
+                    className="w-full bg-foreground/70 hover:bg-foreground rounded-t-lg transition-all duration-300 min-h-[4px]"
                     style={{ height: `${(val / maxGrowth) * 100}%` }}
                   />
                   <span className="text-[10px] text-muted-fg">W{i + 1}</span>
@@ -198,14 +198,14 @@ export default function OrganizerDashboardPage() {
           {nextEvent && (
             <Link
               href={`/app/event/${nextEvent.id}`}
-              className="group flex items-center gap-5 p-5 rounded-2xl border border-violet-500/30 bg-violet-500/[0.04] hover:bg-violet-500/[0.08] transition-all"
+              className="group flex items-center gap-5 p-5 rounded-2xl border border-border-strong bg-foreground/[0.04] hover:bg-foreground/[0.07] transition-all"
             >
-              <div className="w-16 h-16 rounded-2xl bg-violet-500/15 flex flex-col items-center justify-center flex-shrink-0">
-                <span className="text-2xl font-heading font-bold text-violet-300">{daysUntilNext}</span>
-                <span className="text-[9px] font-medium text-violet-400 uppercase tracking-wider">Tage</span>
+              <div className="w-16 h-16 rounded-2xl bg-muted flex flex-col items-center justify-center flex-shrink-0">
+                <span className="text-2xl font-heading font-bold text-foreground">{daysUntilNext}</span>
+                <span className="text-[9px] font-medium text-foreground uppercase tracking-wider">Tage</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-violet-400 uppercase tracking-wider">Nächstes Event</p>
+                <p className="text-[11px] font-medium text-foreground uppercase tracking-wider">Nächstes Event</p>
                 <h3 className="font-semibold text-[15px] truncate mt-0.5">{nextEvent.title}</h3>
                 <p className="text-[12px] text-muted-fg mt-0.5">
                   {formatDate(nextEvent.date)} · {nextEvent.location}
@@ -224,7 +224,7 @@ export default function OrganizerDashboardPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Activity size={15} className="text-violet-500" />
+                  <Activity size={15} className="text-muted-fg" />
                   <h2 className="text-base font-heading font-semibold">Erfolgreichste Events</h2>
                 </div>
                 <Link href="/organizer" className="flex items-center gap-1 text-[12px] text-muted-fg hover:text-foreground transition-colors">
@@ -293,12 +293,12 @@ interface StatCardProps {
   label: string;
   value: number;
   icon: LucideIcon;
-  accent: 'violet' | 'pink' | 'green';
+  accent: 'neutral' | 'pink' | 'green';
 }
 
 function StatCard({ label, value, icon: Icon, accent }: StatCardProps) {
   const accentClass = {
-    violet: 'text-violet-500',
+    neutral: 'text-muted-fg',
     pink: 'text-pink-500',
     green: 'text-green-500',
   }[accent];
@@ -321,7 +321,7 @@ function EmptyState() {
       <p className="text-[13px] text-muted-fg mt-1">Erstelle dein erstes Event, um Statistiken zu sehen.</p>
       <Link
         href="/organizer/events/create"
-        className="inline-flex items-center gap-1 mt-4 px-4 py-2 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+        className="inline-flex items-center gap-1 mt-4 px-4 py-2 rounded-xl text-[13px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors"
       >
         Event erstellen <ArrowRight size={14} />
       </Link>

@@ -162,7 +162,7 @@ export default function CalendarPage() {
       const status = statuses[e.id];
       if (status === 'confirmed' || status === 'attended') return '#22c55e';
       if (status === 'interested') return '#ec4899';
-      if (e.visibility === 'private') return '#a78bfa';
+      if (e.visibility === 'private') return '#8C8C88';
       return getCategoryColor(e.category);
     });
   };
@@ -178,7 +178,7 @@ export default function CalendarPage() {
         <button
           onClick={goToToday}
           disabled={isToday && selectedDate === today}
-          className="px-4 py-2 rounded-full text-[12px] font-semibold border border-border-subtle bg-surface hover:bg-elevated transition-colors disabled:opacity-40"
+          className="px-4 py-2 rounded-xl text-[12px] font-semibold border border-border-subtle bg-surface hover:bg-elevated transition-colors disabled:opacity-40"
         >
           Heute
         </button>
@@ -234,9 +234,9 @@ export default function CalendarPage() {
                 onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                 className={`relative flex flex-col items-center justify-center aspect-square sm:aspect-auto sm:h-12 rounded-xl transition-all duration-200 ${
                   isSelected
-                    ? 'bg-violet-600 text-white ring-2 ring-violet-600/40'
+                    ? 'bg-primary-bg text-primary-text ring-2 ring-focus'
                     : isTodayCell
-                      ? 'bg-violet-500/15 text-violet-300 font-semibold'
+                      ? 'bg-muted text-foreground font-semibold'
                       : hasEvents
                         ? 'hover:bg-muted/60 cursor-pointer'
                         : 'text-muted-fg/50 hover:bg-muted/30'
@@ -264,7 +264,7 @@ export default function CalendarPage() {
       <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-[11px] text-muted-fg flex-wrap">
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500" /> Bestätigt</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-pink-500" /> Interessiert</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400" /> Privat</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-muted-fg" /> Privat</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-muted-fg" /> Sonstige</span>
       </div>
 
@@ -302,7 +302,7 @@ export default function CalendarPage() {
               const accentColor =
                 status === 'confirmed' || status === 'attended' ? '#22c55e'
                 : status === 'interested' ? '#ec4899'
-                : event.visibility === 'private' ? '#a78bfa'
+                : event.visibility === 'private' ? '#8C8C88'
                 : getCategoryColor(event.category);
               return (
                 <Link
@@ -318,7 +318,7 @@ export default function CalendarPage() {
                     <div className="flex items-center gap-1.5">
                       <h3 className="font-semibold text-[14px] truncate">{event.title}</h3>
                       {event.visibility === 'private' && (
-                        <Lock size={11} className="text-violet-400 flex-shrink-0" />
+                        <Lock size={11} className="text-muted-fg flex-shrink-0" />
                       )}
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 text-[12px] text-muted-fg mt-0.5">

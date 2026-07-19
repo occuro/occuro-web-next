@@ -135,7 +135,7 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
     return (
       <div className="max-w-3xl mx-auto py-20 text-center text-muted-fg">
         <p className="text-sm font-medium">Veranstalter nicht gefunden</p>
-        <Link href="/app/friends" className="inline-flex items-center gap-1 mt-3 text-[13px] text-violet-400 hover:text-violet-300">
+        <Link href="/app/friends" className="inline-flex items-center gap-1 mt-3 text-[13px] text-foreground hover:text-muted-fg">
           <ArrowLeft size={13} /> Zurück
         </Link>
       </div>
@@ -154,7 +154,7 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
       </button>
 
       <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden">
-        <div className="h-32 sm:h-40 bg-gradient-to-br from-violet-500/15 to-purple-600/15" />
+        <div className="h-32 sm:h-40 bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02]" />
 
         <div className="px-6 pt-5 pb-6">
           <div className="flex items-center gap-4">
@@ -170,11 +170,11 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
               <div className="flex items-center gap-1.5">
                 <h1 className="text-xl sm:text-2xl font-heading font-bold truncate">{org.name}</h1>
                 {org.verified && (
-                  <BadgeCheck size={18} className="text-violet-500 flex-shrink-0" strokeWidth={2.2} />
+                  <BadgeCheck size={18} className="text-verified flex-shrink-0" strokeWidth={2.2} />
                 )}
               </div>
               {org.category && (
-                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-foreground/70">
+                <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-xl text-[11px] font-medium bg-muted text-foreground/70">
                   <Tag size={10} /> {org.category}
                 </span>
               )}
@@ -187,13 +187,13 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
 
           {/* Stats */}
           <div className="flex items-center gap-2 mt-4 flex-wrap">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
-              <Users size={13} className="text-violet-400" />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-elevated border border-border-subtle">
+              <Users size={13} className="text-muted-fg" />
               <span className="text-[13px] font-semibold">{org.follower_count}</span>
               <span className="text-[12px] text-muted-fg">Follower</span>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-elevated border border-border-subtle">
-              <CalendarDays size={13} className="text-violet-400" />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-elevated border border-border-subtle">
+              <CalendarDays size={13} className="text-muted-fg" />
               <span className="text-[13px] font-semibold">{events.length}</span>
               <span className="text-[12px] text-muted-fg">Anstehend</span>
             </div>
@@ -215,7 +215,7 @@ export default function PublicOrganizerPage({ params }: { params: Promise<{ slug
                 className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-colors disabled:opacity-50 ${
                   following
                     ? 'border border-border-subtle text-foreground hover:bg-elevated'
-                    : 'bg-violet-600 text-white hover:bg-violet-500'
+                    : 'bg-primary-bg text-primary-text hover:bg-primary-hover'
                 }`}
               >
                 {followBusy ? (

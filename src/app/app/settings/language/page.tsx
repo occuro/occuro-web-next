@@ -40,7 +40,7 @@ export default function LanguageSettingsPage() {
             label={`${l.flag}  ${l.label}`}
             onClick={() => selectLang(l.code)}
             trailing={
-              lang === l.code ? <Check size={16} className="text-violet-500" strokeWidth={2.4} /> : null
+              lang === l.code ? <Check size={16} className="text-muted-fg" strokeWidth={2.4} /> : null
             }
           />
         ))}

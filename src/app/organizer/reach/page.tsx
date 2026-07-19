@@ -80,7 +80,7 @@ export default function ReachPage() {
         {followerCount > 0 && promotableEvents.length > 0 && (
           <button
             onClick={() => setPushModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors shadow-lg shadow-black/10"
           >
             <Megaphone size={14} /> Push senden
           </button>
@@ -148,7 +148,7 @@ export default function ReachPage() {
                       <p className="text-[13px] font-medium truncate">{event.title}</p>
                       <p className="text-[11px] text-muted-fg">{formatDate(event.date)}</p>
                     </div>
-                    {event.ticket_shop_url && <Link2 size={13} className="text-violet-500 flex-shrink-0" />}
+                    {event.ticket_shop_url && <Link2 size={13} className="text-muted-fg flex-shrink-0" />}
                     <span className="flex items-center gap-1 text-[12px] text-muted-fg flex-shrink-0">
                       <Heart size={11} /> {event.interested_count}
                     </span>
@@ -159,10 +159,10 @@ export default function ReachPage() {
           )}
 
           {/* ─── Push notification card ─── */}
-          <div className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/[0.05] to-purple-500/[0.05] p-5 sm:p-6">
+          <div className="rounded-2xl border border-border-subtle bg-gradient-to-br from-foreground/[0.05] to-foreground/[0.02] p-5 sm:p-6">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-                <Megaphone size={20} className="text-violet-400" strokeWidth={2} />
+              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center flex-shrink-0">
+                <Megaphone size={20} className="text-muted-fg" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-heading font-bold">Erinnere deine Follower</h2>
@@ -183,7 +183,7 @@ export default function ReachPage() {
                   ) : (
                     <button
                       onClick={() => setPushModalOpen(true)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors shadow-lg shadow-black/10"
                     >
                       <Send size={14} /> Event ankündigen
                     </button>
@@ -210,7 +210,7 @@ export default function ReachPage() {
                   } catch {}
                 }
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold border border-border-subtle bg-elevated hover:bg-muted transition-colors"
             >
               <Share2 size={14} /> Profil teilen
             </button>
@@ -290,8 +290,8 @@ function PushModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/15 flex items-center justify-center">
-              <Megaphone size={16} className="text-violet-400" />
+            <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center">
+              <Megaphone size={16} className="text-muted-fg" />
             </div>
             <div>
               <h2 className="text-[15px] font-heading font-bold">Event ankündigen</h2>
@@ -329,7 +329,7 @@ function PushModal({
             </div>
             <button
               onClick={onClose}
-              className="px-5 py-2.5 rounded-full text-[13px] font-semibold bg-elevated hover:bg-muted transition-colors"
+              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-elevated hover:bg-muted transition-colors"
             >
               Schließen
             </button>
@@ -352,15 +352,15 @@ function PushModal({
                     disabled={isSending}
                     className={`w-full text-left p-3 rounded-xl border transition-colors ${
                       selectedEventId === event.id
-                        ? 'border-violet-500/40 bg-violet-500/[0.08]'
+                        ? 'border-border-strong bg-foreground/[0.06]'
                         : 'border-border-subtle bg-elevated/50 hover:bg-elevated'
                     } ${isSending ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex items-start gap-2.5">
                       <div className={`mt-0.5 w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center ${
-                        selectedEventId === event.id ? 'bg-violet-500' : 'border border-border-strong'
+                        selectedEventId === event.id ? 'bg-foreground' : 'border border-border-strong'
                       }`}>
-                        {selectedEventId === event.id && <Check size={10} className="text-white" strokeWidth={3} />}
+                        {selectedEventId === event.id && <Check size={10} className="text-background" strokeWidth={3} />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-semibold truncate">{event.title}</p>
@@ -404,7 +404,7 @@ function PushModal({
                 type="button"
                 onClick={send}
                 disabled={isSending || !selectedEventId}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 {isSending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 Push senden

@@ -420,7 +420,7 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
         ) : error ? (
           <div className="text-center py-20 text-muted-fg">
             <p className="text-sm">{error}</p>
-            <Link href={backHref} className="text-[12px] text-violet-400 hover:underline mt-2 inline-block">
+            <Link href={backHref} className="text-[12px] text-foreground hover:underline mt-2 inline-block">
               Zurück zur Übersicht
             </Link>
           </div>
@@ -460,12 +460,12 @@ export function ChatThread({ roomId, backHref }: ChatThreadProps) {
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Nachricht schreiben…"
             disabled={sending || loading}
-            className="flex-1 px-4 py-2.5 rounded-full border border-border-subtle bg-elevated text-sm placeholder:text-muted-fg/60 focus:outline-none focus:border-violet-500/40"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm placeholder:text-muted-fg/60 focus:outline-none focus:border-focus"
           />
           <button
             type="submit"
             disabled={!draft.trim() || sending || loading}
-            className="w-10 h-10 rounded-full bg-violet-600 text-white flex items-center justify-center hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-full bg-primary-bg text-primary-text flex items-center justify-center hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
             aria-label="Senden"
           >
             {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
@@ -520,7 +520,7 @@ function MessageBubble({
               type="button"
               onClick={() => { if (profile && onProfileClick) onProfileClick(profile); }}
               disabled={!profile || !onProfileClick}
-              className="w-7 h-7 rounded-full bg-muted overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-violet-500/40 transition-all"
+              className="w-7 h-7 rounded-full bg-muted overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-border-strong transition-all"
               aria-label="Profil ansehen"
             >
               {profile?.avatar_url ? (
@@ -549,7 +549,7 @@ function MessageBubble({
         <div
           className={`px-3.5 py-2 rounded-2xl text-[14px] leading-snug ${
             isOwn
-              ? 'bg-violet-600 text-white rounded-br-md'
+              ? 'bg-primary-bg text-primary-text rounded-br-md'
               : 'bg-elevated border border-border-subtle text-foreground rounded-bl-md'
           } ${isLocked ? 'italic opacity-80' : ''}`}
         >

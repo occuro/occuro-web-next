@@ -86,7 +86,7 @@ export default function FollowersPage() {
           placeholder="Follower suchen..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-focus transition-all"
         />
         {search && (
           <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-fg hover:text-foreground">
@@ -126,7 +126,7 @@ export default function FollowersPage() {
                 </p>
               </div>
               {f.created_at && (
-                <span className="text-[11px] text-muted-fg bg-muted px-2 py-1 rounded-full flex-shrink-0">
+                <span className="text-[11px] text-muted-fg bg-muted px-2 py-1 rounded-xl flex-shrink-0">
                   {timeAgo(f.created_at)}
                 </span>
               )}

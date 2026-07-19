@@ -1,6 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+/* Inter is the single typeface across the whole product. The three legacy
+   families (Outfit / Poppins / Space Grotesk) are kept as *token names*
+   below but all resolve to Inter, so the ~100 existing font-heading /
+   font-sans / font-mono call sites keep working unchanged. Same remap
+   trick the mobile app already uses in occuroapp/src/theme/fonts.ts. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* ─── Palette ──────────────────────────────────────────────────────────
+   Single source of truth, mirrored 1:1 from occuroapp/src/theme/ux.ts.
+   Neutral only — the sole permitted accents are the four semantic ones
+   at the bottom (live / interest / pin / danger) plus the verified blue.
+   No coloured hues beyond those, and no navy surfaces. */
 :root {
   --background: #FAF9F7;
   --foreground: #1A1A1A;
@@ -8,14 +18,19 @@
   --elevated: #F3F1EE;
   --muted: #EDEAE6;
   --muted-fg: #8C8C88;
+  --secondary-fg: #52524E;
   --border: rgba(0,0,0,0.06);
   --border-strong: rgba(0,0,0,0.12);
   --input-bg: #FFFFFF;
-  --primary-bg: #1A1A1A;
+  --primary-bg: #191919;
+  --primary-hover: #3D3D3A;
   --primary-text: #FAFAF8;
   --secondary-bg: #F0EDE9;
   --secondary-text: #3D3D3A;
   --destructive: #B42318;
+  /* Focus indicator — neutral, but stronger than a hairline so keyboard
+     focus stays visible now that the old coloured ring is gone. */
+  --focus: rgba(0,0,0,0.32);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
@@ -23,20 +38,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0A0A0A;
+    --background: #121212;
     --foreground: #FAFAFA;
-    --surface: #141414;
-    --elevated: #1E1E1E;
-    --muted: #2A2A2A;
-    --muted-fg: rgba(255,255,255,0.5);
-    --border: rgba(255,255,255,0.08);
-    --border-strong: rgba(255,255,255,0.16);
-    --input-bg: #1E1E1E;
-    --primary-bg: #FAFAFA;
-    --primary-text: #0A0A0A;
-    --secondary-bg: #1E1E1E;
+    --surface: #1E1E1E;
+    --elevated: #2A2A2A;
+    --muted: #333333;
+    --muted-fg: rgba(255,255,255,0.73);
+    --secondary-fg: rgba(255,255,255,0.92);
+    --border: rgba(255,255,255,0.14);
+    --border-strong: rgba(255,255,255,0.22);
+    --input-bg: #2A2A2A;
+    --primary-bg: #F4F4F5;
+    --primary-hover: #E4E4E7;
+    --primary-text: #111114;
+    --secondary-bg: #333333;
     --secondary-text: #FAFAFA;
     --destructive: #FCA5A5;
+    --focus: rgba(255,255,255,0.42);
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
     --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
@@ -50,17 +68,34 @@
   --color-elevated: var(--elevated);
   --color-muted: var(--muted);
   --color-muted-fg: var(--muted-fg);
+  --color-secondary-fg: var(--secondary-fg);
   --color-border-subtle: var(--border);
   --color-border-strong: var(--border-strong);
+  --color-focus: var(--focus);
   --color-input-bg: var(--input-bg);
   --color-primary-bg: var(--primary-bg);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-text: var(--primary-text);
   --color-secondary-bg: var(--secondary-bg);
   --color-secondary-text: var(--secondary-text);
   --color-destructive: var(--destructive);
-  --font-sans: 'Poppins', sans-serif;
-  --font-heading: 'Outfit', sans-serif;
-  --font-mono: 'Space Grotesk', monospace;
+
+  /* The only permitted accent hues (occuroapp/src/theme/ux.ts). */
+  --color-live: #22C55E;      /* läuft gerade / teilnehmen */
+  --color-interest: #F43F5E;  /* interessiert / like */
+  --color-pin: #FF3B30;       /* kartenpins */
+  --color-danger: #EF4444;    /* destruktive aktionen */
+  --color-verified: #3B82F6;  /* NUR das verifiziert-badge */
+
+  /* All three map to Inter — see the note at the top of this file. */
+  --font-sans: 'Inter', sans-serif;
+  --font-heading: 'Inter', sans-serif;
+  --font-mono: 'Inter', monospace;
+
+  /* Squircle radii — the app never uses full rounding on buttons/chips. */
+  --radius-btn: 12px;
+  --radius-card: 20px;
+  --radius-sheet: 24px;
 }
 
 * {
@@ -74,9 +109,11 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Tight tracking on headings is the signature of the app's design —
+   see the "occuro" wordmark. */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.022em;
 }
 
 /* Smooth transitions globally */

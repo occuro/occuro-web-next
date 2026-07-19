@@ -64,7 +64,7 @@ export default function PrivacySettingsPage() {
 
       <div className="rounded-2xl border border-border-subtle bg-surface px-5 py-4">
         <div className="flex items-start gap-2.5">
-          <Shield size={14} className="text-violet-500 mt-0.5 flex-shrink-0" />
+          <Shield size={14} className="text-muted-fg mt-0.5 flex-shrink-0" />
           <p className="text-[12px] text-muted-fg leading-relaxed">
             Diese Einstellungen werden derzeit nur in der mobilen App vollständig erzwungen.
             In der WebApp werden sie als Präferenzen gespeichert und in Kürze für alle Funktionen aktiv.

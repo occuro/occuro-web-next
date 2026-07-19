@@ -297,7 +297,7 @@ export default function DiscoverClient({
           </div>
           <Link
             href="/app/events/create"
-            className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 active:scale-[0.98] transition-all shadow-lg shadow-violet-600/20"
+            className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover active:scale-[0.98] transition-all shadow-lg shadow-black/10"
           >
             <CalendarPlus size={15} strokeWidth={2.2} className="transition-transform group-hover:rotate-12" />
             Eigenes Event erstellen
@@ -313,7 +313,7 @@ export default function DiscoverClient({
           placeholder="Events, Orte, Kategorien suchen..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-10 py-3.5 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/30 transition-all duration-200"
+          className="w-full pl-10 pr-10 py-3.5 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-focus focus:border-focus transition-all duration-200"
         />
         {search && (
           <button
@@ -372,9 +372,9 @@ export default function DiscoverClient({
             <button
               key={key}
               onClick={() => setSort(key)}
-              className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-all duration-200 ${
+              className={`px-3.5 py-1.5 rounded-xl text-[12px] font-medium transition-all duration-200 ${
                 sort === key
-                  ? 'bg-violet-600 text-white shadow-sm'
+                  ? 'bg-primary-bg text-primary-text shadow-sm'
                   : 'bg-surface border border-border-subtle text-foreground/70 hover:border-border-strong'
               }`}
             >
@@ -396,9 +396,9 @@ export default function DiscoverClient({
           type="button"
           onClick={requestNearby}
           disabled={locatingStatus === 'loading'}
-          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200 disabled:opacity-60 ${
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 disabled:opacity-60 ${
             userLocation
-              ? 'bg-violet-600 text-white shadow-sm'
+              ? 'bg-primary-bg text-primary-text shadow-sm'
               : 'bg-surface border border-border-subtle text-foreground/70 hover:text-foreground hover:border-border-strong'
           }`}
           title={userLocation ? 'Umkreis-Filter aktiv — klicken zum Deaktivieren' : 'Events in deiner Nähe anzeigen'}
@@ -414,7 +414,7 @@ export default function DiscoverClient({
           <select
             value={radiusKm}
             onChange={(e) => setRadiusKm(Number(e.target.value))}
-            className="px-3 py-2 rounded-full text-[13px] font-medium bg-surface border border-border-subtle text-foreground/70 hover:border-border-strong focus:outline-none focus:border-violet-500/40"
+            className="px-3 py-2 rounded-xl text-[13px] font-medium bg-surface border border-border-subtle text-foreground/70 hover:border-border-strong focus:outline-none focus:border-focus"
           >
             {[5, 10, 25, 50, 100].map((km) => (
               <option key={km} value={km}>{km} km</option>
@@ -432,9 +432,9 @@ export default function DiscoverClient({
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setCategory(null)}
-          className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200 ${
+          className={`px-4 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 ${
             !category
-              ? 'bg-violet-600 text-white shadow-sm'
+              ? 'bg-primary-bg text-primary-text shadow-sm'
               : 'bg-surface border border-border-subtle text-foreground/70 hover:text-foreground hover:border-border-strong'
           }`}
         >
@@ -444,7 +444,7 @@ export default function DiscoverClient({
           <button
             key={cat}
             onClick={() => setCategory(cat === category ? null : cat)}
-            className={`px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-200 ${
+            className={`px-4 py-2 rounded-xl text-[13px] font-medium transition-all duration-200 ${
               category === cat
                 ? 'text-white shadow-sm'
                 : 'bg-surface border border-border-subtle text-foreground/70 hover:text-foreground hover:border-border-strong'
@@ -649,15 +649,15 @@ function TabButton({
           : 'text-muted-fg hover:text-foreground'
       }`}
     >
-      <span className={active ? 'text-violet-500' : ''}>{icon}</span>
+      <span className={active ? 'text-foreground' : ''}>{icon}</span>
       {label}
       {typeof count === 'number' && count > 0 && (
         <span
           className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-semibold ${
             accent
-              ? 'bg-violet-600 text-white'
+              ? 'bg-primary-bg text-primary-text'
               : active
-                ? 'bg-violet-500/15 text-violet-500'
+                ? 'bg-foreground/10 text-foreground'
                 : 'bg-muted text-muted-fg'
           }`}
         >
@@ -667,7 +667,7 @@ function TabButton({
       {/* Active indicator */}
       <span
         className={`absolute left-0 right-0 bottom-[-1px] h-[2px] transition-all ${
-          active ? 'bg-violet-500' : 'bg-transparent'
+          active ? 'bg-foreground' : 'bg-transparent'
         }`}
       />
     </button>
@@ -700,7 +700,7 @@ function EventCard({
       } as React.CSSProperties}
       className={`group relative rounded-3xl border bg-surface overflow-hidden hover:-translate-y-1 hover:shadow-[0_24px_48px_-18px_var(--cat-glow)] transition-all duration-300 ${
         accent
-          ? 'border-violet-500/50 hover:border-violet-500/70'
+          ? 'border-border-strong hover:border-focus'
           : 'border-border-subtle hover:border-border-strong'
       }`}
     >
@@ -718,8 +718,8 @@ function EventCard({
         {/* Context badge (top-left) — "3 Freunde", "Eingeladen" etc. */}
         {contextBadge && (
           <span
-            className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-[11px] font-semibold backdrop-blur-md ${
-              accent ? 'bg-violet-600/95 text-white' : 'bg-black/55 text-white'
+            className={`absolute top-4 left-4 px-3 py-1.5 rounded-xl text-[11px] font-semibold backdrop-blur-md ${
+              accent ? 'bg-black/80 text-white' : 'bg-black/55 text-white'
             }`}
           >
             {contextBadge}
@@ -729,12 +729,12 @@ function EventCard({
         {/* Single top-right badge: private > category. Stacking both
             was visual noise; private beats category as a signal. */}
         {isPrivate ? (
-          <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white backdrop-blur-md bg-amber-500/90">
+          <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-semibold text-white backdrop-blur-md bg-amber-500/90">
             <Lock size={10} strokeWidth={2.5} /> Privat
           </span>
         ) : event.category && event.category.trim() ? (
           <span
-            className="absolute top-4 right-4 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white backdrop-blur-md"
+            className="absolute top-4 right-4 px-3 py-1.5 rounded-xl text-[11px] font-semibold text-white backdrop-blur-md"
             style={{ backgroundColor: `${catColor}e6` }}
           >
             {event.category}

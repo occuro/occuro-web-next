@@ -109,7 +109,7 @@ export function LocationAutocomplete({
 
   return (
     <div ref={wrapperRef} className="relative">
-      <div className="flex items-center bg-elevated border border-border-subtle rounded-xl pl-3 pr-2 h-[42px] focus-within:border-violet-500/50 transition-colors">
+      <div className="flex items-center bg-elevated border border-border-subtle rounded-xl pl-3 pr-2 h-[42px] focus-within:border-focus transition-colors">
         <MapPin size={15} className="text-muted-fg flex-shrink-0" />
         <input
           type="text"

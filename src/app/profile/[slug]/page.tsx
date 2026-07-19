@@ -46,7 +46,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   }, [slug]);
 
   if (authLoading || (!authLoading && user)) {
-    return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>;
+    return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /></div>;
   }
 
   return (
@@ -56,10 +56,10 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           {loading ? (
             <div className="w-20 h-20 rounded-full bg-gray-800 animate-pulse mx-auto" />
           ) : profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-violet-500/30" />
+            <img src={profile.avatar_url} alt="" className="w-20 h-20 rounded-full mx-auto object-cover border-2 border-white/20" />
           ) : (
-            <div className="w-20 h-20 rounded-full bg-violet-600/20 mx-auto flex items-center justify-center">
-              <User size={32} className="text-violet-400" />
+            <div className="w-20 h-20 rounded-full bg-white/10 mx-auto flex items-center justify-center">
+              <User size={32} className="text-gray-400" />
             </div>
           )}
           <div>
@@ -67,7 +67,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
               {loading ? '...' : profile?.full_name || 'Profil'}
             </h1>
             {profile?.username && (
-              <p className="text-violet-400 text-sm mt-1">@{profile.username}</p>
+              <p className="text-gray-400 text-sm mt-1">@{profile.username}</p>
             )}
             {profile?.bio && (
               <p className="text-gray-400 text-sm mt-3 leading-relaxed">{profile.bio}</p>
@@ -78,14 +78,14 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
         <div className="space-y-3 pt-4">
           <a
             href={`${APP_SCHEME}profile/${slug}`}
-            className="flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-2xl transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#111114] font-semibold rounded-2xl transition-colors"
           >
             <ExternalLink size={18} />
             In der App öffnen
           </a>
           <a
             href={`/app/profile/${slug}`}
-            className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-violet-500/40 text-violet-200 hover:text-white hover:border-violet-400 hover:bg-violet-600/10 font-medium rounded-2xl transition-colors text-sm"
+            className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-white/25 text-gray-300 hover:text-white hover:border-white/50 hover:bg-white/5 font-medium rounded-2xl transition-colors text-sm"
           >
             <Globe size={16} />
             Im Browser öffnen
@@ -100,7 +100,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
         </div>
 
         <div className="pt-6">
-          <p className="text-gray-600 text-xs">occuro — Entdecke Events & triff echte Menschen</p>
+          <p className="text-gray-600 text-xs">occuro — Events entdecken, Momente teilen.</p>
         </div>
       </div>
     </div>

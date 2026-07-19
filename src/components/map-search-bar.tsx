@@ -139,7 +139,7 @@ export function MapSearchBar({ onSelectLocation }: MapSearchBarProps) {
       <div className="flex items-center gap-2">
         {/* Search input */}
         <div className="flex-1 relative">
-          <div className="flex items-center bg-surface/95 backdrop-blur border border-border-subtle rounded-full shadow-lg pl-3 pr-2 h-10">
+          <div className="flex items-center bg-surface/95 backdrop-blur border border-border-subtle rounded-xl shadow-lg pl-3 pr-2 h-10">
             <Search size={15} className="text-muted-fg flex-shrink-0" />
             <input
               type="text"

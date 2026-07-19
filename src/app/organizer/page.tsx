@@ -115,7 +115,7 @@ export default function OrganizerHomePage() {
         </div>
         <Link
           href="/organizer/events/create"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors shadow-lg shadow-black/10"
         >
           <Plus size={15} strokeWidth={2.2} /> Event erstellen
         </Link>
@@ -166,14 +166,14 @@ export default function OrganizerHomePage() {
                 active
                   ? t.liveBg && t.key === 'live'
                     ? 'bg-green-600 text-white shadow-sm'
-                    : 'bg-violet-600 text-white shadow-sm'
+                    : 'bg-primary-bg text-primary-text shadow-sm'
                   : 'bg-surface border border-border-subtle text-muted-fg hover:text-foreground hover:border-border-strong'
               }`}
             >
               <Icon size={15} strokeWidth={active ? 2.2 : 1.8} />
               {t.label}
-              <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                active ? 'bg-white/20' : 'bg-muted'
+              <span className={`text-[11px] px-1.5 py-0.5 rounded-xl ${
+                active ? 'bg-primary-text/20' : 'bg-muted'
               }`}>{t.count}</span>
             </button>
           );
@@ -188,7 +188,7 @@ export default function OrganizerHomePage() {
           placeholder="Events filtern..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/30 transition-all"
+          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-focus focus:border-focus transition-all"
         />
         {search && (
           <button
@@ -219,7 +219,7 @@ export default function OrganizerHomePage() {
           {!search && events.length === 0 && (
             <Link
               href="/organizer/events/create"
-              className="inline-flex items-center gap-1 mt-3 text-[13px] font-medium text-foreground hover:text-violet-400 transition-colors"
+              className="inline-flex items-center gap-1 mt-3 text-[13px] font-medium text-foreground hover:text-foreground transition-colors"
             >
               Erstelle dein erstes Event <ArrowRight size={14} />
             </Link>
@@ -251,7 +251,7 @@ export default function OrganizerHomePage() {
                   </p>
                 </div>
                 <span
-                  className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold text-white flex-shrink-0"
+                  className="hidden sm:inline-block px-2 py-0.5 rounded-xl text-[10px] font-semibold text-white flex-shrink-0"
                   style={{ backgroundColor: getCategoryColor(event.category) }}
                 >
                   {event.category}
@@ -260,7 +260,7 @@ export default function OrganizerHomePage() {
               {/* Edit button — separate Link so it doesn't trigger the row navigation */}
               <Link
                 href={`/organizer/events/${event.id}/edit`}
-                className="p-2 rounded-lg text-muted-fg hover:text-violet-400 hover:bg-violet-500/10 transition-colors flex-shrink-0"
+                className="p-2 rounded-lg text-muted-fg hover:text-foreground hover:bg-elevated transition-colors flex-shrink-0"
                 aria-label="Bearbeiten"
                 title="Bearbeiten"
               >
@@ -290,7 +290,7 @@ function QuickStat({ label, value, icon: Icon, href }: QuickStatProps) {
     <>
       <div className="flex items-center justify-between mb-2">
         <p className="text-[11px] font-medium text-muted-fg uppercase tracking-wide">{label}</p>
-        <Icon size={14} strokeWidth={1.8} className="text-violet-500/60" />
+        <Icon size={14} strokeWidth={1.8} className="text-muted-fg" />
       </div>
       <p className="text-2xl font-heading font-bold tracking-tight">{value.toLocaleString('de-DE')}</p>
     </>
@@ -300,7 +300,7 @@ function QuickStat({ label, value, icon: Icon, href }: QuickStatProps) {
     return (
       <Link
         href={href}
-        className="block p-4 rounded-2xl border border-border-subtle bg-surface hover:border-violet-500/30 hover:bg-elevated/30 transition-all"
+        className="block p-4 rounded-2xl border border-border-subtle bg-surface hover:border-border-strong hover:bg-elevated/30 transition-all"
       >
         {inner}
       </Link>

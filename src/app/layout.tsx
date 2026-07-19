@@ -7,7 +7,7 @@ import type { Profile, Organization } from '@/types/occuro';
 import type { User } from '@supabase/supabase-js';
 
 const SITE_URL = 'https://app.occuroapp.com';
-const SITE_TITLE = 'occuro — Entdecke Events in deiner Nähe';
+const SITE_TITLE = 'occuro — Events entdecken, Momente teilen.';
 const SITE_DESCRIPTION = 'Events entdecken, Tickets kaufen, Freunde treffen. Die Plattform für Veranstalter und Eventbesucher.';
 
 export const metadata: Metadata = {
@@ -50,8 +50,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FFFFFF' },
-    { media: '(prefers-color-scheme: dark)', color: '#0A0A0B' },
+    { media: '(prefers-color-scheme: light)', color: '#FAF9F7' },
+    { media: '(prefers-color-scheme: dark)', color: '#121212' },
   ],
 };
 

@@ -80,9 +80,9 @@ export default function OrganizerTicketsPage() {
       </div>
 
       {/* Check-in Hint */}
-      <div className="flex items-center gap-3 p-4 rounded-xl border border-violet-200 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-900/20">
-        <ScanLine size={20} className="text-violet-600 flex-shrink-0" />
-        <p className="text-[13px] text-violet-700 dark:text-violet-300">
+      <div className="flex items-center gap-3 p-4 rounded-xl border border-border-subtle bg-elevated">
+        <ScanLine size={20} className="text-muted-fg flex-shrink-0" />
+        <p className="text-[13px] text-secondary-fg">
           Scanne Tickets am Einlass mit der mobilen App, um den Check-in zu bestätigen.
         </p>
       </div>
@@ -105,7 +105,7 @@ export default function OrganizerTicketsPage() {
             >
               <Icon size={15} />
               {t.label}
-              <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${tab === t.key ? 'bg-white/20' : 'bg-muted'}`}>{t.count}</span>
+              <span className={`text-[11px] px-1.5 py-0.5 rounded-xl ${tab === t.key ? 'bg-primary-text/20' : 'bg-muted'}`}>{t.count}</span>
             </button>
           );
         })}

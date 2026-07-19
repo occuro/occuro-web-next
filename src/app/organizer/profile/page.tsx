@@ -81,7 +81,7 @@ export default function OrganizerProfilePage() {
           Overlap. Banner zuerst, dann eigene Zeile mit Logo + Name. */}
       <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden">
         {/* Banner — orgs don't have banner_url in DB, use category-tinted gradient */}
-        <div className="h-32 sm:h-40 bg-gradient-to-br from-violet-500/15 to-purple-600/15 relative">
+        <div className="h-32 sm:h-40 bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02] relative">
           <div className="absolute top-3 right-3 flex gap-2">
             <button
               onClick={() => setEditOpen(true)}
@@ -119,11 +119,11 @@ export default function OrganizerProfilePage() {
                   {organization?.name ?? profile?.full_name}
                 </h1>
                 {organization?.verified && (
-                  <BadgeCheck size={18} className="text-violet-500 flex-shrink-0" strokeWidth={2.2} />
+                  <BadgeCheck size={18} className="text-verified flex-shrink-0" strokeWidth={2.2} />
                 )}
               </div>
               {organization?.category && (
-                <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-muted text-foreground/70">
+                <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-xl text-[11px] font-medium bg-muted text-foreground/70">
                   <Tag size={10} /> {organization.category}
                 </span>
               )}
@@ -148,16 +148,16 @@ export default function OrganizerProfilePage() {
             <div className="flex items-center gap-2 sm:gap-3 pt-2 flex-wrap">
               <button
                 onClick={() => setEditOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle bg-elevated hover:bg-muted transition-colors"
               >
                 <Pencil size={13} />
                 <span className="text-[12px] font-medium">Bearbeiten</span>
               </button>
               <Link
                 href="/organizer/followers"
-                className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle bg-elevated hover:bg-muted transition-colors"
               >
-                <Users size={13} className="text-violet-400" />
+                <Users size={13} className="text-muted-fg" />
                 <span className="text-[12px] font-medium">Follower</span>
               </Link>
               <ShareOrgButton organization={organization} />
@@ -166,19 +166,19 @@ export default function OrganizerProfilePage() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-2 pt-2">
               <Link href="/organizer/followers" className="flex flex-col items-center py-3 rounded-xl bg-elevated hover:bg-muted transition-colors group">
-                <Users size={16} className="text-violet-500 mb-1" strokeWidth={2} />
-                <p className="text-lg font-heading font-bold group-hover:text-violet-400 transition-colors">
+                <Users size={16} className="text-muted-fg mb-1" strokeWidth={2} />
+                <p className="text-lg font-heading font-bold group-hover:text-foreground transition-colors">
                   {organization?.follower_count ?? 0}
                 </p>
                 <p className="text-[10px] text-muted-fg">Follower</p>
               </Link>
               <div className="flex flex-col items-center py-3 rounded-xl bg-elevated">
-                <CalendarRange size={16} className="text-violet-500 mb-1" strokeWidth={2} />
+                <CalendarRange size={16} className="text-muted-fg mb-1" strokeWidth={2} />
                 <p className="text-lg font-heading font-bold">{totalEvents}</p>
                 <p className="text-[10px] text-muted-fg">Events gesamt</p>
               </div>
               <div className="flex flex-col items-center py-3 rounded-xl bg-elevated">
-                <TrendingUp size={16} className="text-violet-500 mb-1" strokeWidth={2} />
+                <TrendingUp size={16} className="text-muted-fg mb-1" strokeWidth={2} />
                 <p className="text-lg font-heading font-bold">{upcomingCount}</p>
                 <p className="text-[10px] text-muted-fg">Anstehend</p>
               </div>
@@ -190,7 +190,7 @@ export default function OrganizerProfilePage() {
       {/* ─── Quick action: create new event ─── */}
       <Link
         href="/organizer/events/create"
-        className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+        className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-primary-bg text-primary-text text-sm font-semibold hover:bg-primary-hover transition-colors shadow-lg shadow-black/10"
       >
         <Plus size={16} /> Neues Event erstellen
       </Link>
@@ -261,7 +261,7 @@ export default function OrganizerProfilePage() {
                 </div>
               </div>
               <span
-                className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white flex-shrink-0"
+                className="px-2.5 py-1 rounded-xl text-[10px] font-semibold text-white flex-shrink-0"
                 style={{ backgroundColor: getCategoryColor(event.category) }}
               >
                 {event.category}
@@ -349,7 +349,7 @@ function EditOrganizationModal({ organization, onClose, onSaved }: EditOrganizat
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Name der Organisation"
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Bio">
@@ -358,7 +358,7 @@ function EditOrganizationModal({ organization, onClose, onSaved }: EditOrganizat
               onChange={(e) => setBio(e.target.value)}
               placeholder="Was macht ihr?"
               rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Standort">
@@ -367,7 +367,7 @@ function EditOrganizationModal({ organization, onClose, onSaved }: EditOrganizat
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="z.B. Wien, Österreich"
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Kategorie" hint="z.B. Club, Konzertveranstalter, Festival">
@@ -376,7 +376,7 @@ function EditOrganizationModal({ organization, onClose, onSaved }: EditOrganizat
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               placeholder="z.B. Club"
-              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-violet-500/40"
+              className="w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm focus:outline-none focus:border-focus"
             />
           </Field>
           <Field label="Logo / Avatar">
@@ -407,7 +407,7 @@ function EditOrganizationModal({ organization, onClose, onSaved }: EditOrganizat
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-primary-bg text-primary-text text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
             Speichern
@@ -460,7 +460,7 @@ function ShareOrgButton({ organization }: { organization: ReturnType<typeof useA
   return (
     <button
       onClick={handleShare}
-      className="flex items-center gap-2 px-4 py-2 rounded-full border border-border-subtle bg-elevated hover:bg-muted transition-colors"
+      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border-subtle bg-elevated hover:bg-muted transition-colors"
     >
       {copied ? (
         <>

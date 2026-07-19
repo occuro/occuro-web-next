@@ -364,7 +364,7 @@ export default function FriendsPage() {
           placeholder={tab === 'friends' ? 'Freunde durchsuchen…' : 'Personen oder Veranstalter suchen…'}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/30 transition-all"
+          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-focus focus:border-focus transition-all"
         />
         {search && (
           <button
@@ -434,8 +434,8 @@ export default function FriendsPage() {
                         className="flex flex-col items-center gap-2 min-w-[72px] group"
                       >
                         <div
-                          className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-semibold ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all p-[5px]"
-                          style={{ backgroundColor: 'rgba(124,58,237,0.12)' }}
+                          className="w-14 h-14 rounded-full flex items-center justify-center text-sm font-semibold ring-2 ring-border-subtle group-hover:ring-border-strong transition-all p-[5px]"
+                          style={{ backgroundColor: 'var(--muted)' }}
                         >
                           {org.avatar_url && org.avatar_url.trim() ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -451,12 +451,12 @@ export default function FriendsPage() {
                               className="w-full h-full object-cover object-center rounded-full"
                             />
                           ) : (
-                            <span className="text-violet-400 text-[15px]">
+                            <span className="text-foreground text-[15px]">
                               {(org.name ?? '?').trim().charAt(0).toUpperCase() || '?'}
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-center font-medium truncate w-full group-hover:text-violet-400 transition-colors">{org.name}</span>
+                        <span className="text-[10px] text-center font-medium truncate w-full group-hover:text-foreground transition-colors">{org.name}</span>
                       </button>
                     ))}
                   </div>
@@ -481,7 +481,7 @@ export default function FriendsPage() {
                         <button
                           onClick={(e) => { e.stopPropagation(); void removeFriend(friend.id); }}
                           disabled={busyIds.has(friend.id)}
-                          className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
                         >
                           <UserX size={11} /> Entfernen
                         </button>
@@ -513,14 +513,14 @@ export default function FriendsPage() {
                         <button
                           onClick={() => void declineRequest(person.id)}
                           disabled={busyIds.has(person.id)}
-                          className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors"
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors"
                         >
                           Ablehnen
                         </button>
                         <button
                           onClick={() => void acceptRequest(person.id)}
                           disabled={busyIds.has(person.id)}
-                          className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors flex items-center gap-1.5"
                         >
                           {busyIds.has(person.id) ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
                           Annehmen
@@ -566,7 +566,7 @@ export default function FriendsPage() {
                                 <button
                                   onClick={(e) => { e.stopPropagation(); void cancelRequest(person.id); }}
                                   disabled={busyIds.has(person.id)}
-                                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
+                                  className="px-3 py-1.5 rounded-xl text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
                                 >
                                   <Clock size={11} /> Gesendet
                                 </button>
@@ -574,7 +574,7 @@ export default function FriendsPage() {
                                 <button
                                   onClick={(e) => { e.stopPropagation(); void sendRequest(person.id); }}
                                   disabled={busyIds.has(person.id)}
-                                  className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
+                                  className="px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors flex items-center gap-1.5"
                                 >
                                   {busyIds.has(person.id) ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />}
                                   Hinzufügen
@@ -617,7 +617,7 @@ export default function FriendsPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); void cancelRequest(person.id); }}
                               disabled={busyIds.has(person.id)}
-                              className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
+                              className="px-3 py-1.5 rounded-xl text-[11px] font-semibold border border-border-subtle hover:bg-elevated transition-colors flex items-center gap-1.5"
                             >
                               <Clock size={11} /> Gesendet
                             </button>
@@ -625,7 +625,7 @@ export default function FriendsPage() {
                             <button
                               onClick={(e) => { e.stopPropagation(); void sendRequest(person.id); }}
                               disabled={busyIds.has(person.id)}
-                              className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center gap-1.5"
+                              className="px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors flex items-center gap-1.5"
                             >
                               {busyIds.has(person.id) ? <Loader2 size={11} className="animate-spin" /> : <UserPlus size={11} />}
                               Hinzufügen
@@ -670,7 +670,7 @@ function TabButton({
       <Icon size={14} strokeWidth={active ? 2.2 : 1.8} />
       {label}
       {typeof count === 'number' && count > 0 && (
-        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${highlight && !active ? 'bg-violet-600 text-white' : 'bg-elevated'}`}>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-xl ${highlight && !active ? 'bg-primary-bg text-primary-text' : 'bg-elevated'}`}>
           {count}
         </span>
       )}
@@ -756,7 +756,7 @@ function OrgRow({ org, onPreview }: { org: OrgResult; onPreview?: (org: OrgResul
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <h3 className="font-semibold text-[14px] truncate">{org.name}</h3>
-          {org.verified && <BadgeCheck size={14} className="text-violet-500 flex-shrink-0" />}
+          {org.verified && <BadgeCheck size={14} className="text-verified flex-shrink-0" />}
         </div>
         {org.category && <p className="text-[12px] text-muted-fg truncate">{org.category}</p>}
       </div>

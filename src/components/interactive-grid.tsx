@@ -119,7 +119,7 @@ export function InteractiveGrid({ forceDark }: { forceDark?: boolean } = {}) {
           : `rgba(0, 0, 0, ${alpha})`;
 
         ctx.fillStyle = color;
-        ctx.font = `${11 + t * 3}px "Space Grotesk", monospace`;
+        ctx.font = `${11 + t * 3}px Inter, monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 

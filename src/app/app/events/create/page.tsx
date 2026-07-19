@@ -18,7 +18,7 @@ export default function CreatePrivateEventPage() {
           <h1 className="text-2xl sm:text-3xl font-heading font-bold tracking-tight">
             Privates Event erstellen
           </h1>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xl text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
             <Lock size={9} /> Privat
           </span>
         </div>
@@ -28,9 +28,9 @@ export default function CreatePrivateEventPage() {
       </div>
 
       {/* Info hint */}
-      <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] px-4 py-3.5">
-        <p className="text-[12px] text-violet-200/90 leading-relaxed">
-          <strong className="font-semibold text-violet-300">Wie funktioniert das?</strong>{' '}
+      <div className="rounded-2xl border border-border-subtle bg-elevated px-4 py-3.5">
+        <p className="text-[12px] text-secondary-fg leading-relaxed">
+          <strong className="font-semibold text-foreground">Wie funktioniert das?</strong>{' '}
           Private Events sind nur für eingeladene Personen sichtbar. Du kannst Freunde
           schon beim Erstellen einladen und auch jederzeit danach noch weitere hinzufügen
           und mit allen im Event-Chat schreiben. Öffentliche Events können nur

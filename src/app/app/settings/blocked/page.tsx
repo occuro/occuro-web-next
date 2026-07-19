@@ -87,7 +87,7 @@ export default function BlockedUsersPage() {
               </div>
               <button
                 onClick={() => unblock(b.id)}
-                className="px-3 py-1.5 rounded-full text-[12px] font-medium border border-border-subtle hover:bg-elevated transition-colors"
+                className="px-3 py-1.5 rounded-xl text-[12px] font-medium border border-border-subtle hover:bg-elevated transition-colors"
               >
                 Aufheben
               </button>

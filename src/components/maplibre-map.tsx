@@ -184,7 +184,7 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
                 </div>
                 <div className="flex-1 min-w-0">
                   <span
-                    className="inline-block px-2 py-0.5 rounded-full text-[9px] font-semibold text-white"
+                    className="inline-block px-2 py-0.5 rounded-xl text-[9px] font-semibold text-white"
                     style={{ backgroundColor: getCategoryColor(selected.category) }}
                   >
                     {selected.category}
@@ -202,7 +202,7 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
                 </div>
                 <Link
                   href={`/app/event/${selected.id}`}
-                  className="text-[11px] font-semibold text-violet-500 hover:text-violet-400"
+                  className="text-[11px] font-semibold text-foreground hover:text-foreground"
                 >
                   Details →
                 </Link>

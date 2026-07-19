@@ -50,19 +50,56 @@ function getBannerIcon(
 }
 
 type DecorStyle = 'circles' | 'dots' | 'rings' | 'diagonal';
+type Tone = keyof typeof TONES;
 interface BannerCfg {
   from: string;
   via: string;
   to: string;
   accent: string;
+  angle: number;
   decor: DecorStyle;
 }
 
-// Mirrors occuroapp/src/components/EventImagePlaceholder.tsx. The mobile
-// app picks a gradient + decor style based on (in order of specificity)
-// subcategory -> event type -> category, so events without an uploaded
-// banner still feel distinct per vibe instead of all looking like the
-// same gray box.
+// Placeholder banners are deliberately MONOCHROME. Saturated per-genre
+// gradients (blue for tech, green for outdoor, magenta for festivals, …) made
+// the feed read like a colour swatch: with a dozen cards on screen the hues
+// fought each other and looked cheap. Events are told apart by their icon and
+// decor pattern instead, so the surface stays the same clean near-black as the
+// rest of the app and real event photos are the only colour in the feed.
+//
+// Ported 1:1 from occuroapp/src/components/EventImagePlaceholder.tsx so web
+// and mobile show the identical placeholder for the same event.
+const TONES = {
+  // Four near-black steps. The spread is small on purpose — enough that two
+  // adjacent cards don't look identical, never enough to read as "a colour".
+  deep: ['#08080A', '#121214', '#1C1C20'],
+  base: ['#0A0A0C', '#161618', '#242428'],
+  soft: ['#0C0C0E', '#1A1A1D', '#2A2A2E'],
+  warm: ['#0A0908', '#171614', '#26241F'],
+} as const;
+
+// 135deg = top-left -> bottom-right, 45deg = bottom-left -> top-right.
+// Same two directions the mobile version alternates between.
+const DIAG_DOWN = 135;
+const DIAG_UP = 45;
+
+function banner(tone: Tone, decor: DecorStyle, opts?: { up?: boolean }): BannerCfg {
+  const [from, via, to] = TONES[tone];
+  return {
+    from,
+    via,
+    to,
+    // Decor shapes are drawn at low opacity, so a light neutral is all the
+    // "accent" that is needed — no hue.
+    accent: '#8A8A90',
+    angle: opts?.up ? DIAG_UP : DIAG_DOWN,
+    decor,
+  };
+}
+
+// Picks tone + decor style based on (in order of specificity) subcategory ->
+// event type -> category, so events without an uploaded banner still feel
+// distinct per vibe instead of all looking like the same gray box.
 function getBannerCfg(
   category?: string | null,
   subcategory?: string | null,
@@ -72,65 +109,69 @@ function getBannerCfg(
   const type = (eventType ?? '').toLowerCase();
   const cat = (category ?? '').toLowerCase();
 
-  if (sub.includes('techno')) return { from: '#09090f', via: '#1a0a3d', to: '#2d1b69', accent: '#7c3aed', decor: 'circles' };
-  if (sub.includes('house')) return { from: '#3b0d02', via: '#7c2d12', to: '#c2410c', accent: '#f97316', decor: 'circles' };
-  if (sub.includes('rock')) return { from: '#0f0303', via: '#450a0a', to: '#7f1d1d', accent: '#ef4444', decor: 'diagonal' };
-  if (sub.includes('pop')) return { from: '#4a044e', via: '#831843', to: '#9d174d', accent: '#f472b6', decor: 'circles' };
-  if (sub.includes('jazz')) return { from: '#271505', via: '#6b3a0a', to: '#a16207', accent: '#fbbf24', decor: 'rings' };
-  if (sub.includes('hip') || sub.includes('hop')) return { from: '#06060f', via: '#0f172a', to: '#1e1b4b', accent: '#818cf8', decor: 'dots' };
-  if (sub.includes('electronic')) return { from: '#020d1f', via: '#0c1a45', to: '#1e40af', accent: '#38bdf8', decor: 'circles' };
-  if (sub.includes('indie')) return { from: '#100d0b', via: '#292524', to: '#44403c', accent: '#a78bfa', decor: 'diagonal' };
-  if (sub.includes('classical') || sub.includes('orchestra')) return { from: '#1c1408', via: '#3d2b00', to: '#713f12', accent: '#fcd34d', decor: 'rings' };
-  if (sub.includes('yoga') || sub.includes('meditation')) return { from: '#051a16', via: '#0d3d35', to: '#065f46', accent: '#34d399', decor: 'rings' };
-  if (sub.includes('fitness')) return { from: '#071a0f', via: '#14532d', to: '#15803d', accent: '#4ade80', decor: 'diagonal' };
-  if (sub.includes('wellness') || sub.includes('mental')) return { from: '#0d3d35', via: '#0f766e', to: '#0e7490', accent: '#5eead4', decor: 'rings' };
-  if (sub.includes('football') || sub.includes('soccer')) return { from: '#1a2e05', via: '#14532d', to: '#16a34a', accent: '#86efac', decor: 'diagonal' };
-  if (sub.includes('basketball')) return { from: '#431407', via: '#7c2d12', to: '#c2410c', accent: '#fb923c', decor: 'circles' };
-  if (sub.includes('tennis')) return { from: '#1a2e05', via: '#365314', to: '#4d7c0f', accent: '#bef264', decor: 'dots' };
-  if (sub.includes('running') || sub.includes('marathon')) return { from: '#0c1445', via: '#1e3a8a', to: '#1d4ed8', accent: '#93c5fd', decor: 'diagonal' };
-  if (sub.includes('swimming')) return { from: '#0c2a4a', via: '#0c4a6e', to: '#0369a1', accent: '#38bdf8', decor: 'rings' };
-  if (sub.includes('hackathon') || sub.includes('coding') || sub.includes('ai')) return { from: '#020c18', via: '#0c1a2e', to: '#0c4a6e', accent: '#22d3ee', decor: 'dots' };
-  if (sub.includes('tech talk') || sub.includes('techtalk')) return { from: '#0f172a', via: '#1e3a8a', to: '#1e40af', accent: '#60a5fa', decor: 'dots' };
-  if (sub.includes('startup')) return { from: '#0f172a', via: '#1e3a5f', to: '#1e40af', accent: '#818cf8', decor: 'circles' };
-  if (sub.includes('cooking') || sub.includes('culinary')) return { from: '#3b1202', via: '#7c2d12', to: '#b45309', accent: '#fbbf24', decor: 'rings' };
-  if (sub.includes('wine') || sub.includes('tasting')) return { from: '#2d0a3a', via: '#4a1d96', to: '#6d28d9', accent: '#d946ef', decor: 'circles' };
-  if (sub.includes('food festival') || sub.includes('brunch')) return { from: '#3d1a00', via: '#92400e', to: '#b45309', accent: '#fcd34d', decor: 'rings' };
-  if (sub.includes('exhibition') || sub.includes('gallery')) return { from: '#0f0a1e', via: '#1a103c', to: '#3b0764', accent: '#c084fc', decor: 'rings' };
-  if (sub.includes('theater') || sub.includes('theatre')) return { from: '#0a0406', via: '#3b0a0a', to: '#6b1a1a', accent: '#fca5a5', decor: 'diagonal' };
-  if (sub.includes('comedy')) return { from: '#2d0a1a', via: '#500724', to: '#9f1239', accent: '#fb7185', decor: 'circles' };
-  if (sub.includes('movie') || sub.includes('film') || sub.includes('cinema')) return { from: '#0a0a0a', via: '#111827', to: '#1f2937', accent: '#f59e0b', decor: 'diagonal' };
-  if (sub.includes('networking')) return { from: '#0f172a', via: '#1e3a5f', to: '#0c4a6e', accent: '#38bdf8', decor: 'dots' };
-  if (sub.includes('volunteering')) return { from: '#14532d', via: '#15803d', to: '#166534', accent: '#86efac', decor: 'rings' };
-  if (sub.includes('neighborhood') || sub.includes('social')) return { from: '#0f172a', via: '#1e3a5f', to: '#1e40af', accent: '#93c5fd', decor: 'dots' };
-  if (sub.includes('hiking') || sub.includes('camping')) return { from: '#1a2e05', via: '#365314', to: '#3f6212', accent: '#84cc16', decor: 'diagonal' };
-  if (sub.includes('picnic') || sub.includes('bbq')) return { from: '#14532d', via: '#166534', to: '#15803d', accent: '#4ade80', decor: 'rings' };
+  // ── Subcategory / Genre (most specific) ──────────────────────────────
+  if (sub.includes('techno')) return banner('deep', 'circles');
+  if (sub.includes('house')) return banner('base', 'circles', { up: true });
+  if (sub.includes('rock')) return banner('deep', 'diagonal');
+  if (sub.includes('pop')) return banner('soft', 'circles');
+  if (sub.includes('jazz')) return banner('warm', 'rings');
+  if (sub.includes('hip') || sub.includes('hop')) return banner('deep', 'dots', { up: true });
+  if (sub.includes('electronic')) return banner('base', 'circles');
+  if (sub.includes('indie')) return banner('warm', 'diagonal');
+  if (sub.includes('classical') || sub.includes('orchestra')) return banner('warm', 'rings');
+  if (sub.includes('yoga') || sub.includes('meditation')) return banner('soft', 'rings');
+  if (sub.includes('fitness')) return banner('base', 'diagonal', { up: true });
+  if (sub.includes('wellness') || sub.includes('mental')) return banner('soft', 'rings');
+  if (sub.includes('football') || sub.includes('soccer')) return banner('deep', 'diagonal');
+  if (sub.includes('basketball')) return banner('warm', 'circles');
+  if (sub.includes('tennis')) return banner('base', 'dots');
+  if (sub.includes('running') || sub.includes('marathon')) return banner('deep', 'diagonal', { up: true });
+  if (sub.includes('swimming')) return banner('base', 'rings');
+  if (sub.includes('hackathon') || sub.includes('coding') || sub.includes('ai')) return banner('deep', 'dots');
+  if (sub.includes('tech talk') || sub.includes('techtalk')) return banner('base', 'dots');
+  if (sub.includes('startup')) return banner('soft', 'circles', { up: true });
+  if (sub.includes('cooking') || sub.includes('culinary')) return banner('warm', 'rings');
+  if (sub.includes('wine') || sub.includes('tasting')) return banner('warm', 'circles');
+  if (sub.includes('food festival') || sub.includes('brunch')) return banner('warm', 'rings', { up: true });
+  if (sub.includes('exhibition') || sub.includes('gallery')) return banner('soft', 'rings');
+  if (sub.includes('theater') || sub.includes('theatre')) return banner('deep', 'diagonal');
+  if (sub.includes('comedy')) return banner('soft', 'circles');
+  if (sub.includes('movie') || sub.includes('film') || sub.includes('cinema')) return banner('deep', 'diagonal');
+  if (sub.includes('networking')) return banner('base', 'dots');
+  if (sub.includes('volunteering')) return banner('soft', 'rings');
+  if (sub.includes('neighborhood') || sub.includes('social')) return banner('base', 'dots');
+  if (sub.includes('hiking') || sub.includes('camping')) return banner('warm', 'diagonal');
+  if (sub.includes('picnic') || sub.includes('bbq')) return banner('warm', 'rings', { up: true });
 
-  if (type === 'festival') return { from: '#1e0533', via: '#701a75', to: '#a21caf', accent: '#e879f9', decor: 'circles' };
-  if (type === 'concert') return { from: '#030712', via: '#0a0a0f', to: '#1e1b4b', accent: '#818cf8', decor: 'circles' };
-  if (type === 'party') return { from: '#1a0010', via: '#500724', to: '#9f1239', accent: '#f43f5e', decor: 'circles' };
-  if (type === 'workshop') return { from: '#0a1628', via: '#1e3a8a', to: '#1d4ed8', accent: '#93c5fd', decor: 'dots' };
-  if (type === 'conference') return { from: '#050e1a', via: '#0f172a', to: '#1e3a5f', accent: '#60a5fa', decor: 'dots' };
-  if (type === 'seminar' || type === 'lecture') return { from: '#0a1628', via: '#1e3a8a', to: '#312e81', accent: '#a5b4fc', decor: 'diagonal' };
-  if (type === 'networking') return { from: '#020d1f', via: '#0c4a6e', to: '#0369a1', accent: '#38bdf8', decor: 'dots' };
-  if (type === 'exhibition') return { from: '#0f0a1e', via: '#3b0764', to: '#4c1d95', accent: '#c084fc', decor: 'rings' };
-  if (type === 'tournament') return { from: '#1a0505', via: '#450a0a', to: '#991b1b', accent: '#f87171', decor: 'diagonal' };
-  if (type === 'gala' || type === 'premiere') return { from: '#100c00', via: '#3d2b00', to: '#92400e', accent: '#fcd34d', decor: 'rings' };
-  if (type === 'retreat') return { from: '#030f0c', via: '#0d3d35', to: '#064e3b', accent: '#34d399', decor: 'rings' };
-  if (type === 'meetup') return { from: '#0a0f20', via: '#0f172a', to: '#1e40af', accent: '#60a5fa', decor: 'dots' };
-  if (type === 'trade show') return { from: '#050e1a', via: '#0f172a', to: '#1e3a5f', accent: '#93c5fd', decor: 'diagonal' };
+  // ── Event Type ───────────────────────────────────────────────────────
+  if (type === 'festival') return banner('soft', 'circles');
+  if (type === 'concert') return banner('deep', 'circles');
+  if (type === 'party') return banner('base', 'circles');
+  if (type === 'workshop') return banner('base', 'dots');
+  if (type === 'conference') return banner('deep', 'dots');
+  if (type === 'seminar' || type === 'lecture') return banner('base', 'diagonal');
+  if (type === 'networking') return banner('soft', 'dots');
+  if (type === 'exhibition') return banner('soft', 'rings');
+  if (type === 'tournament') return banner('deep', 'diagonal');
+  if (type === 'gala' || type === 'premiere') return banner('warm', 'rings');
+  if (type === 'retreat') return banner('soft', 'rings');
+  if (type === 'meetup') return banner('base', 'dots');
+  if (type === 'trade show') return banner('deep', 'diagonal');
 
-  if (cat.includes('music')) return { from: '#0f0e28', via: '#1e1b4b', to: '#4c1d95', accent: '#a78bfa', decor: 'circles' };
-  if (cat.includes('business')) return { from: '#050e1a', via: '#0f172a', to: '#1e3a5f', accent: '#60a5fa', decor: 'dots' };
-  if (cat.includes('health')) return { from: '#030f0c', via: '#0d3d35', to: '#065f46', accent: '#34d399', decor: 'rings' };
-  if (cat.includes('sport')) return { from: '#1a0505', via: '#7c2d12', to: '#c2410c', accent: '#fb923c', decor: 'diagonal' };
-  if (cat.includes('education')) return { from: '#0a1628', via: '#1e3a8a', to: '#312e81', accent: '#93c5fd', decor: 'dots' };
-  if (cat.includes('art') || cat.includes('culture')) return { from: '#1a0520', via: '#701a75', to: '#4a044e', accent: '#f0abfc', decor: 'rings' };
-  if (cat.includes('food') || cat.includes('drink')) return { from: '#1f0a00', via: '#78350f', to: '#b45309', accent: '#fbbf24', decor: 'rings' };
-  if (cat.includes('tech')) return { from: '#020d1f', via: '#0c4a6e', to: '#1e3a8a', accent: '#22d3ee', decor: 'dots' };
-  if (cat.includes('community')) return { from: '#071a0f', via: '#14532d', to: '#166534', accent: '#86efac', decor: 'rings' };
-  if (cat.includes('outdoor')) return { from: '#0f1a03', via: '#1a2e05', to: '#365314', accent: '#bef264', decor: 'diagonal' };
+  // ── Main Category ────────────────────────────────────────────────────
+  if (cat.includes('music')) return banner('deep', 'circles');
+  if (cat.includes('business')) return banner('base', 'dots');
+  if (cat.includes('health')) return banner('soft', 'rings');
+  if (cat.includes('sport')) return banner('base', 'diagonal');
+  if (cat.includes('education')) return banner('deep', 'dots');
+  if (cat.includes('art') || cat.includes('culture')) return banner('soft', 'rings');
+  if (cat.includes('food') || cat.includes('drink')) return banner('warm', 'rings');
+  if (cat.includes('tech')) return banner('deep', 'dots');
+  if (cat.includes('community')) return banner('soft', 'rings');
+  if (cat.includes('outdoor')) return banner('warm', 'circles');
 
-  return { from: '#0f111a', via: '#111827', to: '#1f2937', accent: '#6b7280', decor: 'circles' };
+  // ── Default ──────────────────────────────────────────────────────────
+  return banner('base', 'circles');
 }
 
 function Circles({ accent }: { accent: string }) {
@@ -222,7 +263,7 @@ export function EventBanner({
   return (
     <div
       className={`w-full h-full relative overflow-hidden ${className}`}
-      style={{ background: `linear-gradient(135deg, ${cfg.from}, ${cfg.via}, ${cfg.to})` }}
+      style={{ background: `linear-gradient(${cfg.angle}deg, ${cfg.from}, ${cfg.via}, ${cfg.to})` }}
     >
       {cfg.decor === 'circles' && <Circles accent={cfg.accent} />}
       {cfg.decor === 'rings' && <Rings accent={cfg.accent} />}

@@ -7,8 +7,8 @@ export default function AboutSettingsPage() {
   return (
     <SettingsShell title="Über occuro">
       <div className="text-center py-8 space-y-3">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-violet-500/15">
-          <Heart size={28} className="text-violet-500" strokeWidth={2} />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-muted">
+          <Heart size={28} className="text-muted-fg" strokeWidth={2} />
         </div>
         <h2 className="text-xl font-heading font-bold tracking-tight">occuro</h2>
         <p className="text-sm text-muted-fg">Version 1.0.6 · WebApp</p>

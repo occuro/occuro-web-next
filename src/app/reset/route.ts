@@ -27,8 +27,8 @@ export async function GET() {
 <style>
   html, body {
     margin: 0; padding: 0;
-    background: #0A0A0A; color: #FAFAFA;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #121212; color: #FAFAFA;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     min-height: 100vh;
     display: flex; align-items: center; justify-content: center;
   }
@@ -37,12 +37,12 @@ export async function GET() {
     max-width: 420px;
     padding: 32px 24px;
   }
-  h1 { font-size: 24px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h1 { font-size: 24px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.022em; }
   p  { font-size: 14px; line-height: 1.5; opacity: 0.7; margin: 0 0 24px; }
   .spinner {
     width: 32px; height: 32px;
     border: 3px solid rgba(255,255,255,0.1);
-    border-top-color: #8B5CF6;
+    border-top-color: #F4F4F5;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     margin: 0 auto 24px;
@@ -52,14 +52,14 @@ export async function GET() {
   a {
     display: inline-block;
     padding: 12px 24px;
-    background: #8B5CF6; color: white;
+    background: #F4F4F5; color: #111114;
     text-decoration: none;
-    border-radius: 999px;
+    border-radius: 12px;
     font-weight: 600;
     font-size: 14px;
     margin-top: 8px;
   }
-  a:hover { background: #7C3AED; }
+  a:hover { background: #E4E4E7; }
   .step { font-size: 11px; opacity: 0.5; margin-top: 8px; min-height: 16px; }
 </style>
 </head>

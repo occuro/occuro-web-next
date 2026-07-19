@@ -61,7 +61,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   }, [token]);
 
   if (authLoading || (!authLoading && user)) {
-    return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" /></div>;
+    return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /></div>;
   }
 
   const bannerUrl = event?.banner_url ?? event?.image_url ?? null;
@@ -81,15 +81,15 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         ) : bannerUrl ? (
           <img src={bannerUrl} alt="" className="w-full aspect-video rounded-2xl object-cover" />
         ) : (
-          <div className="w-full aspect-video rounded-2xl bg-violet-600/10 flex items-center justify-center">
-            <Calendar size={40} className="text-violet-400" />
+          <div className="w-full aspect-video rounded-2xl bg-white/5 flex items-center justify-center">
+            <Calendar size={40} className="text-gray-400" />
           </div>
         )}
 
         <div className="space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-600/15 border border-violet-600/30">
-            <Lock size={12} className="text-violet-400" />
-            <span className="text-violet-300 text-xs font-medium">Private Einladung</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 border border-white/15">
+            <Lock size={12} className="text-gray-400" />
+            <span className="text-gray-200 text-xs font-medium">Private Einladung</span>
           </div>
           <h1 className="text-2xl font-bold text-white">
             {loading ? '...' : notFound ? 'Einladung nicht gefunden' : event?.title || 'Event'}
@@ -120,7 +120,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
           <div className="space-y-3 pt-4">
             <a
               href={`${APP_SCHEME}invite/${token}`}
-              className="flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-2xl transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-3.5 px-6 bg-[#F4F4F5] hover:bg-[#E4E4E7] text-[#111114] font-semibold rounded-2xl transition-colors"
             >
               <ExternalLink size={18} />
               In der App öffnen
@@ -136,7 +136,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         )}
 
         <div className="pt-4">
-          <p className="text-gray-600 text-xs">occuro — Entdecke Events & triff echte Menschen</p>
+          <p className="text-gray-600 text-xs">occuro — Events entdecken, Momente teilen.</p>
         </div>
       </div>
     </div>

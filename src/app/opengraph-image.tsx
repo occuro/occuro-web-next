@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'occuro — Entdecke Events in deiner Nähe';
+export const alt = 'occuro — Events entdecken, Momente teilen.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -48,11 +48,11 @@ function OccuroRing({ cx, cy, radius, dotSize }: { cx: number; cy: number; radiu
 
 export default async function OpengraphImage() {
   const wordmarkText = 'occuro';
-  const taglineText = 'Entdecke Events in deiner Nähe';
+  const taglineText = 'Events entdecken, Momente teilen.';
 
-  const [outfitBold, poppinsRegular] = await Promise.all([
-    loadGoogleFont('Outfit', 700, wordmarkText),
-    loadGoogleFont('Poppins', 400, taglineText),
+  const [interBold, interRegular] = await Promise.all([
+    loadGoogleFont('Inter', 700, wordmarkText),
+    loadGoogleFont('Inter', 400, taglineText),
   ]);
 
   return new ImageResponse(
@@ -61,16 +61,16 @@ export default async function OpengraphImage() {
         style={{
           width: '100%',
           height: '100%',
-          background: '#0A0A0B',
+          background: '#121212',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          fontFamily: 'Outfit',
+          fontFamily: 'Inter',
         }}
       >
-        {/* Violet glow top-right */}
+        {/* Neutral glow top-right — the palette allows no coloured wash. */}
         <div
           style={{
             position: 'absolute',
@@ -79,7 +79,7 @@ export default async function OpengraphImage() {
             width: 900,
             height: 900,
             borderRadius: 9999,
-            background: 'radial-gradient(circle, rgba(124,58,237,0.38) 0%, rgba(124,58,237,0) 70%)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 70%)',
           }}
         />
         <div
@@ -90,7 +90,7 @@ export default async function OpengraphImage() {
             width: 700,
             height: 700,
             borderRadius: 9999,
-            background: 'radial-gradient(circle, rgba(168,85,247,0.22) 0%, rgba(168,85,247,0) 70%)',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 70%)',
           }}
         />
 
@@ -120,7 +120,7 @@ export default async function OpengraphImage() {
             marginTop: 20,
             fontSize: 28,
             color: 'rgba(255,255,255,0.65)',
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontWeight: 400,
             display: 'flex',
           }}
@@ -136,7 +136,7 @@ export default async function OpengraphImage() {
             right: 56,
             fontSize: 18,
             color: 'rgba(255,255,255,0.5)',
-            fontFamily: 'Poppins',
+            fontFamily: 'Inter',
             fontWeight: 400,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -150,11 +150,11 @@ export default async function OpengraphImage() {
     {
       ...size,
       fonts: [
-        ...(outfitBold
-          ? [{ name: 'Outfit', data: outfitBold, style: 'normal' as const, weight: 700 as const }]
+        ...(interBold
+          ? [{ name: 'Inter', data: interBold, style: 'normal' as const, weight: 700 as const }]
           : []),
-        ...(poppinsRegular
-          ? [{ name: 'Poppins', data: poppinsRegular, style: 'normal' as const, weight: 400 as const }]
+        ...(interRegular
+          ? [{ name: 'Inter', data: interRegular, style: 'normal' as const, weight: 400 as const }]
           : []),
       ],
     },

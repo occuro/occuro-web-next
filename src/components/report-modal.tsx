@@ -152,7 +152,7 @@ export function ReportModal({
             </div>
             <button
               onClick={handleClose}
-              className="px-5 py-2.5 rounded-full text-[13px] font-semibold bg-elevated hover:bg-muted transition-colors"
+              className="px-5 py-2.5 rounded-xl text-[13px] font-semibold bg-elevated hover:bg-muted transition-colors"
             >
               Schließen
             </button>
@@ -173,15 +173,15 @@ export function ReportModal({
                     onClick={() => setSelectedReason(r.value)}
                     className={`w-full text-left p-3 rounded-xl border transition-colors ${
                       selectedReason === r.value
-                        ? 'border-violet-500/40 bg-violet-500/[0.08]'
+                        ? 'border-border-strong bg-foreground/[0.06]'
                         : 'border-border-subtle bg-elevated/50 hover:bg-elevated'
                     }`}
                   >
                     <div className="flex items-start gap-2.5">
                       <div className={`mt-0.5 w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center ${
-                        selectedReason === r.value ? 'bg-violet-500' : 'border border-border-strong'
+                        selectedReason === r.value ? 'bg-foreground' : 'border border-border-strong'
                       }`}>
-                        {selectedReason === r.value && <Check size={10} className="text-white" strokeWidth={3} />}
+                        {selectedReason === r.value && <Check size={10} className="text-background" strokeWidth={3} />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-semibold">{r.label}</p>
@@ -202,7 +202,7 @@ export function ReportModal({
                   rows={3}
                   maxLength={3000}
                   placeholder="Beschreibe das Problem genauer…"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-violet-500/40"
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-focus"
                 />
               </div>
 

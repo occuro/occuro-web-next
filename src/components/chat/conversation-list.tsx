@@ -96,7 +96,7 @@ export function ConversationList({ basePath }: ConversationListProps) {
           placeholder="Chats durchsuchen…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500/30 transition-all"
+          className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border-subtle bg-surface text-sm placeholder:text-muted-fg/60 focus:outline-none focus:ring-2 focus:ring-focus focus:border-focus transition-all"
         />
         {search && (
           <button
@@ -166,7 +166,7 @@ function TabButton({
     >
       <Icon size={15} />
       {label}
-      {count > 0 && <span className="text-[11px] bg-elevated rounded-full px-1.5 py-0.5">{count}</span>}
+      {count > 0 && <span className="text-[11px] bg-elevated rounded-xl px-1.5 py-0.5">{count}</span>}
     </button>
   );
 }
@@ -192,7 +192,7 @@ function ConversationRow({ room, basePath }: { room: ChatRoom; basePath: string 
             )}
           </h3>
           {room.last_message_at && (
-            <span className={`text-[11px] flex-shrink-0 ${room.unread_count > 0 ? 'text-violet-400 font-semibold' : 'text-muted-fg'}`}>
+            <span className={`text-[11px] flex-shrink-0 ${room.unread_count > 0 ? 'text-foreground font-semibold' : 'text-muted-fg'}`}>
               {timeAgo(room.last_message_at)}
             </span>
           )}
@@ -202,8 +202,8 @@ function ConversationRow({ room, basePath }: { room: ChatRoom; basePath: string 
             {room.last_message_preview}
           </p>
           {room.unread_count > 0 && (
-            <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-violet-600 flex items-center justify-center">
-              <span className="text-[10px] font-bold text-white leading-none">
+            <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-bg flex items-center justify-center">
+              <span className="text-[10px] font-bold text-primary-text leading-none">
                 {room.unread_count > 99 ? '99+' : room.unread_count}
               </span>
             </span>
@@ -248,8 +248,8 @@ function ChatAvatar({ room }: { room: ChatRoom }) {
     );
   }
   return (
-    <div className="w-12 h-12 rounded-2xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-      <Users size={20} className="text-violet-400" strokeWidth={1.8} />
+    <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center flex-shrink-0">
+      <Users size={20} className="text-muted-fg" strokeWidth={1.8} />
     </div>
   );
 }

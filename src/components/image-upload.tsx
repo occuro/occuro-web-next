@@ -134,7 +134,7 @@ export function ImageUpload({
     <div>
       <div
         onClick={openPicker}
-        className={`group relative ${shapeClass} bg-elevated border border-border-subtle overflow-hidden cursor-pointer hover:border-violet-500/40 transition-colors ${disabled || uploading ? 'cursor-not-allowed' : ''} ${variant === 'circle' ? 'w-24 h-24' : 'w-full'}`}
+        className={`group relative ${shapeClass} bg-elevated border border-border-subtle overflow-hidden cursor-pointer hover:border-border-strong transition-colors ${disabled || uploading ? 'cursor-not-allowed' : ''} ${variant === 'circle' ? 'w-24 h-24' : 'w-full'}`}
         style={aspectStyle}
       >
         {value ? (

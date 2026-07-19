@@ -510,20 +510,20 @@ export default function EventDetailClient({
         {/* Top-right badges stacked: private, category, past */}
         <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
           {event.visibility === 'private' && (
-            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-amber-500/90 text-white backdrop-blur-md">
+            <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-amber-500/90 text-white backdrop-blur-md">
               <Lock size={10} strokeWidth={2.5} /> Privat
             </span>
           )}
           {event.category && event.category.trim() ? (
             <span
-              className="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold text-white backdrop-blur-md"
+              className="inline-flex items-center px-3 py-1.5 rounded-xl text-[11px] font-semibold text-white backdrop-blur-md"
               style={{ backgroundColor: `${catColor}e6` }}
             >
               {event.category}
             </span>
           ) : null}
           {isPast && (
-            <span className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-black/70 text-white backdrop-blur-md">
+            <span className="px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-black/70 text-white backdrop-blur-md">
               Vergangen
             </span>
           )}
@@ -574,7 +574,7 @@ export default function EventDetailClient({
             {isOwnEvent && event.visibility === 'private' && (
               <Link
                 href={`/app/events/${event.id}/edit#invites`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition-colors"
               >
                 <Users size={13} strokeWidth={2} /> Freunde einladen
               </Link>
@@ -586,7 +586,7 @@ export default function EventDetailClient({
                     ? `/app/events/${event.id}/edit`
                     : `/organizer/events/${event.id}/edit`
                 }
-                className="px-3 py-1.5 rounded-full text-[12px] font-semibold border border-border-subtle hover:bg-elevated transition-colors"
+                className="px-3 py-1.5 rounded-xl text-[12px] font-semibold border border-border-subtle hover:bg-elevated transition-colors"
               >
                 Bearbeiten
               </Link>
@@ -689,7 +689,7 @@ export default function EventDetailClient({
               className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 disabled:opacity-50 ${
                 status === 'confirmed' || status === 'attended'
                   ? 'bg-green-500 text-white shadow-sm'
-                  : 'bg-violet-600 text-white hover:bg-violet-500 shadow-sm'
+                  : 'bg-primary-bg text-primary-text hover:bg-primary-hover shadow-sm'
               }`}
             >
               {inviteBusy ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} strokeWidth={2.2} />}
@@ -765,7 +765,7 @@ export default function EventDetailClient({
               href={event.ticket_shop_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-violet-600 text-white hover:bg-violet-500 transition"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-primary-bg text-primary-text hover:bg-primary-hover transition"
             >
               <Ticket size={15} /> Tickets kaufen <ExternalLink size={12} />
             </a>
@@ -780,7 +780,7 @@ export default function EventDetailClient({
         event.organizer_org_id ? (
           <Link
             href={`/app/organizer/${event.organizer_org_id}`}
-            className="block rounded-2xl border border-border-subtle bg-surface p-5 hover:border-violet-500/30 hover:bg-elevated/30 transition-colors"
+            className="block rounded-2xl border border-border-subtle bg-surface p-5 hover:border-border-strong hover:bg-elevated/30 transition-colors"
           >
             <p className="text-[12px] text-muted-fg uppercase tracking-wide mb-2">Veranstalter</p>
             <p className="font-semibold">{event.organizer_name}</p>
@@ -853,10 +853,10 @@ function GiveawaySection({
     : null;
 
   return (
-    <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-br from-violet-500/[0.06] to-purple-500/[0.06] p-5 sm:p-6 space-y-4">
+    <div className="rounded-2xl border border-border-strong bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02] p-5 sm:p-6 space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-2xl bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-          <Gift size={20} className="text-violet-400" strokeWidth={2} />
+        <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center flex-shrink-0">
+          <Gift size={20} className="text-muted-fg" strokeWidth={2} />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-heading font-bold">Gewinnspiel</h2>
@@ -866,8 +866,8 @@ function GiveawaySection({
         </div>
       </div>
 
-      <div className="rounded-xl bg-surface/60 border border-violet-500/15 p-4">
-        <p className="text-[11px] font-semibold text-violet-400 uppercase tracking-wider">Gewinn</p>
+      <div className="rounded-xl bg-surface/60 border border-border-subtle p-4">
+        <p className="text-[11px] font-semibold text-foreground uppercase tracking-wider">Gewinn</p>
         <p className="text-[15px] font-semibold mt-1">{giveaway.prize_description}</p>
       </div>
 
@@ -914,11 +914,11 @@ function GiveawaySection({
             <span className="text-[13px] font-semibold">Gewinnspiel beendet</span>
           </div>
           {isWinner ? (
-            <div className="rounded-xl bg-violet-500/10 border border-violet-500/30 p-4 text-center">
-              <Trophy size={24} className="text-violet-400 mx-auto mb-2" />
-              <p className="text-[14px] font-semibold text-violet-300">Du hast gewonnen! 🎉</p>
+            <div className="rounded-xl bg-muted border border-border-strong p-4 text-center">
+              <Trophy size={24} className="text-muted-fg mx-auto mb-2" />
+              <p className="text-[14px] font-semibold text-foreground">Du hast gewonnen! 🎉</p>
               <p className="text-[11px] text-muted-fg mt-1">Verifizierungs-Code:</p>
-              <p className="text-[18px] font-mono font-bold text-violet-300 tracking-widest mt-1">
+              <p className="text-[18px] font-mono font-bold text-foreground tracking-widest mt-1">
                 {isWinner.verification_code}
               </p>
               <p className="text-[10px] text-muted-fg mt-2">
@@ -966,12 +966,12 @@ function EventFeedSection({
             onChange={(e) => onChangeText(e.target.value)}
             placeholder="Update für deine Teilnehmer schreiben…"
             rows={2}
-            className="flex-1 px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-violet-500/40"
+            className="flex-1 px-3 py-2.5 rounded-xl border border-border-subtle bg-elevated text-sm resize-none focus:outline-none focus:border-focus"
           />
           <button
             onClick={onPost}
             disabled={!newPostText.trim() || posting}
-            className="w-10 h-10 rounded-full bg-violet-600 text-white flex items-center justify-center hover:bg-violet-500 disabled:opacity-50 transition-colors flex-shrink-0"
+            className="w-10 h-10 rounded-full bg-primary-bg text-primary-text flex items-center justify-center hover:bg-primary-hover disabled:opacity-50 transition-colors flex-shrink-0"
             aria-label="Posten"
           >
             {posting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
@@ -1032,7 +1032,7 @@ function EventFeedSection({
                       href={post.link_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 text-[11px] text-violet-400 hover:underline"
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] text-foreground hover:underline"
                     >
                       <ExternalLink size={11} /> {post.link_title ?? post.link_url}
                     </a>
@@ -1086,7 +1086,7 @@ function FriendsGoingSection({
   }> = [
     { key: 'confirmed', label: 'dabei', color: 'text-green-500', bg: 'bg-green-500/10 hover:bg-green-500/15 border-green-500/20', icon: CheckCircle2 },
     { key: 'interested', label: 'interessiert', color: 'text-pink-500', bg: 'bg-pink-500/10 hover:bg-pink-500/15 border-pink-500/20', icon: Heart },
-    { key: 'attended', label: 'waren da', color: 'text-violet-400', bg: 'bg-violet-500/10 hover:bg-violet-500/15 border-violet-500/20', icon: Trophy },
+    { key: 'attended', label: 'waren da', color: 'text-foreground', bg: 'bg-foreground/[0.06] hover:bg-foreground/10 border-border-strong', icon: Trophy },
   ];
 
   // Avatar stack: up to 7 participants from the combined list, confirmed
@@ -1099,7 +1099,7 @@ function FriendsGoingSection({
   return (
     <section className="rounded-2xl border border-border-subtle bg-surface p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <Users size={15} className="text-violet-500" strokeWidth={2} />
+        <Users size={15} className="text-muted-fg" strokeWidth={2} />
         <h3 className="text-[13px] font-heading font-semibold">
           {participants.length === 1
             ? '1 Freund von dir'
@@ -1127,7 +1127,7 @@ function FriendsGoingSection({
             <button
               key={key}
               onClick={() => onToggle(key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors ${bg} ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium border transition-colors ${bg} ${
                 isOpen ? 'ring-1 ring-foreground/20' : ''
               }`}
             >

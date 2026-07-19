@@ -67,7 +67,7 @@ export function NotificationsPage() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border border-border-subtle hover:bg-elevated transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium border border-border-subtle hover:bg-elevated transition-colors"
               >
                 <Check size={12} /> Alle gelesen
               </button>
@@ -76,7 +76,7 @@ export function NotificationsPage() {
               onClick={() => {
                 if (confirm('Alle Benachrichtigungen löschen?')) deleteAll();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border border-border-subtle text-muted-fg hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-medium border border-border-subtle text-muted-fg hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/5 transition-colors"
             >
               <Trash2 size={12} /> Alle löschen
             </button>
@@ -154,7 +154,7 @@ function NotificationRow({
   return (
     <div
       className={`group flex items-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 cursor-pointer transition-colors ${
-        !notification.read ? 'bg-violet-500/[0.04] hover:bg-violet-500/[0.07]' : 'hover:bg-elevated/40'
+        !notification.read ? 'bg-foreground/[0.04] hover:bg-foreground/[0.05]' : 'hover:bg-elevated/40'
       }`}
       onClick={onClick}
     >
@@ -170,7 +170,7 @@ function NotificationRow({
             {notification.title}
           </p>
           {!notification.read && (
-            <span className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 flex-shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-foreground mt-1.5 flex-shrink-0" />
           )}
         </div>
         {notification.body && (
@@ -201,7 +201,7 @@ function iconForType(type: string): { icon: typeof Bell; accent: string } {
   switch (type) {
     case 'friend_request':
     case 'friend_accepted':
-      return { icon: UserPlus, accent: 'bg-violet-500/15 text-violet-400' };
+      return { icon: UserPlus, accent: 'bg-muted text-foreground' };
     case 'event_reminder':
       return { icon: Calendar, accent: 'bg-blue-500/15 text-blue-400' };
     case 'event_updated':
@@ -217,12 +217,12 @@ function iconForType(type: string): { icon: typeof Bell; accent: string } {
     case 'event_rsvp':
       return { icon: Heart, accent: 'bg-pink-500/15 text-pink-400' };
     case 'giveaway_won':
-      return { icon: Award, accent: 'bg-violet-500/15 text-violet-400' };
+      return { icon: Award, accent: 'bg-muted text-foreground' };
     case 'lineup_invitation':
-      return { icon: Ticket, accent: 'bg-violet-500/15 text-violet-400' };
+      return { icon: Ticket, accent: 'bg-muted text-foreground' };
     case 'organizer_new_follower':
     case 'org_milestone':
-      return { icon: Users, accent: 'bg-violet-500/15 text-violet-400' };
+      return { icon: Users, accent: 'bg-muted text-foreground' };
     default:
       return { icon: Bell, accent: 'bg-muted text-muted-fg' };
   }

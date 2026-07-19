@@ -10,7 +10,9 @@ export const colors = {
   input: '#FFFFFF',
   destructive: '#B42318',
   category: {
-    music: '#8b5cf6',
+    // `music` used to be an off-palette hue; it falls back to the
+    // neutral secondary text tone.
+    music: '#52524E',
     business: '#3b82f6',
     health: '#22c55e',
     sports: '#f97316',
@@ -53,8 +55,8 @@ export const DARK = {
   textMuted: 'rgba(255,255,255,0.73)',
   inputBg: '#2A2A2A',
   inputBorder: 'rgba(255,255,255,0.22)',
-  buttonPrimaryBg: '#FAFAFA',
-  buttonPrimaryText: '#0A0A0A',
+  buttonPrimaryBg: '#F4F4F5',
+  buttonPrimaryText: '#111114',
   buttonSecondaryBg: '#333333',
   buttonSecondaryText: '#FAFAFA',
 } as const;

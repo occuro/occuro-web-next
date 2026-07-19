@@ -127,8 +127,8 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
               />
               <span className="flex-1 truncate">{item.label}</span>
               {showBadge && (
-                <span className="min-w-[20px] h-[20px] px-1 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-[10px] font-bold text-white leading-none">
+                <span className="min-w-[20px] h-[20px] px-1 rounded-full bg-primary-bg flex items-center justify-center flex-shrink-0">
+                  <span className="text-[10px] font-bold text-primary-text leading-none">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 </span>
@@ -148,7 +148,7 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
           )}
         >
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-violet-500/40 transition-all">
+            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-semibold overflow-hidden ring-2 ring-border-subtle group-hover:ring-border-strong transition-all">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -194,7 +194,7 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
           {/* Mobile unread indicator on the menu button — so users see
               a notification arrived without needing to open the drawer. */}
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-violet-500 ring-2 ring-surface" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-foreground ring-2 ring-surface" />
           )}
         </button>
         <Link href={brandHref} className="flex-1 flex items-center justify-center">

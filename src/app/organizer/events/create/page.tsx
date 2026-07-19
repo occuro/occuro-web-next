@@ -23,9 +23,9 @@ export default function OrganizerCreateEventPage() {
       </div>
 
       {/* Info hint */}
-      <div className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.04] px-4 py-3.5">
-        <p className="text-[12px] text-violet-200/90 leading-relaxed">
-          <strong className="font-semibold text-violet-300">Wie funktioniert das?</strong>{' '}
+      <div className="rounded-2xl border border-border-subtle bg-elevated px-4 py-3.5">
+        <p className="text-[12px] text-secondary-fg leading-relaxed">
+          <strong className="font-semibold text-foreground">Wie funktioniert das?</strong>{' '}
           Als verifizierter Veranstalter erstellst du immer öffentliche Events — sie
           erscheinen in der Entdecken-Seite und auf der Karte für alle Nutzer in der Nähe.
           Deine Follower bekommen automatisch eine Benachrichtigung. Im Event-Chat kannst

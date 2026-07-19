@@ -321,7 +321,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
     return (
       <div className="max-w-3xl mx-auto py-20 text-center text-muted-fg space-y-4">
         <p className="text-sm font-medium">Profil nicht gefunden</p>
-        <Link href="/app/friends" className="inline-flex items-center gap-1 text-[13px] text-violet-400 hover:text-violet-300">
+        <Link href="/app/friends" className="inline-flex items-center gap-1 text-[13px] text-foreground hover:text-muted-fg">
           <ArrowLeft size={13} /> Zurück zu Freunden
         </Link>
         {debugLog.length > 0 && (
@@ -353,7 +353,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
 
       {/* Profile header card — banner + avatar/identity below it */}
       <div className="rounded-2xl border border-border-subtle bg-surface overflow-hidden">
-        <div className="h-32 sm:h-40 bg-gradient-to-br from-violet-500/15 to-purple-600/15 relative">
+        <div className="h-32 sm:h-40 bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02] relative">
           {profile.banner_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.banner_url} alt="" className="w-full h-full object-cover" />
@@ -453,7 +453,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           {profile.interests && profile.interests.length > 0 && (
             <div className="flex gap-1.5 flex-wrap mt-4">
               {profile.interests.slice(0, 12).map((interest) => (
-                <span key={interest} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-foreground/70">
+                <span key={interest} className="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-muted text-foreground/70">
                   {interest}
                 </span>
               ))}
@@ -470,7 +470,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
               <button
                 onClick={openDirectMessage}
                 disabled={messageBusy}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-500 transition-colors disabled:opacity-60"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary-bg text-primary-text text-[13px] font-semibold hover:bg-primary-hover transition-colors disabled:opacity-60"
               >
                 {messageBusy ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />} Nachricht
               </button>
@@ -488,7 +488,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                 <button
                   onClick={sendRequest}
                   disabled={busy}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-500 transition-colors disabled:opacity-50"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary-bg text-primary-text text-[13px] font-semibold hover:bg-primary-hover transition-colors disabled:opacity-50"
                 >
                   {busy ? <Loader2 size={13} className="animate-spin" /> : <UserPlus size={13} />}
                   Hinzufügen
