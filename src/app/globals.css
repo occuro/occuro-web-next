@@ -1,10 +1,11 @@
-/* Zwei Familien: Outfit traegt Ueberschriften und das "occuro"-Wortmark
-   (geometrisch, runde Formen — die Marke bekommt ihr eigenes Gesicht),
-   Inter alles Lesende. `--font-mono` ist ein historischer Token-Name
-   (frueher Space Grotesk) und liefert Inter, damit die bestehenden
-   Aufrufstellen unveraendert weiterlaufen. Gleiche Aufteilung wie in
-   occuroapp/src/theme/fonts.ts. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap');
+/* Outfit ist die durchgehende Schrift — Wortmark, Ueberschriften und
+   Fliesstext. Dieselbe Schrift traegt die Mobile-App (siehe
+   occuroapp/src/theme/fonts.ts), damit Marke und Produkt gleich klingen.
+   --font-heading und --font-mono sind historische Token-Namen und zeigen
+   ebenfalls auf Outfit, damit die bestehenden Aufrufstellen unveraendert
+   weiterlaufen. Gewicht 500 muss im Import bleiben: font-medium wird haeufig
+   benutzt und faellt sonst still auf einen anderen Schnitt zurueck. */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ─── Palette ──────────────────────────────────────────────────────────
@@ -88,12 +89,9 @@
   --color-danger: #EF4444;    /* destruktive aktionen */
   --color-verified: #3B82F6;  /* NUR das verifiziert-badge */
 
-  /* Outfit traegt Ueberschriften und das Wortmark, Inter alles Lesende.
-     --font-mono ist ein historischer Token-Name (frueher Space Grotesk) und
-     liefert bewusst Inter. */
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'Outfit', sans-serif;
   --font-heading: 'Outfit', sans-serif;
-  --font-mono: 'Inter', monospace;
+  --font-mono: 'Outfit', monospace;
 
   /* Squircle radii — the app never uses full rounding on buttons/chips. */
   --radius-btn: 12px;
