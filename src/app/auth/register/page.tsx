@@ -23,6 +23,11 @@ export default function RegisterPage() {
       email,
       password,
       options: {
+        // Ohne emailRedirectTo schickt Supabase den User auf die Site-URL
+        // (die Startseite) statt auf den Callback — die Bestätigung stellt
+        // dann keine Session her. Das Origin kommt aus dem Browser, damit
+        // Preview-Deployments und lokale Entwicklung auf sich selbst zeigen.
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           full_name: fullName,
           user_type: userType,

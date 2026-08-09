@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
@@ -10,6 +10,14 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+
+  // /auth/callback leitet Bestätigungs-Fehler als ?error=… hierher weiter.
+  // Ohne das hier landet der User auf einem ganz normalen Login-Formular und
+  // erfährt nie, warum die Bestätigung nicht geklappt hat.
+  useEffect(() => {
+    const fromCallback = new URLSearchParams(window.location.search).get('error');
+    if (fromCallback) setError(fromCallback);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
