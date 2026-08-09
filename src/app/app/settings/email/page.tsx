@@ -29,7 +29,16 @@ export default function EmailSettingsPage() {
     }
 
     setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({ email: newEmail });
+    // Ohne emailRedirectTo schickt Supabase den User auf die Site URL, also
+    // die nackte Startseite — der Bestätigungslink endete damit wortlos im
+    // Nichts, obwohl der Wechsel serverseitig schon durch war. Der flow-Hinweis
+    // sorgt dafür, dass die Landeseite den richtigen Text zeigt: bei einem
+    // abgelaufenen Link liefert Supabase kein `type` mit, aus dem sie den
+    // Vorgang sonst ableiten könnte.
+    const { error: updateError } = await supabase.auth.updateUser(
+      { email: newEmail },
+      { emailRedirectTo: `${window.location.origin}/auth/confirmed?flow=email_change` },
+    );
     setLoading(false);
 
     if (updateError) {
