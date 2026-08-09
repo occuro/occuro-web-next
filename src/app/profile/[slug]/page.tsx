@@ -100,7 +100,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
         </div>
 
         <div className="pt-6">
-          <p className="text-gray-600 text-xs">occuro — Events entdecken, Momente teilen.</p>
+          <p className="text-gray-600 text-xs">OutNow — Events entdecken, Momente teilen.</p>
         </div>
       </div>
     </div>

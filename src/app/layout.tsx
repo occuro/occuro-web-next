@@ -7,7 +7,7 @@ import type { Profile, Organization } from '@/types/occuro';
 import type { User } from '@supabase/supabase-js';
 
 const SITE_URL = 'https://app.occuroapp.com';
-const SITE_TITLE = 'occuro — Events entdecken, Momente teilen.';
+const SITE_TITLE = 'OutNow — Events entdecken, Momente teilen.';
 const SITE_DESCRIPTION = 'Events entdecken, Tickets kaufen, Freunde treffen. Die Plattform für Veranstalter und Eventbesucher.';
 
 export const metadata: Metadata = {
@@ -15,10 +15,10 @@ export const metadata: Metadata = {
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   manifest: '/manifest.webmanifest',
-  applicationName: 'occuro',
+  applicationName: 'OutNow',
   appleWebApp: {
     capable: true,
-    title: 'occuro',
+    title: 'OutNow',
     statusBarStyle: 'black-translucent',
   },
   icons: {
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: SITE_URL,
-    siteName: 'occuro',
+    siteName: 'OutNow',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     locale: 'de_DE',

@@ -52,7 +52,7 @@ export default function SettingsPage() {
       items: [
         { label: 'Hilfe & Support', icon: HelpCircle, href: '/app/settings/help' },
         { label: 'AGB & Rechtliches', icon: FileText, href: '/app/settings/legal' },
-        { label: 'Über occuro', subtitle: 'Version 1.0.6', icon: Info, href: '/app/settings/about' },
+        { label: 'Über OutNow', subtitle: 'Version 1.0.6', icon: Info, href: '/app/settings/about' },
       ],
     },
     {

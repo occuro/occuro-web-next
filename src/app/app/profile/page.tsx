@@ -557,8 +557,8 @@ function ShareProfileButton({
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
       try {
         await navigator.share({
-          title: profile?.full_name ?? 'occuro Profil',
-          text: `Schau dir ${profile?.full_name ?? 'mein Profil'} auf occuro an`,
+          title: profile?.full_name ?? 'OutNow Profil',
+          text: `Schau dir ${profile?.full_name ?? 'mein Profil'} auf OutNow an`,
           url: profileUrl,
         });
       } catch (err) {

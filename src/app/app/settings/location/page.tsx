@@ -26,7 +26,7 @@ export default function LocationSettingsPage() {
   }
 
   return (
-    <SettingsShell title="Standort" description="Verwalte, wie occuro deinen Standort verwendet.">
+    <SettingsShell title="Standort" description="Verwalte, wie OutNow deinen Standort verwendet.">
       <SettingsCard>
         <SettingsRow
           icon={MapPin}

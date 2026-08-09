@@ -439,8 +439,8 @@ function ShareOrgButton({ organization }: { organization: ReturnType<typeof useA
     if ('share' in navigator) {
       try {
         await navigator.share({
-          title: organization?.name ?? 'occuro Veranstalter',
-          text: `Schau dir ${organization?.name ?? 'diesen Veranstalter'} auf occuro an`,
+          title: organization?.name ?? 'OutNow Veranstalter',
+          text: `Schau dir ${organization?.name ?? 'diesen Veranstalter'} auf OutNow an`,
           url: orgUrl,
         });
         return;

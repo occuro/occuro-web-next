@@ -34,7 +34,7 @@ const SUCCESS: Record<Flow, { title: string; body: string; cta: string; href: st
     // verschweigen, sonst wundert sich der User über die zweite Mail.
     title: 'E-Mail-Adresse bestätigt',
     body: 'Falls du zwei Bestätigungsmails bekommen hast, öffne auch den Link in der zweiten — der Wechsel wird erst dann wirksam.',
-    cta: 'Zu occuro',
+    cta: 'Zu OutNow',
     href: '/app',
   },
   recovery: {

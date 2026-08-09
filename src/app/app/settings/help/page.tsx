@@ -16,7 +16,7 @@ export default function HelpSettingsPage() {
         <SettingsRow
           icon={Bug}
           label="Bug melden"
-          subtitle="Hilf uns, occuro besser zu machen."
+          subtitle="Hilf uns, OutNow besser zu machen."
           onClick={() => { window.location.href = 'mailto:support@occuroapp.com?subject=Bug%20Report'; }}
         />
       </SettingsCard>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { OccuroRingLogo } from '@/components/occuro-ring-logo';
 import { InteractiveGrid } from '@/components/interactive-grid';
 import { useEffect } from 'react';
+import { OutNowWordmark } from '@/components/outnow-wordmark';
 
 export default function LandingPage() {
   const { user, userType, loading } = useAuth();
@@ -20,7 +21,7 @@ export default function LandingPage() {
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
-        <div className="animate-pulse text-3xl font-heading font-bold tracking-tight">occuro</div>
+        <div className="animate-pulse"><OutNowWordmark size={30} layout="stacked" /></div>
         <button
           onClick={() => { localStorage.clear(); window.location.reload(); }}
           className="mt-4 px-4 py-2 text-xs text-muted-fg hover:text-foreground transition-colors"
@@ -40,7 +41,7 @@ export default function LandingPage() {
           returning users. Registrieren is the primary CTA in the hero
           below to avoid duplicate buttons (Apple/Linear/Notion pattern). */}
       <header className="relative z-10 flex items-center justify-between px-8 lg:px-12 py-5" data-grid-exclude>
-        <h1 className="text-xl font-heading font-bold tracking-tight">occuro</h1>
+        <h1><OutNowWordmark size={20} layout="row" /></h1>
         <Link
           href="/auth/login"
           className="px-4 py-2 text-[13px] font-medium text-foreground/60 hover:text-foreground transition-colors"

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { OutNowWordmark } from '@/components/outnow-wordmark';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -88,8 +89,8 @@ export default function LoginPage() {
     <div className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[380px] animate-fade-in">
         <div className="text-center mb-10">
-          <Link href="/" className="text-2xl font-heading font-bold tracking-tight hover:opacity-70 transition-opacity">
-            occuro
+          <Link href="/" className="inline-block hover:opacity-70 transition-opacity">
+            <OutNowWordmark size={26} layout="stacked" />
           </Link>
           <p className="mt-2 text-sm text-muted-fg">Willkommen zurück</p>
         </div>

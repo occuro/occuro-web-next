@@ -5,12 +5,12 @@ import { Globe, Mail, FileText, Code2, Heart } from 'lucide-react';
 
 export default function AboutSettingsPage() {
   return (
-    <SettingsShell title="Über occuro">
+    <SettingsShell title="Über OutNow">
       <div className="text-center py-8 space-y-3">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-muted">
           <Heart size={28} className="text-muted-fg" strokeWidth={2} />
         </div>
-        <h2 className="text-xl font-heading font-bold tracking-tight">occuro</h2>
+        <h2 className="text-xl font-heading font-bold tracking-tight">OutNow</h2>
         <p className="text-sm text-muted-fg">Version 1.0.6 · WebApp</p>
       </div>
 

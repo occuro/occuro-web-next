@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'occuro — Events entdecken, Momente teilen.';
+export const alt = 'OutNow — Events entdecken, Momente teilen.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -47,7 +47,7 @@ function OccuroRing({ cx, cy, radius, dotSize }: { cx: number; cy: number; radiu
 }
 
 export default async function OpengraphImage() {
-  const wordmarkText = 'occuro';
+  const wordmarkText = 'OutNow';
   const taglineText = 'Events entdecken, Momente teilen.';
 
   const [interBold, interRegular] = await Promise.all([

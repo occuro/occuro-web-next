@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { OutNowWordmark } from '@/components/outnow-wordmark';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -66,7 +67,7 @@ export default function RegisterPage() {
     <div className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <Link href="/" className="text-3xl font-heading font-bold">occuro</Link>
+          <Link href="/" className="inline-block hover:opacity-70 transition-opacity"><OutNowWordmark size={28} layout="stacked" /></Link>
           <p className="mt-3 text-muted-fg">Erstelle dein Konto</p>
         </div>
 

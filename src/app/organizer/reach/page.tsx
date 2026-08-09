@@ -203,7 +203,7 @@ export default function ReachPage() {
               onClick={async () => {
                 const url = `${window.location.origin}/organizer/profile`;
                 if (navigator.share) {
-                  try { await navigator.share({ title: 'occuro', url }); } catch {}
+                  try { await navigator.share({ title: 'OutNow', url }); } catch {}
                 } else {
                   try {
                     await navigator.clipboard.writeText(url);
