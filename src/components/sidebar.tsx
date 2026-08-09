@@ -94,9 +94,14 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
           <span className="group-hover:opacity-70 transition-opacity">
             <OutNowWordmark size={20} layout="row" />
           </span>
-          <p className="text-[11px] font-medium text-muted-fg mt-0.5 uppercase tracking-widest">
-            {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
-          </p>
+          {/* Nur im Veranstalter-Bereich: dort benennt die Zeile, in welchem
+              Modus man steckt. Fuer Nutzer stand hier "Entdecken" — dasselbe
+              Wort wie der erste Menuepunkt gleich darunter. */}
+          {variant === 'organizer' ? (
+            <p className="text-[11px] font-medium text-muted-fg mt-0.5 uppercase tracking-widest">
+              Veranstalter
+            </p>
+          ) : null}
         </Link>
       </div>
 
