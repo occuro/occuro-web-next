@@ -8,15 +8,17 @@ import { createClient } from '@/lib/supabase/server';
 //   2. We exchange the code for a session (sets httpOnly cookies)
 //   3. Redirect to /app for individuals, /organizer for organizations
 //
-// Zwei Fälle können hier keine Session herstellen, sind aber trotzdem
-// erfolgreiche Bestätigungen — der Token wurde schon in Supabases
-// /auth/v1/verify eingelöst, bevor der User hier ankommt:
-//   · Registrierung in der Mobile-App: der PKCE-Verifier liegt im
-//     App-Speicher, nicht in diesem Browser, der Tausch schlägt zwangsläufig fehl.
-//   · Supabase liefert das Ergebnis nur als URL-Fragment (#access_token /
-//     #error) — ein Fragment erreicht den Server nie, hier kommt also
-//     überhaupt kein Code an.
-// Beide landen auf /auth/confirmed, das den Fragment-Teil im Client auswertet.
+// Registrierungen aus der Mobile-App landen hier ebenfalls, können aber
+// keine Session herstellen: der PKCE-Verifier liegt im App-Speicher, nicht
+// in diesem Browser, der Tausch schlägt also zwangsläufig fehl. Die Mail
+// ist zu dem Zeitpunkt trotzdem schon bestätigt — Supabases /auth/v1/verify
+// hat den Token eine Station vorher eingelöst. Dieser Fall geht deshalb auf
+// /auth/confirmed statt auf eine Fehlermeldung.
+//
+// Aufrufe OHNE ?code erreichen diesen Handler im Normalfall gar nicht: ein
+// beforeFiles-Rewrite in next.config.ts rendert dafür direkt /auth/confirmed,
+// damit ein Ergebnis-Fragment (#error=…) nicht von einem Redirect abhängt.
+// Die Zweige unten bleiben als Absicherung, falls der Rewrite mal nicht greift.
 //
 // Bei echten Fehlern geht es zur Login-Seite mit error-Query, damit der User
 // eine Meldung sieht statt einer 404.

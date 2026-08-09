@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["GT3SX6ZKWD.com.occuro.app"],
+        "components": [
+          { "/": "/auth/*", "exclude": true, "comment": "Supabase-Bestaetigungslinks muessen im Browser bleiben - die App hat keine /auth-Route und kann die Browser-Session nicht abschliessen" },
+          { "/": "/event/*", "comment": "Event deep links" },
+          { "/": "/profile/*", "comment": "Profile deep links" },
+          { "/": "/invite/*", "comment": "Invite deep links" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["GT3SX6ZKWD.com.occuro.app"]
+  }
+}

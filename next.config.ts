@@ -12,6 +12,62 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // ── Apple App Site Association ─────────────────────────────────
+  // Universal Links für app.occuroapp.com. Share-Links der App zeigen
+  // hierher (EXPO_PUBLIC_WEB_BASE_URL), und app.json deklariert sowohl
+  // `applinks:app.occuroapp.com` als auch `webcredentials:` — ohne diese
+  // Datei öffnet iOS die Links im Browser statt in der App und die
+  // Passwort-Autofill-Verknüpfung greift nicht.
+  //
+  // Apple ist bei zwei Dingen streng: die Datei MUSS als application/json
+  // ausgeliefert werden, und der Pfad MUSS exakt
+  // /.well-known/apple-app-site-association ohne Dateiendung sein. Die
+  // Datei liegt deshalb in public/.well-known/ und bekommt ihren
+  // Content-Type hier. Headers werden vor dem Dateisystem geprüft und
+  // treffen damit auch statische Dateien.
+  //
+  // Apples CDN folgt beim Abholen KEINEN Redirects — die Datei muss also
+  // unter genau diesem Host direkt antworten.
+  async headers() {
+    return [
+      {
+        source: '/.well-known/apple-app-site-association',
+        headers: [
+          { key: 'Content-Type', value: 'application/json' },
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
+        ],
+      },
+    ];
+  },
+
+  // ── Bestätigungslinks ohne Code ────────────────────────────────
+  // Supabase liefert das Ergebnis einer Bestätigung bei einigen Flows nur
+  // als URL-Fragment (#error=…). Ein Fragment erreicht den Server nie, also
+  // kommt hier eine nackte /auth/callback ohne ?code an.
+  //
+  // Ein Redirect auf /auth/confirmed würde funktionieren, aber nur weil
+  // Browser das Fragment über den 3xx hinweg mitschleppen. Ein Rewrite
+  // rendert /auth/confirmed direkt unter der aufgerufenen URL — das
+  // Fragment bleibt unangetastet, ganz ohne diese Annahme.
+  //
+  // `beforeFiles` ist nötig, weil der Route-Handler unter
+  // src/app/auth/callback/route.ts eine Dateisystem-Route ist und sonst
+  // gewinnen würde. Mit `?code=` greift der Rewrite nicht und der
+  // Handler tauscht den Code wie bisher gegen eine Session.
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/auth/callback',
+          missing: [{ type: 'query', key: 'code' }],
+          destination: '/auth/confirmed',
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
+
 
   // ── Version Skew Protection ────────────────────────────────────
   // When we deploy a new build while a user is mid-session, the user's
