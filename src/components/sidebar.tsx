@@ -12,6 +12,7 @@ import {
   UserCheck, LogOut, Home, ChevronRight, Menu, X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { OutNowWordmark } from '@/components/outnow-wordmark';
 
 interface NavItem {
   label: string;
@@ -90,8 +91,8 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
       {/* Logo */}
       <div className="px-6 py-6">
         <Link href={brandHref} className="group flex flex-col">
-          <span className="text-xl font-heading font-bold tracking-tight group-hover:opacity-70 transition-opacity">
-            occuro
+          <span className="group-hover:opacity-70 transition-opacity">
+            <OutNowWordmark size={20} layout="row" />
           </span>
           <p className="text-[11px] font-medium text-muted-fg mt-0.5 uppercase tracking-widest">
             {variant === 'organizer' ? 'Veranstalter' : 'Entdecken'}
@@ -198,7 +199,7 @@ export function Sidebar({ variant }: { variant: 'user' | 'organizer' }) {
           )}
         </button>
         <Link href={brandHref} className="flex-1 flex items-center justify-center">
-          <span className="text-lg font-heading font-bold tracking-tight">occuro</span>
+          <OutNowWordmark size={17} layout="row" />
         </Link>
         <Link
           href={profileHref}

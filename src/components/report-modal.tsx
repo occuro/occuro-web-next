@@ -19,7 +19,7 @@ interface ReportModalProps {
 
 const REASONS_BY_TYPE: Record<ReportTarget, { value: string; label: string; description: string }[]> = {
   event: [
-    { value: 'event_violation', label: 'Verstoß gegen Richtlinien', description: 'Illegal, gefährlich oder gegen die occuro-Regeln' },
+    { value: 'event_violation', label: 'Verstoß gegen Richtlinien', description: 'Illegal, gefährlich oder gegen die OutNow-Regeln' },
     { value: 'spam', label: 'Spam', description: 'Wiederholte oder irreführende Inhalte' },
     { value: 'misleading', label: 'Irreführend', description: 'Falsche oder veraltete Informationen' },
     { value: 'inappropriate', label: 'Unangemessener Inhalt', description: 'Beleidigend, hasserfüllt oder nicht für alle geeignet' },
@@ -27,7 +27,7 @@ const REASONS_BY_TYPE: Record<ReportTarget, { value: string; label: string; desc
     { value: 'other', label: 'Sonstiges', description: 'Etwas anderes — bitte beschreibe es unten' },
   ],
   profile: [
-    { value: 'profile_violation', label: 'Verstoß gegen Richtlinien', description: 'Illegal oder gegen die occuro-Regeln' },
+    { value: 'profile_violation', label: 'Verstoß gegen Richtlinien', description: 'Illegal oder gegen die OutNow-Regeln' },
     { value: 'fake_profile', label: 'Fake-Profil', description: 'Identitätsdiebstahl oder erfundene Person' },
     { value: 'harassment', label: 'Belästigung', description: 'Belästigt mich oder andere Nutzer' },
     { value: 'inappropriate', label: 'Unangemessener Inhalt', description: 'Beleidigend oder hasserfüllt' },

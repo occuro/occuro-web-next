@@ -119,7 +119,7 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <div className="pt-4">
-          <p className="text-gray-600 text-xs">occuro — Events entdecken, Momente teilen.</p>
+          <p className="text-gray-600 text-xs">OutNow — Events entdecken, Momente teilen.</p>
         </div>
       </div>
     </div>
