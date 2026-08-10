@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, Download, ExternalLink, Globe } from 'lucide-react';
+import { eventImageUrl } from '@/lib/eventImages';
 
 const APP_STORE_URL = 'https://apps.apple.com/app/occuro/id6760317905';
 const APP_SCHEME = 'occuro://';
@@ -55,7 +56,9 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
     return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-white/70 border-t-transparent rounded-full animate-spin" /></div>;
   }
 
-  const bannerUrl = event?.banner_url ?? event?.image_url ?? null;
+  // Gleiche Kette wie ueberall sonst: eigenes Banner, eigenes Bild, sonst
+  // keins. Diese Seite erzeugt auch das Vorschaubild geteilter Links.
+  const bannerUrl = event ? eventImageUrl(event) : null;
   const formattedDate = event?.date
     ? new Date(event.date).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
     : null;

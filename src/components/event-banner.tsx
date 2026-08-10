@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Event } from '@/types/occuro';
+import { eventImageUrl } from '@/lib/eventImages';
 
 // Pick the icon that best represents an event — subcategory is most
 // specific, then event_type, then the broad category. Mirrors the
@@ -247,7 +248,10 @@ export function EventBanner({
   showText?: boolean;
   className?: string;
 }) {
-  const url = event.banner_url ?? event.image_url ?? null;
+  // Eigenes Banner, ersatzweise eigenes Bild, sonst keins — dieselbe Kette
+  // wie in der Mobile-App, damit dasselbe Event dort und hier gleich
+  // aussieht. Ohne eigenes Bild uebernimmt das gezeichnete Muster unten.
+  const url = eventImageUrl(event);
   if (url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element

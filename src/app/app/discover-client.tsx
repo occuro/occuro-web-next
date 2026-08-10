@@ -7,6 +7,7 @@ import type { Event } from '@/types/occuro';
 import { formatDate, formatTime, getCategoryColor } from '@/lib/utils';
 import Link from 'next/link';
 import { EventBanner } from '@/components/event-banner';
+import { TAXONOMY_CATEGORIES, categoryLabel } from '@/lib/taxonomy';
 import {
   Search, Heart, CheckCircle2, MapPin, Clock, Calendar,
   ArrowUpDown, X, Sparkles, CalendarPlus,
@@ -73,10 +74,10 @@ export default function DiscoverClient({
   const [visibleCount, setVisibleCount] = useState(12);
   const supabase = createClient();
 
-  const categories = [
-    'Music', 'Business', 'Health', 'Sports', 'Education',
-    'Art', 'Food', 'Technology', 'Community', 'Outdoor',
-  ];
+  // Aus der gemeinsamen Taxonomie statt inline. Die frühere Liste hier wich
+  // von der im Event-Formular ab ('Art' vs. 'Art & Culture') — ein so
+  // angelegtes Event war über den Filter gar nicht auffindbar.
+  const categories = TAXONOMY_CATEGORIES;
 
   useEffect(() => {
     fetchEvents();

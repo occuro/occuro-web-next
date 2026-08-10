@@ -10,6 +10,7 @@ import {
   Save, Loader2, AlertTriangle, Check, Trash2, Calendar, UserPlus, Users,
 } from 'lucide-react';
 import type { Event } from '@/types/occuro';
+import { TAXONOMY_CATEGORIES, TAXONOMY_SUBCATEGORIES, categoryLabel } from '@/lib/taxonomy';
 
 interface FriendOption {
   id: string;
@@ -22,29 +23,11 @@ interface FriendOption {
 // written to events.category match across both clients. Mismatching
 // labels would split events across two effective taxonomies and break
 // filtering.
-const CATEGORIES = [
-  'Music', 'Business', 'Health', 'Sports', 'Education',
-  'Art & Culture', 'Food & Drink', 'Technology', 'Community', 'Outdoor',
-];
-
-const SUBCATEGORIES: Record<string, string[]> = {
-  Music: ['Techno', 'House', 'Rock', 'Pop', 'Jazz', 'Hip Hop', 'Electronic', 'Indie'],
-  Business: ['Networking', 'Workshop', 'Conference', 'Startup', 'Marketing'],
-  Health: ['Yoga', 'Meditation', 'Wellness', 'Fitness', 'Mental Health'],
-  Sports: ['Football', 'Tennis', 'Running', 'Basketball', 'Swimming'],
-  Education: ['Seminar', 'Training', 'Course', 'Lecture', 'Masterclass'],
-  'Art & Culture': ['Exhibition', 'Theater', 'Movie', 'Gallery', 'Comedy'],
-  'Food & Drink': ['Wine Tasting', 'Cooking', 'Food Festival', 'Brunch'],
-  Technology: ['Hackathon', 'Meetup', 'Tech Talk', 'AI & ML', 'Coding'],
-  Community: ['Volunteering', 'Neighborhood', 'Social Gathering'],
-  Outdoor: ['Hiking', 'Camping', 'Picnic', 'BBQ'],
-};
-
-const EVENT_TYPES = [
-  'Festival', 'Concert', 'Party', 'Workshop', 'Conference',
-  'Trade Show', 'Seminar', 'Networking', 'Exhibition', 'Tournament',
-  'Lecture', 'Meetup', 'Retreat', 'Gala', 'Premiere', 'Other',
-];
+// Aus der gemeinsamen Taxonomie — vorher standen hier eigene Listen, die von
+// denen im Filter abwichen. Der Event-Typ ist abgeschafft: er hat die
+// Kategorie dupliziert und war die Hauptquelle widersprüchlicher Daten.
+const CATEGORIES = TAXONOMY_CATEGORIES;
+const SUBCATEGORIES = TAXONOMY_SUBCATEGORIES;
 
 interface EventFormProps {
   /**
@@ -88,7 +71,8 @@ export function EventForm({
     longitude: initialEvent?.longitude ?? null as number | null,
     category: initialEvent?.category ?? 'Music',
     subcategory: initialEvent?.subcategory ?? '',
-    event_type: initialEvent?.event_type ?? 'Concert',
+    // Abgeschafft — wird nicht mehr gesetzt, damit die Spalte leer bleibt.
+    event_type: '',
     visibility: (isIndividual ? 'private' : (initialEvent?.visibility ?? 'public')) as 'public' | 'private',
     website: initialEvent?.website ?? '',
     ticket_shop_url: initialEvent?.ticket_shop_url ?? '',
@@ -273,7 +257,7 @@ export function EventForm({
       longitude: resolvedLng,
       category: form.category,
       subcategory: form.subcategory.trim() || null,
-      event_type: form.event_type,
+      event_type: null,
       max_participants: 0, // No participant cap — invitations / ticketing handle this
       visibility: isIndividual ? 'private' : 'public',
       website: form.website.trim() || null,
@@ -676,17 +660,6 @@ export function EventForm({
               className="input"
             />
           )}
-        </Field>
-        <Field label="Event-Typ">
-          <select
-            value={form.event_type}
-            onChange={(e) => update('event_type', e.target.value)}
-            className="input"
-          >
-            {EVENT_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
         </Field>
       </div>
 
