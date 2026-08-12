@@ -2,6 +2,7 @@
 
 import { SettingsShell, SettingsCard, SettingsRow } from '@/components/settings-shell';
 import { Globe, Mail, FileText, Code2, Heart } from 'lucide-react';
+import { APP_VERSION } from '@/lib/version';
 
 export default function AboutSettingsPage() {
   return (
@@ -11,7 +12,7 @@ export default function AboutSettingsPage() {
           <Heart size={28} className="text-muted-fg" strokeWidth={2} />
         </div>
         <h2 className="text-xl font-heading font-bold tracking-tight">OutNow</h2>
-        <p className="text-sm text-muted-fg">Version 1.0.6 · WebApp</p>
+        <p className="text-sm text-muted-fg">Version {APP_VERSION} · WebApp</p>
       </div>
 
       <SettingsCard title="Über uns">

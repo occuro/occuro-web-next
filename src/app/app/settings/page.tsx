@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { APP_VERSION } from '@/lib/version';
 import {
   Globe, Bell, Shield, MapPin, UserX, Lock, Mail,
   HelpCircle, FileText, Info, LogOut, Trash2, ChevronRight,
@@ -52,7 +53,7 @@ export default function SettingsPage() {
       items: [
         { label: 'Hilfe & Support', icon: HelpCircle, href: '/app/settings/help' },
         { label: 'AGB & Rechtliches', icon: FileText, href: '/app/settings/legal' },
-        { label: 'Über OutNow', subtitle: 'Version 1.0.6', icon: Info, href: '/app/settings/about' },
+        { label: 'Über OutNow', subtitle: `Version ${APP_VERSION}`, icon: Info, href: '/app/settings/about' },
       ],
     },
     {
