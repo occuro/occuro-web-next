@@ -97,10 +97,30 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
     mapRef.current.fitBounds(bounds, { padding: 60, duration: 600, maxZoom: 12 });
   }, [events, selected]);
 
-  // Fly to selected — also fires when the map first becomes available
-  // (handles the deeplink race where selected was set before mount).
+  /**
+   * EIN KLICK AUF EINEN PIN BEWEGT DIE KARTE NICHT.
+   *
+   * Vorher flog sie auf die feste Zoomstufe 13 — egal, wie weit man
+   * herausgezoomt hatte. Der Ueberblick, den man sich gerade verschafft
+   * hatte, war damit jedes Mal weg. Apple Maps, Google Maps und Airbnb
+   * halten es alle anders: auswaehlen, Infos zeigen, Zoom stehen lassen.
+   *
+   * Dieselbe Aenderung ist in der Mobil-App gemacht — beide sollen sich
+   * gleich anfuehlen.
+   *
+   * Hineinzoomen ist eine eigene Geste: derselbe Pin ein zweites Mal
+   * (siehe onClick am Marker).
+   *
+   * Ausnahme bleibt der Deeplink-Fall: Wird ein Event ueber die Adresszeile
+   * geoeffnet, weiss die Karte noch nichts von ihm und muss hinfahren.
+   */
+  const zuletztGeflogen = useRef<string | null>(null);
   useEffect(() => {
     if (!mapRef.current || !selected) return;
+    // Nur beim ERSTEN Mal hinfliegen — das ist der Deeplink-Fall. Danach
+    // kommt die Auswahl vom Klick, und der soll nichts bewegen.
+    if (zuletztGeflogen.current !== null) return;
+    zuletztGeflogen.current = selected.id;
     mapRef.current.flyTo({
       center: [selected.longitude!, selected.latitude!],
       zoom: 13,
@@ -108,6 +128,17 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
       essential: true,
     });
   }, [selected]);
+
+  /** Zweiter Klick auf denselben Pin: eine Stufe naeher, zentriert auf ihn. */
+  function zoomeAufPin(lat: number, lng: number) {
+    const map = mapRef.current;
+    if (!map) return;
+    map.easeTo({
+      center: [lng, lat],
+      zoom: Math.min(18, (map.getZoom?.() ?? 12) + 1.5),
+      duration: 400,
+    });
+  }
 
   function flyToLocation(lat: number, lng: number) {
     didLocateUserRef.current = true; // suppress auto-fit-to-events
@@ -130,7 +161,10 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
       >
         <NavigationControl position="top-right" />
         {events.map((event) => {
-          const color = getCategoryColor(event.category);
+          // Dieselbe Farbe wie in der App (PIN_COLOR). Vorher war es die
+          // Kategoriefarbe — auf der Karte wurde daraus ein Farbteppich, und
+          // App und Web sahen unterschiedlich aus.
+          const color = '#FF3B30';
           const isSelected = selected?.id === event.id;
           return (
             <Marker
@@ -140,11 +174,18 @@ export function MapLibreFallback({ events, selected, onSelect, skipAutoLocate }:
               anchor="bottom"
               onClick={(e) => {
                 e.originalEvent.stopPropagation();
-                onSelect(event);
+                // Erster Klick waehlt aus, zweiter faehrt auf den Pin zu —
+                // wie in der Mobil-App.
+                if (isSelected) zoomeAufPin(event.latitude!, event.longitude!);
+                else onSelect(event);
               }}
             >
+              {/* Die durchsichtige Polsterung bringt die Klickflaeche auf
+                  ueber 44 px — Apples Mindestmass fuer alles Antippbare, und
+                  auf dem Telefon auch hier spuerbar. */}
               <button
-                className="group relative cursor-pointer"
+                aria-label={event.title}
+                className="group relative cursor-pointer p-1.5"
                 style={{ transform: isSelected ? 'translateY(-2px)' : undefined }}
               >
                 <div
