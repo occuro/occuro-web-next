@@ -1,50 +1,79 @@
 import type { CSSProperties } from 'react';
 import {
-  Beer, Disc3, Dumbbell, Guitar, HeartPulse, Mic2, Music, Music2,
-  PartyPopper, Skull, Sparkles, Theater, TreePine, Trophy, Users,
-  UtensilsCrossed,
+  Beer, Disc3, Drama, Dumbbell, FerrisWheel, Gift, GraduationCap, Guitar,
+  HeartPulse, Mountain, Music, Music2, Palette, PartyPopper, Skull, Sparkles,
+  Store, Theater, TreePine, Trophy, Users, UtensilsCrossed, Wine,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Event } from '@/types/occuro';
 import { eventImageUrl } from '@/lib/eventImages';
 
-// Pick the icon that best represents an event — subcategory is most
-// specific, then event_type, then the broad category. Mirrors the
-// mapping in occuroapp/src/components/EventImagePlaceholder.tsx.
+/**
+ * Das Symbol, das ein Event ohne eigenes Bild traegt.
+ *
+ * Zeichengleich zur App (occuroapp/src/components/EventImagePlaceholder.tsx)
+ * — dasselbe Event soll hier und dort dasselbe Zeichen tragen.
+ *
+ * Die Zuordnung stammte aus der Zeit vor dem Taxonomie-Umbau und prueft auf
+ * englische Werte ('music', 'food', 'culture') sowie auf den Event-Typ, den
+ * es nicht mehr gibt. Von 221 Events bekamen damit nur 64 ein Symbol.
+ *
+ * Reihenfolge: Unterkategorie vor Kategorie — ein Christkindlmarkt verdient
+ * ein anderes Zeichen als ein Flohmarkt, obwohl beide "Market" sind.
+ */
 function getBannerIcon(
   category?: string | null,
   subcategory?: string | null,
   eventType?: string | null,
 ): LucideIcon | null {
   const sub = (subcategory ?? '').toLowerCase();
-  const type = (eventType ?? '').toLowerCase();
   const cat = (category ?? '').toLowerCase();
+  const type = (eventType ?? '').toLowerCase();
 
-  if (sub.includes('techno') || sub.includes('house') || sub.includes('electronic')) return Disc3;
+  // ── Unterkategorie ────────────────────────────────────────────────
+  if (sub.includes('christkindl') || sub.includes('weihnacht')) return Gift;
+  if (sub.includes('floh') || sub.includes('handwerker') || sub.includes('wochenmarkt')) return Store;
+  if (sub.includes('volksfest') || sub.includes('dult') || sub.includes('kirchweih')) return FerrisWheel;
+  if (sub.includes('schuetzen') || sub.includes('schützen') || sub.includes('erntedank')) return Beer;
+  if (sub.includes('techno') || sub.includes('house') || sub.includes('club')) return Disc3;
   if (sub.includes('rock')) return Guitar;
   if (sub.includes('metal')) return Skull;
-  if (sub.includes('pop')) return Music;
-  if (sub.includes('hip') || sub.includes('hop')) return Mic2;
-  if (sub.includes('jazz')) return Music2;
-  if (sub.includes('classical') || sub.includes('orchestra')) return Music2;
-  if (sub.includes('indie')) return Music;
-  if (sub.includes('yoga') || sub.includes('meditation') || sub.includes('wellness') || sub.includes('mental')) return Sparkles;
+  if (sub.includes('klassik') || sub.includes('classical') || sub.includes('jazz')) return Music2;
+  if (sub.includes('schlager') || sub.includes('volksmusik')) return Music;
+  if (sub.includes('pop') || sub.includes('indie') || sub.includes('hip')) return Music;
+  if (sub.includes('kabarett') || sub.includes('comedy') || sub.includes('lesung')) return Drama;
+  if (sub.includes('theater') || sub.includes('oper') || sub.includes('musical')) return Theater;
+  if (sub.includes('wein') || sub.includes('bier') || sub.includes('verkostung')) return Wine;
+  if (sub.includes('kulinarik') || sub.includes('streetfood')) return UtensilsCrossed;
+  if (sub.includes('wander') || sub.includes('camping') || sub.includes('picknick')) return Mountain;
+  if (sub.includes('lauf') || sub.includes('turnier') || sub.includes('fußball') || sub.includes('fussball')) return Trophy;
+  if (sub.includes('ausstellung') || sub.includes('galerie') || sub.includes('museum') || sub.includes('vernissage')) return Palette;
+  if (sub.includes('seminar') || sub.includes('workshop') || sub.includes('vortrag') || sub.includes('konferenz')) return GraduationCap;
+  if (sub.includes('yoga') || sub.includes('wellness')) return Sparkles;
   if (sub.includes('fitness')) return Dumbbell;
-  if (sub.includes('football') || sub.includes('soccer') || sub.includes('basketball') || sub.includes('tennis')) return Trophy;
-  if (sub.includes('traditional')) return Beer;
-  if (sub.includes('theater') || sub.includes('theatre')) return Theater;
 
-  if (type === 'volksfest') return Beer;
+  // ── Kategorie ─────────────────────────────────────────────────────
+  if (cat === 'funfair') return FerrisWheel;
+  if (cat === 'market') return Store;
+  if (cat === 'concert') return Music;
+  if (cat === 'festival') return PartyPopper;
+  if (cat === 'nightlife') return Disc3;
+  if (cat === 'stage') return Theater;
+  if (cat === 'art') return Palette;
+  if (cat === 'sports') return Trophy;
+  if (cat === 'food & drink') return UtensilsCrossed;
+  if (cat === 'community') return Users;
+  if (cat === 'education') return GraduationCap;
+  if (cat === 'outdoor') return TreePine;
+
+  // ── Altdaten ──────────────────────────────────────────────────────
+  if (type === 'volksfest') return FerrisWheel;
   if (type === 'festival') return PartyPopper;
   if (type === 'party') return Disc3;
   if (type === 'concert') return Music;
-
   if (cat === 'music') return Music;
-  if (cat === 'sports') return Trophy;
   if (cat === 'health' || cat === 'wellness') return HeartPulse;
   if (cat === 'food' || cat === 'kulinarik') return UtensilsCrossed;
-  if (cat === 'outdoor') return TreePine;
-  if (cat === 'community') return Users;
   if (cat === 'culture') return Sparkles;
 
   return null;
