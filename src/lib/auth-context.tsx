@@ -115,6 +115,19 @@ export function AuthProvider({
   const [loading, setLoading] = useState(!initialUser);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [supabase] = useState(() => createClient());
+
+  /**
+   * Die zuletzt bekannte Sitzung.
+   *
+   * WARUM NICHT `getSession()` FRAGEN: Der Supabase-Client nimmt dafuer ein
+   * Schloss ueber die LockManager-API des Browsers. Haelt ein anderer Tab
+   * oder eine haengende Aktualisierung dieses Schloss, blockiert der Aufruf
+   * — nicht Sekunden, sondern unbegrenzt.
+   *
+   * `onAuthStateChange` liefert dieselbe Sitzung frei Haus und ohne Schloss.
+   * Wer sie mitschreibt, muss nie fragen.
+   */
+  const sitzungRef = useRef<{ userId: string | null }>({ userId: initialUser?.id ?? null });
   // Distinguishes user-initiated logouts from SDK-initiated ones. The
   // Supabase SDK fires SIGNED_OUT for both "user clicked logout" AND
   // "token refresh failed transiently" — the second case is what
@@ -184,8 +197,8 @@ export function AuthProvider({
       // Kick a delayed refetch if that happened.
       setTimeout(() => {
         void (async () => {
-          const { data } = await supabase.auth.getSession();
-          const uid = data.session?.user?.id;
+          // Aus dem Ref, nicht ueber getSession — siehe sitzungRef oben.
+          const uid = sitzungRef.current.userId;
           if (uid) void fetchProfile(uid);
         })();
       }, 3000);
@@ -193,6 +206,11 @@ export function AuthProvider({
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Immer mitschreiben, auch bei INITIAL_SESSION — sonst steht der Ref
+        // beim ersten Tabwechsel noch leer und die Wiederherstellung greift
+        // ins Leere.
+        sitzungRef.current.userId = session?.user?.id ?? null;
+
         // INITIAL_SESSION is handled by the IIFE above via the secure
         // getUser() path. Skip it here to avoid a redundant profile fetch.
         if (event === 'INITIAL_SESSION') return;
@@ -256,25 +274,33 @@ export function AuthProvider({
       if (document.visibilityState !== 'visible') return;
       if (visibilityCheckInFlight) return;
       visibilityCheckInFlight = true;
+      // HARTE ZEITGRENZE UM DEN GANZEN BLOCK — das war der Fehler.
+      //
+      // Vorher stand hier ein ungesichertes `supabase.auth.getSession()`.
+      // Blockiert das auf dem Schloss des SDK, laeuft das `finally` NIE, und
+      // `visibilityCheckInFlight` bleibt fuer immer auf true. Ab da tut jeder
+      // weitere Tabwechsel gar nichts mehr: Das abgelaufene Token wird nicht
+      // erneuert, jede Abfrage antwortet mit 401, und die Seite zeigt nichts
+      // mehr an — bis der Nutzer von Hand neu laedt. Genau das war das
+      // gemeldete „oft laedt einfach nichts mehr".
+      //
+      // Jetzt kann der Riegel nicht mehr klemmen: Der ganze Block laeuft
+      // gegen eine Uhr, und die Sitzung kommt aus dem Ref statt aus einem
+      // Aufruf, der ein Schloss nimmt.
+      const fertig = () => { visibilityCheckInFlight = false; };
+      const notbremse = setTimeout(fertig, 8000);
       try {
-        // Refresh the JWT. If the tab was away long enough that the
-        // token expired, this renews it. If there's no valid refresh
-        // token (revoked), it fails quickly and we just return —
-        // subsequent queries will surface a proper auth error and the
-        // user can react.
         await Promise.race([
           supabase.auth.refreshSession().catch(() => null),
           new Promise((r) => setTimeout(r, 4000)),
         ]);
-        // Best-effort profile re-sync so the sidebar name / avatar
-        // reflect any changes made in another tab.
-        const { data } = await supabase.auth.getSession();
-        const uid = data.session?.user?.id;
+        const uid = sitzungRef.current.userId;
         if (uid) {
           void fetchProfile(uid);
         }
       } finally {
-        visibilityCheckInFlight = false;
+        clearTimeout(notbremse);
+        fertig();
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
