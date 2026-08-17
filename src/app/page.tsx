@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { OccuroRingLogo } from '@/components/occuro-ring-logo';
-import { InteractiveGrid } from '@/components/interactive-grid';
+import { GoldMesh } from '@/components/gold-mesh';
 import { useEffect } from 'react';
 import { OutNowWordmark } from '@/components/outnow-wordmark';
 
@@ -34,8 +34,12 @@ export default function LandingPage() {
 
   return (
     <div className="flex-1 flex flex-col relative">
-      {/* Interactive Background Grid */}
-      <InteractiveGrid />
+      {/* Dasselbe Punktfeld wie auf der Homepage — es ist das
+          Erkennungszeichen der Marke. Das vorherige Buchstabenraster leuchtete
+          mit Zeichen auf und wirkte technisch; wer von occuroapp.com hierher
+          wechselt, soll dieselbe Seite wiedererkennen, nicht ein zweites
+          Produkt. */}
+      <GoldMesh variante="zeiger" />
 
       {/* Header — only the Anmelden link as a quiet shortcut for
           returning users. Registrieren is the primary CTA in the hero
@@ -54,15 +58,19 @@ export default function LandingPage() {
       <main className="relative z-10 flex-1 flex items-center justify-center px-8">
         <div className="max-w-xl text-center space-y-8" data-grid-exclude>
           <div className="space-y-6">
-            <OccuroRingLogo size={64} className="mx-auto text-foreground" />
-            {/* Two lines, one per half of the claim — the second is muted,
-                same stepped-contrast logic the three-line version used. */}
+            <OccuroRingLogo size={64} className="mx-auto" />
+            {/* DERSELBE SATZ WIE AUF DER HOMEPAGE. „Events entdecken, Momente
+                teilen" beschreibt einen Veranstaltungskalender — das kann
+                jede App. Der Satz hier nennt das, was sonst niemand bietet:
+                dass man sieht, wo die eigenen Leute hingehen. Wer von
+                occuroapp.com kommt, findet ihn wieder. */}
             <h2 className="text-[3.2rem] leading-[1.1] font-heading font-bold tracking-tight">
-              Events entdecken,<br />
-              <span className="text-muted-fg">Momente teilen.</span>
+              Sieh, wo deine<br />
+              <span className="text-muted-fg">Leute hingehen.</span>
             </h2>
             <p className="text-base text-muted-fg max-w-sm mx-auto leading-relaxed">
-              Finde Events in deiner Nähe, triff neue Leute und erlebe unvergessliche Momente.
+              Welche Freunde wo zugesagt haben. Wer gerade unterwegs ist. Und was
+              am Wochenende überhaupt läuft.
             </p>
           </div>
           <div className="flex gap-3 justify-center">
@@ -77,7 +85,10 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/auth/register"
-              className="px-8 py-3.5 rounded-xl text-sm font-semibold bg-primary-bg text-primary-text hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-sm"
+              /* Der Hauptknopf traegt die Markenfarbe — dieselbe Rolle wie
+                 „Web-App" auf der Homepage. Sparsam: es ist der EINZIGE
+                 goldene Knopf auf der Seite. */
+              className="px-8 py-3.5 rounded-xl text-sm font-semibold bg-gold text-background hover:bg-gold-satt active:scale-[0.98] transition-all shadow-sm"
             >
               Registrieren
             </Link>

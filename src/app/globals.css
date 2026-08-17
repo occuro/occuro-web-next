@@ -1,11 +1,18 @@
-/* Outfit ist die durchgehende Schrift — Wortmark, Ueberschriften und
-   Fliesstext. Dieselbe Schrift traegt die Mobile-App (siehe
-   occuroapp/src/theme/fonts.ts), damit Marke und Produkt gleich klingen.
+/* Source Serif 4 traegt seit dem 18.08.2026 die ganze Web-App — Wortmarke,
+   Ueberschriften und Fliesstext. Dieselbe Schrift steht in der Mobile-App
+   (occuroapp/src/theme/fonts.ts) und auf der Homepage; vorher lief die
+   Web-App als einzige noch auf Outfit und klang dadurch wie ein anderes
+   Produkt.
+
    --font-heading und --font-mono sind historische Token-Namen und zeigen
-   ebenfalls auf Outfit, damit die bestehenden Aufrufstellen unveraendert
-   weiterlaufen. Gewicht 500 muss im Import bleiben: font-medium wird haeufig
-   benutzt und faellt sonst still auf einen anderen Schnitt zurueck. */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+   ebenfalls hierher, damit die bestehenden Aufrufstellen unveraendert
+   weiterlaufen. Gewicht 500 muss im Import bleiben: font-medium wird
+   haeufig benutzt und faellt sonst still auf einen anderen Schnitt zurueck.
+
+   Die Ersatzschriften sind Absicht: Charter und Iowan Old Style liegen auf
+   Apple-Geraeten bereit und sehen Source Serif 4 nahe genug, dass die Seite
+   nicht springt, solange die Webschrift laedt. */
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&display=swap');
 @import "tailwindcss";
 
 /* ─── Palette ──────────────────────────────────────────────────────────
@@ -36,6 +43,14 @@
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+
+  /* MARKENFARBE. Dieselben Werte wie occuroapp/src/theme/ux.ts (GOLD) und
+     occuro-homepage/src/app/globals.css. Sie ist ein AKZENT, keine Flaeche:
+     aktive Zustaende, das Markenzeichen, der Hauptknopf. Wer sie flaechig
+     einsetzt, macht aus einer Veranstaltungsplattform einen Goldrahmen. */
+  --gold: #8A6E3C;
+  --gold-satt: #6B5228;
+  --gold-leise: rgba(138,110,60,0.10);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -60,6 +75,12 @@
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
     --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+
+    /* Auf dunklem Grund traegt das satte Gold nicht — es wird zu Braun.
+       Der helle Sandton ist derselbe wie in der App im Dunkelmodus. */
+    --gold: #D9C4A0;
+    --gold-satt: #EBD9B8;
+    --gold-leise: rgba(217,196,160,0.14);
   }
 }
 
@@ -88,10 +109,13 @@
   --color-pin: #FF3B30;       /* kartenpins */
   --color-danger: #EF4444;    /* destruktive aktionen */
   --color-verified: #3B82F6;  /* NUR das verifiziert-badge */
+  --color-gold: var(--gold);
+  --color-gold-satt: var(--gold-satt);
+  --color-gold-leise: var(--gold-leise);
 
-  --font-sans: 'Outfit', sans-serif;
-  --font-heading: 'Outfit', sans-serif;
-  --font-mono: 'Outfit', monospace;
+  --font-sans: 'Source Serif 4', Charter, 'Iowan Old Style', Georgia, serif;
+  --font-heading: 'Source Serif 4', Charter, 'Iowan Old Style', Georgia, serif;
+  --font-mono: 'Source Serif 4', Charter, 'Iowan Old Style', Georgia, serif;
 
   /* Squircle radii — the app never uses full rounding on buttons/chips. */
   --radius-btn: 12px;
