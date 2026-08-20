@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.occuro.app",
+      "sha256_cert_fingerprints": [
+        "33:B7:35:54:5F:10:6D:4B:8E:7F:6A:01:43:11:A1:4F:1A:C0:F7:97:FB:EB:96:00:88:E8:D8:60:A7:13:82:78"
+      ]
+    }
+  }
+]

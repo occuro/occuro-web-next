@@ -37,6 +37,22 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=3600' },
         ],
       },
+      // ── Android App Links ──────────────────────────────────────────
+      // Das Gegenstueck fuer Android. Die .json-Endung liefert zwar meist
+      // schon den richtigen Typ, aber Androids Pruefung scheitert STILL,
+      // wenn er nicht stimmt: Es gibt keine Fehlermeldung, die Links
+      // oeffnen sich einfach weiter im Browser. Deshalb ausdruecklich.
+      //
+      // Wie bei Apple gilt: exakter Pfad, HTTPS, keine Weiterleitung.
+      // Der Host muss der sein, den app.json unter android.intentFilters
+      // beansprucht — app.occuroapp.com, also GENAU dieses Projekt.
+      {
+        source: '/.well-known/assetlinks.json',
+        headers: [
+          { key: 'Content-Type', value: 'application/json' },
+          { key: 'Cache-Control', value: 'public, max-age=3600' },
+        ],
+      },
     ];
   },
 
