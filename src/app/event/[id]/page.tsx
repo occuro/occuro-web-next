@@ -20,7 +20,6 @@ interface PublicEvent {
   image_url: string | null;
   category: string | null;
   description: string | null;
-  visibility: string;
 }
 
 export default function PublicEventPage({ params }: { params: Promise<{ id: string }> }) {
@@ -40,11 +39,18 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     const supabase = createClient();
     async function load() {
+      // Aus der Gast-Sicht lesen, nicht aus der Tabelle. Diese Seite sehen
+      // nur ABGEMELDETE Besucher (Angemeldete werden oben weggeleitet) — und
+      // fuer anon hat `events` keine Leserechte: Die Abfrage lief fuer genau
+      // die Empfaenger ins Leere, die ein geteilter Link anlocken soll, und
+      // die Seite zeigte ein leeres Event. `public_events_guest` ist fuer
+      // anon freigegeben, enthaelt per Bauart nur Oeffentliches (deshalb
+      // entfaellt der visibility-Filter) und ist dieselbe Quelle, die der
+      // Gastmodus der App nutzt.
       const { data } = await supabase
-        .from('events')
-        .select('title, date, end_date, time, location, banner_url, image_url, category, description, visibility')
+        .from('public_events_guest')
+        .select('title, date, end_date, time, location, banner_url, image_url, category, description')
         .eq('id', id)
-        .eq('visibility', 'public')
         .maybeSingle();
       setEvent(data as PublicEvent | null);
       setLoading(false);
