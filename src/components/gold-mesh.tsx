@@ -69,7 +69,8 @@ export function GoldMesh({
       const b = c.getBoundingClientRect();
       ctx.clearRect(0, 0, b.width, b.height);
 
-      const farbe = dunkel ? '217,196,160' : '138,110,60';
+      // Neutral statt Gold — wie in der App und auf der Homepage.
+      const farbe = dunkel ? '250,250,248' : '26,26,26';
 
       // Scrollfortschritt dieses Abschnitts: 0 = kommt herein, 1 = ist oben raus.
       const fortschritt = 1 - Math.max(0, Math.min(1,

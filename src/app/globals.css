@@ -14,6 +14,14 @@
    at the bottom (live / interest / pin / danger) plus the verified blue.
    No coloured hues beyond those, and no navy surfaces. */
 :root {
+  /* AKZENT — neutral, nicht Gold.
+     Der Seitenaufbau nutzt bg-gold / text-gold / border-gold und
+     var(--gold). Die Token fehlten nach dem Rueckbau auf Outfit ganz:
+     Knoepfe standen unsichtbar auf der Seite. Sie sind jetzt da, aber in
+     der alten Handschrift — Tinte auf hellem Grund, Papier auf dunklem. */
+  --gold: #1A1A1A;
+  --gold-satt: #000000;
+  --gold-leise: #1A1A1A14;
   --background: #FAF9F7;
   --foreground: #1A1A1A;
   --surface: #FFFFFF;
@@ -40,6 +48,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --gold: #FAFAF8;
+    --gold-satt: #FFFFFF;
+    --gold-leise: #FAFAF814;
     --background: #121212;
     --foreground: #FAFAFA;
     --surface: #1E1E1E;
@@ -86,6 +97,12 @@
   --color-live: #22C55E;      /* läuft gerade / teilnehmen */
   --color-interest: #F43F5E;  /* interessiert / like */
   --color-pin: #FF3B30;       /* kartenpins */
+
+  /* Ohne diese Zeilen kennt Tailwind bg-gold / text-gold / border-gold
+     nicht — die Klassen fielen weg und die Knoepfe blieben unsichtbar. */
+  --color-gold: var(--gold);
+  --color-gold-satt: var(--gold-satt);
+  --color-gold-leise: var(--gold-leise);
   --color-danger: #EF4444;    /* destruktive aktionen */
   --color-verified: #3B82F6;  /* NUR das verifiziert-badge */
 
