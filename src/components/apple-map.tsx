@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Event } from '@/types/occuro';
-import { getCategoryColor } from '@/lib/utils';
 import { MapSearchBar } from '@/components/map-search-bar';
 
 // Single, app-wide mapkit script loader. We resolve a shared promise so
@@ -195,7 +194,13 @@ export function AppleMap({ events, selected, onSelect, skipAutoLocate }: AppleMa
       if (event.latitude == null || event.longitude == null) continue;
 
       const coordinate = new mapkit.Coordinate(event.latitude, event.longitude);
-      const color = getCategoryColor(event.category);
+      // DIESELBE FARBE WIE IN DER APP UND IN DER MAPLIBRE-KARTE.
+      // Vorher stand hier die Kategoriefarbe — auf der Karte wurde daraus
+      // ein Farbteppich, und dieselbe Web-App sah je nach Browser
+      // unterschiedlich aus: MapLibre zeichnete rot, MapKit bunt. Genau
+      // diese Begruendung steht seit laengerem in maplibre-map.tsx, war
+      // dort aber nur zur Haelfte umgesetzt.
+      const color = '#FF3B30';
 
       // Apple's built-in MarkerAnnotation renders a proper teardrop
       // pin with the chosen color. Way more reliable than the custom
