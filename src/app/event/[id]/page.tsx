@@ -6,8 +6,8 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { Calendar, MapPin, Download, ExternalLink, Globe } from 'lucide-react';
 import { eventImageUrl } from '@/lib/eventImages';
+import { erkennePlattform, storeLinkFuer } from '@/lib/store-weiche';
 
-const APP_STORE_URL = 'https://apps.apple.com/app/occuro/id6760317905';
 const APP_SCHEME = 'occuro://';
 
 interface PublicEvent {
@@ -23,6 +23,12 @@ interface PublicEvent {
 }
 
 export default function PublicEventPage({ params }: { params: Promise<{ id: string }> }) {
+  // Wohin ohne App: App Store, Play Store oder Homepage — je nach
+  // Geraet. Vorher stand hier fuer alle derselbe Apple-Link, und jeder
+  // Android-Nutzer landete im falschen Laden.
+  const [storeLink, setStoreLink] = useState(storeLinkFuer('unbekannt'));
+  useEffect(() => { setStoreLink(storeLinkFuer(erkennePlattform())); }, []);
+
   const { id } = use(params);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -119,7 +125,7 @@ export default function PublicEventPage({ params }: { params: Promise<{ id: stri
             Im Browser öffnen
           </a>
           <a
-            href={APP_STORE_URL}
+            href={storeLink}
             className="flex items-center justify-center gap-2 w-full py-3 px-6 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-500 font-medium rounded-2xl transition-colors text-sm"
           >
             <Download size={16} />
