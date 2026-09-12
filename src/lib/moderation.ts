@@ -10,51 +10,78 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * gingen hier durch.
  */
 
+/**
+ * Begriffsliste und Erkennung — Spiegel von
+ * occuroapp/supabase/functions/_shared/moderation.ts. Der Server prueft
+ * dasselbe noch einmal (und ist die eigentliche Absicherung, weil ein Client
+ * sich umgehen laesst); hier geht es um die sofortige Rueckmeldung.
+ */
 const BLOCKED_TERMS = [
-  'porn', 'porno', 'xxx', 'onlyfans', 'sexcam', 'escort',
-  'nazi', 'hitler', 'whitepower', 'terrorist',
-  'ficken', 'fotze', 'schlampe', 'nutte', 'hure',
-  'fuck', 'fucking', 'bitch', 'whore', 'slut', 'asshole',
+  // Sexuelles / Erwachsenenangebote
+  'porn', 'porno', 'pornos', 'pornhub', 'onlyfans', 'sexcam', 'camgirl',
+  'callgirl', 'sexdate', 'escort service', 'escortservice', 'bordell',
+  'blowjob', 'titten', 'muschi', 'nudes', 'ficken', 'fick', 'fickt', 'gefickt',
+  'wichsen', 'wichser',
+  // Beleidigungen
+  'fotze', 'fotzen', 'schlampe', 'schlampen', 'nutte', 'nutten', 'hure', 'huren',
+  'hurensohn', 'hurensoehne', 'arschloch', 'arschloecher', 'missgeburt',
+  'spasti', 'drecksau', 'fuck', 'fucking', 'fucker', 'motherfucker', 'bitch',
+  'whore', 'slut', 'asshole', 'cunt',
+  // Rassismus, Hass, Extremismus
+  'heil hitler', 'sieg heil', 'hakenkreuz', 'nsdap', 'judensau', 'untermensch',
+  'rassenschande', 'whitepower', 'white power', 'neger', 'nigger', 'nigga',
+  'kanake', 'kanaken', 'faggot', 'auslaender raus', 'auslander raus',
 ];
+
+const LEET: Record<string, string> = {
+  a: 'a4@àáâäåа',
+  b: 'b8',
+  c: 'cç(',
+  e: 'e3€éèêë',
+  g: 'g9',
+  i: 'i1íìîï',
+  l: 'l1',
+  n: 'nñ',
+  o: 'o0öøóòô',
+  s: 's5$š',
+  t: 't7',
+  u: 'uüúùû',
+  z: 'z2',
+};
+
+const TRENNER = "[\\s._\\-*'\"`~,;:+|/\\\\]{0,2}";
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Ein Muster je Begriff: Ersatzschreibweisen ('p0rno', 'b1tch') und bis zu
+ * zwei Trennzeichen zwischen den Buchstaben ('f.u.c.k') fallen mit auf,
+ * Wortgrenzen schuetzen 'Analyse', 'Marsch' und 'Hurlach'.
+ */
+function baueMuster(term: string): RegExp {
+  const teile = [...term].map((zeichen) => {
+    if (zeichen === ' ') return '\\s+';
+    const klasse = LEET[zeichen];
+    return klasse ? `[${escapeRegex(klasse)}]` : escapeRegex(zeichen);
+  });
+  return new RegExp(`(?<![\\p{L}\\p{N}])${teile.join(TRENNER)}(?![\\p{L}\\p{N}])`, 'iu');
+}
+
+const umschrift = (value: string) =>
+  value.replace(/ä/gi, 'ae').replace(/ö/gi, 'oe').replace(/ü/gi, 'ue').replace(/ß/g, 'ss');
 
 export const MODERATION_BLOCKED_TEXT =
   'Dieser Inhalt verstößt gegen unsere Richtlinien. Bitte ändere Name/Beschreibung und versuche es erneut.';
 export const MODERATION_UNAVAILABLE =
   'Die Inhaltsprüfung ist aktuell nicht erreichbar. Bitte versuche es in wenigen Minuten erneut.';
 
-const normalize = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '');
-
-const NORMALIZED_TERMS = BLOCKED_TERMS.map(normalize).filter(Boolean);
-
-// Ortsnamen wie "Pörndorf" oder "Hurlach" dürfen nicht anschlagen.
-const PLACE_SUFFIXES = ['dorf', 'burg', 'berg', 'heim', 'stadt', 'feld', 'ing', 'ach', 'au', 'eck', 'wald', 'hausen', 'kirchen', 'hofen'];
-
-const matchesAsWord = (text: string, term: string) => {
-  const idx = text.indexOf(term);
-  if (idx === -1) return false;
-  const before = idx > 0 ? text[idx - 1] : ' ';
-  const after = idx + term.length < text.length ? text[idx + term.length] : ' ';
-  const boundaryBefore = !/[a-z0-9]/.test(before);
-  const boundaryAfter = !/[a-z0-9]/.test(after);
-  if (!boundaryBefore && !boundaryAfter) return false;
-  const afterWord = text.slice(idx + term.length).match(/^[a-z]+/)?.[0] ?? '';
-  if (afterWord && PLACE_SUFFIXES.some((s) => afterWord.startsWith(s))) return false;
-  return true;
-};
+const MUSTER = BLOCKED_TERMS.map((term) => baueMuster(term));
 
 export const containsBlockedContent = (value?: string | null) => {
   const raw = value?.trim();
   if (!raw) return false;
-  const lowered = raw.toLowerCase();
-  if (BLOCKED_TERMS.some((term) => matchesAsWord(lowered, term))) return true;
-  const normalized = normalize(raw);
-  if (!normalized) return false;
-  return NORMALIZED_TERMS.some((term) => matchesAsWord(normalized, term));
+  const varianten = [raw, umschrift(raw)];
+  return MUSTER.some((regex) => varianten.some((text) => regex.test(text)));
 };
 
 export const assertNoBlockedContent = (values: Array<string | null | undefined>) => {

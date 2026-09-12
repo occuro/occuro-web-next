@@ -69,8 +69,15 @@ function dateRangeToBounds(range: DateRange): { gte: string; lte: string | null 
       week.setDate(week.getDate() + 7);
       return { gte: fmt(today), lte: fmt(week) };
     }
-    default:
-      return { gte: fmt(today), lte: null };
+    default: {
+      // DERSELBE HORIZONT WIE IN DER APP (MapViewPage: DEFAULT_HORIZON_DAYS
+      // = 28). Vorher lud die Karte ohne Obergrenze alles ab heute und kappte
+      // bei 200 Treffern — Events in acht Monaten standen auf der Karte,
+      // waehrend naeher liegende bei vollem Limit verschwanden.
+      const horizont = new Date(today);
+      horizont.setDate(horizont.getDate() + 28);
+      return { gte: fmt(today), lte: fmt(horizont) };
+    }
   }
 }
 
