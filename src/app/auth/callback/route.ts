@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { ONBOARDING_PATH, TWO_FACTOR_PATH, sichererPfad, zielNachAnmeldung } from '@/lib/onboarding';
 
 // Handles Supabase email confirmation / magic link callbacks.
 // The mobile app sends users here via the signUp emailRedirectTo.
@@ -54,19 +55,18 @@ export async function GET(request: Request) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Determine where to send the user based on their profile type
-  let destination = next ?? '/app';
+  // Ziel: offener zweiter Faktor und offene Einrichtung gehen vor ?next —
+  // neue Google-Konten landen so direkt in der Einrichtung. ?next nur als
+  // relativer Pfad: vorher genügte ?next=https://… für eine Weiterleitung
+  // auf eine fremde Seite.
+  const gewuenscht = sichererPfad(next);
+  let destination = gewuenscht ?? '/app';
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', user.id)
-        .maybeSingle();
-      if (profile?.user_type === 'organization') {
-        destination = next ?? '/organizer';
-      }
+      const berechnet = await zielNachAnmeldung(supabase, user.id);
+      destination =
+        berechnet === TWO_FACTOR_PATH || berechnet === ONBOARDING_PATH || !gewuenscht ? berechnet : gewuenscht;
     }
   } catch {
     // fallback to /app

@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
+import { purposeForBucket, uploadModeratedImage } from '@/lib/uploads';
 import { Upload, X, Loader2, ImagePlus } from 'lucide-react';
 
 type Bucket = 'avatars' | 'event-images' | 'tickets';
@@ -15,14 +16,11 @@ interface ImageUploadProps {
   /** Storage bucket name — must already exist in Supabase. */
   bucket: Bucket;
   /**
-   * Subfolder UNDER the user's folder. Files end up at
-   *   <bucket>/<userId>/<pathPrefix>/<timestamp>-<random>.<ext>
-   * The userId comes first so the standard Supabase RLS pattern
-   *   (storage.foldername(name))[1] = auth.uid()::text
-   * still matches — putting the prefix before the userId would break it.
+   * Ohne Wirkung, seit Uploads durch upload-moderated-image laufen — die
+   * Edge Function legt den Pfad selbst fest. Bleibt für bestehende Aufrufer.
    */
   pathPrefix?: string;
-  /** Max file size in bytes. Default 5 MB. */
+  /** Max. Größe der AUSGEWÄHLTEN Datei; verkleinert wird danach. Default 15 MB. */
   maxBytes?: number;
   /**
    * Visual variant — `circle` for avatars, `banner` for wide event/profile
@@ -36,21 +34,21 @@ interface ImageUploadProps {
 }
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
-const DEFAULT_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+// Handyfotos haben oft 5–12 MB. Sie werden vor dem Upload verkleinert
+// (src/lib/uploads.ts), die Grenze hier schützt nur vor Riesendateien.
+const DEFAULT_MAX_BYTES = 15 * 1024 * 1024;
 
 /**
  * Reusable image upload component.
  *
- * Uploads to Supabase Storage and returns the public URL via onChange.
- * Files go to <bucket>/<userId>/<pathPrefix>/<filename> so the standard
- * "users can write into their own folder" RLS pattern works (the userId
- * MUST be the first folder segment, otherwise RLS denies the upload).
+ * Verkleinert das Bild, schickt es durch die Bildmoderation
+ * (upload-moderated-image) und gibt die öffentliche URL per onChange zurück.
  *
  * Renders a clickable area with the current image (or a placeholder),
  * a hover overlay with an upload icon, and a small clear (X) button.
  */
 export function ImageUpload({
-  value, onChange, bucket, pathPrefix, maxBytes = DEFAULT_MAX_BYTES,
+  value, onChange, bucket, maxBytes = DEFAULT_MAX_BYTES,
   variant = 'square', aspect, disabled,
 }: ImageUploadProps) {
   const { user } = useAuth();
@@ -77,31 +75,18 @@ export function ImageUpload({
 
     setUploading(true);
 
-    // Build a unique path under the user's folder. userId comes first
-    // so RLS rule (storage.foldername(name))[1] = auth.uid() matches.
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const folder = pathPrefix
-      ? `${user.id}/${pathPrefix}`
-      : `${user.id}`;
-    const path = `${folder}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(path, file, {
-        upsert: false,
-        contentType: file.type,
-      });
-
-    if (uploadError) {
+    // Durch die Bildmoderation wie in der App (upload-moderated-image). Die
+    // Edge Function bestimmt den Ablageort selbst — pathPrefix ist deshalb
+    // wirkungslos geworden und bleibt nur für bestehende Aufrufer im Typ.
+    // Vorher ging jedes Bild ungeprüft direkt in den Bucket.
+    try {
+      const url = await uploadModeratedImage(supabase, file, bucket, purposeForBucket(bucket));
+      onChange(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen.');
+    } finally {
       setUploading(false);
-      setError(uploadError.message);
-      return;
     }
-
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-    onChange(data.publicUrl);
-    setUploading(false);
   }
 
   function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {

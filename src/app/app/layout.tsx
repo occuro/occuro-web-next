@@ -1,19 +1,10 @@
 'use client';
 
 import { Sidebar } from '@/components/sidebar';
-import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useAuthGate } from '@/lib/use-auth-gate';
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/auth/login');
-    }
-  }, [loading, user, router]);
+  useAuthGate();
 
   // On mobile (<lg) the sidebar renders a sticky top bar via internal
   // responsive logic. On desktop it's a 260px sticky sidebar in a flex
