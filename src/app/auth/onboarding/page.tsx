@@ -400,7 +400,14 @@ function Einrichtung({
 
     setSpeichert(true);
     try {
-      await enforceRemoteTextModeration(supabase, [anzeigename, name, bioText, ortText], 'profile_update');
+      // Kontext 'sign_up' und nicht 'profile_update': Nur bei der
+      // Registrierung laesst die Pruefung durch, wenn der Dienst nicht
+      // erreichbar ist (src/lib/moderation.ts). Am 12.09.2026 antwortete
+      // content-moderation mit 500, weil der Aufruf beim Anbieter scheiterte —
+      // und niemand kam mehr durch den letzten Schritt der Einrichtung. Die
+      // lokale Wortliste oben prueft weiterhin, und jede spaetere Aenderung am
+      // Profil laeuft wieder gegen die scharfe Pruefung.
+      await enforceRemoteTextModeration(supabase, [anzeigename, name, bioText, ortText], 'sign_up');
 
       // Freundschaftsanfragen sind eine Zugabe — scheitern sie, soll das die
       // Einrichtung nicht aufhalten.
