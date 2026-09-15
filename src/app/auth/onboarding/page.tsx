@@ -56,7 +56,8 @@ function kontotypFehlerText(err: unknown): string {
   if (/load failed|failed to fetch|networkerror|network request failed|timed out/i.test(meldung)) {
     return 'Keine Verbindung. Bitte prüfe dein Internet und versuche es erneut.';
   }
-  if (code === 'SITZUNG' || code === 'KEINE_ZEILE' || code === 'PGRST301' || code === 'PGRST303' || /jwt/i.test(meldung)) {
+  // KEINE_ZEILE (Profilzeile fehlt) ist kein Sitzungsproblem — es faellt unten mit Code durch.
+  if (code === 'SITZUNG' || code === 'PGRST301' || code === 'PGRST303' || /jwt/i.test(meldung)) {
     return 'Deine Sitzung ist abgelaufen. Bitte tippe unten auf „Abmelden“, melde dich neu an und versuche es erneut.';
   }
   if (code === '22023' || /content moderation/i.test(meldung)) return MODERATION_BLOCKED_TEXT;

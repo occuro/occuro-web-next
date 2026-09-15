@@ -83,6 +83,7 @@ export default function EventTicketsPage({
     if (!user) return;
     setLoading(true);
     setError(null);
+    setSeitenFehler(null);
 
     // Fetch the event and verify ownership
     const { data: eventData, error: eventErr } = await supabase
@@ -180,6 +181,8 @@ export default function EventTicketsPage({
 
   async function approveTicket(ticketId: string) {
     setBusy(ticketId, true);
+    // Alte Fehlermeldung weg, sobald ein neuer Versuch startet.
+    setSeitenFehler(null);
     const { data: geaendert, error } = await supabase
       .from('tickets')
       .update({
@@ -205,6 +208,8 @@ export default function EventTicketsPage({
   async function rejectTicket(ticketId: string) {
     const reason = prompt('Grund für Ablehnung (optional):') ?? '';
     setBusy(ticketId, true);
+    // Alte Fehlermeldung weg, sobald ein neuer Versuch startet.
+    setSeitenFehler(null);
     const { data: geaendert, error } = await supabase
       .from('tickets')
       .update({
@@ -235,6 +240,8 @@ export default function EventTicketsPage({
   async function markScanned(ticketId: string) {
     if (!confirm('Ticket als gescannt markieren? Damit ist der Einlass bestätigt.')) return;
     setBusy(ticketId, true);
+    // Alte Fehlermeldung weg, sobald ein neuer Versuch startet.
+    setSeitenFehler(null);
     const { data: geaendert, error } = await supabase
       .from('tickets')
       .update({
