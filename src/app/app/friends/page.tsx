@@ -694,11 +694,11 @@ function PersonRow({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={person.avatar_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <span className="text-foreground/70">{person.full_name?.charAt(0).toUpperCase()}</span>
+          <span className="text-foreground/70">{(person.full_name?.trim() || person.username || '?').charAt(0).toUpperCase()}</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-[14px] truncate">{person.full_name}</h3>
+        <h3 className="font-semibold text-[14px] truncate">{person.full_name?.trim() || (person.username ? `@${person.username}` : 'Unbekannt')}</h3>
         {person.username && (
           <p className="text-[12px] text-muted-fg truncate">@{person.username}</p>
         )}

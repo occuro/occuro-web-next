@@ -8,15 +8,31 @@ import type { Event } from '@/types/occuro';
 import { formatDate, formatTime } from '@/lib/utils';
 import {
   ArrowLeft, ImageOff, Check, X, Loader2, AlertCircle,
-  ScanLine, Ticket as TicketIcon, Search, Filter,
+  ScanLine, Ticket as TicketIcon, Search, Filter, FileText,
 } from 'lucide-react';
+
+/**
+ * TICKETDATEIEN LIEGEN IN EINEM PRIVATEN BUCKET.
+ *
+ * Gespeichert ist seit der Migration 20260908120000 nur noch der Objektpfad
+ * (tickets/<uid>/...), und der Bucket ist privat. Diese Seite setzte den Wert
+ * roh als <img src> ein, also lud hier seitdem KEIN Ticketbild mehr. Angezeigt
+ * wird jetzt ueber signierte Links, wie in der App (src/lib/ticketBild.ts).
+ *
+ * Nur echte Objektpfade werden signiert. Ein Wert mit Schema (http:, data:,
+ * javascript:) kommt nie in ein src oder href: Die Spalte schreibt der
+ * Ticketinhaber selbst.
+ */
+const TICKET_BUCKET = 'tickets';
+const istObjektPfad = (wert: string) => !/^[a-z][a-z0-9+.-]*:/i.test(wert);
+const istPdfPfad = (wert: string) => /\.pdf(\?|$)/i.test(wert);
 
 interface TicketSubmission {
   id: string;
   event_id: string;
   user_id: string;
   ticket_image_url: string | null;
-  verification_status: 'pending' | 'approved' | 'rejected' | null;
+  verification_status: 'pending' | 'approved' | 'rejected' | 'stored' | null;
   reviewed_at: string | null;
   rejection_reason: string | null;
   scanned_at: string | null;
@@ -50,6 +66,9 @@ export default function EventTicketsPage({
   const [filter, setFilter] = useState<FilterStatus>('pending');
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  // Objektpfad -> signierte URL, fuer die Bildvorschau.
+  const [bildUrls, setBildUrls] = useState<Record<string, string>>({});
+  const [seitenFehler, setSeitenFehler] = useState<string | null>(null);
 
   const setBusy = (id: string, busy: boolean) => {
     setBusyIds((prev) => {
@@ -91,13 +110,37 @@ export default function EventTicketsPage({
     setEvent(eventData as Event);
 
     // Fetch all tickets for this event
+    // 'stored' sind privat abgelegte Tickets ohne Pruefung: Die gehen den
+    // Veranstalter nichts an, auch wenn eine Datenbankregel sie durchliesse.
     const { data: ticketRows } = await supabase
       .from('tickets')
       .select('*')
       .eq('event_id', eventId)
+      // Nicht .neq(): Das filterte auch Zeilen ohne Status (NULL) weg, die hier als offen gelten.
+      .or('verification_status.is.null,verification_status.neq.stored')
       .order('created_at', { ascending: false });
 
-    setTickets((ticketRows ?? []) as TicketSubmission[]);
+    const zeilen = (ticketRows ?? []) as TicketSubmission[];
+    setTickets(zeilen);
+
+    // Bilder gesammelt signieren. Eine Stunde, damit die Vorschau in einer
+    // laengeren Einlass-Sitzung nicht ausfaellt; jedes Neuladen signiert neu.
+    const bildPfade = [...new Set(
+      zeilen
+        .map((z) => z.ticket_image_url)
+        .filter((w): w is string => !!w && istObjektPfad(w) && !istPdfPfad(w)),
+    )];
+    if (bildPfade.length > 0) {
+      const { data: signiert, error: signFehler } = await supabase.storage.from(TICKET_BUCKET).createSignedUrls(bildPfade, 3600);
+      if (signFehler) setSeitenFehler('Ticketbilder konnten nicht geladen werden. Bitte lade die Seite neu.');
+      const karte: Record<string, string> = {};
+      (signiert ?? []).forEach((eintrag) => {
+        if (eintrag.path && eintrag.signedUrl && !eintrag.error) karte[eintrag.path] = eintrag.signedUrl;
+      });
+      setBildUrls(karte);
+    } else {
+      setBildUrls({});
+    }
 
     // Resolve user profiles
     const userIds = [...new Set((ticketRows ?? []).map((t: { user_id: string }) => t.user_id))];
@@ -119,9 +162,25 @@ export default function EventTicketsPage({
   }, [load]);
 
   // ── Actions ─────────────────────────────────────────────────────
+  // PDFs werden bei jedem Klick frisch und kurzlebig signiert und als Download
+  // ausgeliefert. Sie werden nicht im Browser auf der Storage-Domain angezeigt,
+  // weil der Inhalt vom Ticketinhaber stammt.
+  async function pdfHerunterladen(pfad: string) {
+    setSeitenFehler(null);
+    if (!istObjektPfad(pfad)) return;
+    const { data, error: signError } = await supabase.storage
+      .from(TICKET_BUCKET)
+      .createSignedUrl(pfad, 60, { download: 'ticket.pdf' });
+    if (signError || !data?.signedUrl) {
+      setSeitenFehler('Die PDF konnte nicht geladen werden. Bitte versuche es erneut.');
+      return;
+    }
+    window.location.href = data.signedUrl;
+  }
+
   async function approveTicket(ticketId: string) {
     setBusy(ticketId, true);
-    const { error } = await supabase
+    const { data: geaendert, error } = await supabase
       .from('tickets')
       .update({
         verification_status: 'approved',
@@ -129,8 +188,13 @@ export default function EventTicketsPage({
         reviewed_by: user!.id,
         rejection_reason: null,
       })
-      .eq('id', ticketId);
-    if (!error) {
+      .eq('id', ticketId)
+      .select('id');
+    // Blockt eine Datenbankregel die Zeile, meldet PostgREST keinen Fehler,
+    // sondern aendert 0 Zeilen. Erfolg nur zeigen, wenn wirklich gespeichert wurde.
+    if (error || !geaendert || geaendert.length !== 1) {
+      setSeitenFehler('Die Änderung wurde nicht gespeichert. Bitte lade die Seite neu und versuche es erneut.');
+    } else {
       setTickets((prev) => prev.map((t) =>
         t.id === ticketId ? { ...t, verification_status: 'approved', reviewed_at: new Date().toISOString() } : t,
       ));
@@ -141,7 +205,7 @@ export default function EventTicketsPage({
   async function rejectTicket(ticketId: string) {
     const reason = prompt('Grund für Ablehnung (optional):') ?? '';
     setBusy(ticketId, true);
-    const { error } = await supabase
+    const { data: geaendert, error } = await supabase
       .from('tickets')
       .update({
         verification_status: 'rejected',
@@ -149,8 +213,13 @@ export default function EventTicketsPage({
         reviewed_by: user!.id,
         rejection_reason: reason || null,
       })
-      .eq('id', ticketId);
-    if (!error) {
+      .eq('id', ticketId)
+      .select('id');
+    // Blockt eine Datenbankregel die Zeile, meldet PostgREST keinen Fehler,
+    // sondern aendert 0 Zeilen. Erfolg nur zeigen, wenn wirklich gespeichert wurde.
+    if (error || !geaendert || geaendert.length !== 1) {
+      setSeitenFehler('Die Änderung wurde nicht gespeichert. Bitte lade die Seite neu und versuche es erneut.');
+    } else {
       setTickets((prev) => prev.map((t) =>
         t.id === ticketId ? {
           ...t,
@@ -166,14 +235,19 @@ export default function EventTicketsPage({
   async function markScanned(ticketId: string) {
     if (!confirm('Ticket als gescannt markieren? Damit ist der Einlass bestätigt.')) return;
     setBusy(ticketId, true);
-    const { error } = await supabase
+    const { data: geaendert, error } = await supabase
       .from('tickets')
       .update({
         scanned_at: new Date().toISOString(),
         scanned_by: user!.id,
       })
-      .eq('id', ticketId);
-    if (!error) {
+      .eq('id', ticketId)
+      .select('id');
+    // Blockt eine Datenbankregel die Zeile, meldet PostgREST keinen Fehler,
+    // sondern aendert 0 Zeilen. Erfolg nur zeigen, wenn wirklich gespeichert wurde.
+    if (error || !geaendert || geaendert.length !== 1) {
+      setSeitenFehler('Die Änderung wurde nicht gespeichert. Bitte lade die Seite neu und versuche es erneut.');
+    } else {
       setTickets((prev) => prev.map((t) =>
         t.id === ticketId ? { ...t, scanned_at: new Date().toISOString() } : t,
       ));
@@ -226,6 +300,10 @@ export default function EventTicketsPage({
           </>
         ) : null}
       </div>
+
+      {seitenFehler && (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/5 px-5 py-3 text-[13px] text-red-300">{seitenFehler}</div>
+      )}
 
       {error && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/5 px-5 py-4 flex items-start gap-3">
@@ -303,7 +381,14 @@ export default function EventTicketsPage({
                   onApprove={() => approveTicket(ticket.id)}
                   onReject={() => rejectTicket(ticket.id)}
                   onMarkScanned={() => markScanned(ticket.id)}
-                  onPreview={() => ticket.ticket_image_url && setPreviewImage(ticket.ticket_image_url)}
+                  bildUrl={ticket.ticket_image_url ? bildUrls[ticket.ticket_image_url] ?? null : null}
+                  onPreview={() => {
+                    const url = ticket.ticket_image_url ? bildUrls[ticket.ticket_image_url] : null;
+                    if (url) setPreviewImage(url);
+                  }}
+                  onOpenPdf={() => {
+                    if (ticket.ticket_image_url) void pdfHerunterladen(ticket.ticket_image_url);
+                  }}
                 />
               ))}
             </div>
@@ -359,16 +444,19 @@ function StatTile({
 }
 
 function TicketCard({
-  ticket, user, busy, onApprove, onReject, onMarkScanned, onPreview,
+  ticket, user, busy, bildUrl, onApprove, onReject, onMarkScanned, onPreview, onOpenPdf,
 }: {
   ticket: TicketSubmission;
   user?: UserInfo;
   busy: boolean;
+  bildUrl: string | null;
   onApprove: () => void;
   onReject: () => void;
   onMarkScanned: () => void;
   onPreview: () => void;
+  onOpenPdf: () => void;
 }) {
+  const pdf = !!ticket.ticket_image_url && istObjektPfad(ticket.ticket_image_url) && istPdfPfad(ticket.ticket_image_url);
   const status = ticket.scanned_at
     ? { label: 'Gescannt', className: 'bg-muted text-foreground border-border-strong' }
     : ticket.verification_status === 'approved'
@@ -384,13 +472,19 @@ function TicketCard({
     <div className={`flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 rounded-2xl border border-border-subtle bg-surface ${busy ? 'opacity-60' : ''}`}>
       {/* Ticket thumbnail */}
       <button
-        onClick={onPreview}
-        disabled={!ticket.ticket_image_url}
+        onClick={pdf ? onOpenPdf : onPreview}
+        disabled={!pdf && !bildUrl}
+        aria-label={pdf ? 'Ticket-PDF herunterladen' : 'Ticket ansehen'}
         className="w-full sm:w-20 h-20 rounded-lg bg-elevated overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
       >
-        {ticket.ticket_image_url ? (
+        {pdf ? (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-fg">
+            <FileText size={20} />
+            <span className="text-[10px] font-semibold">PDF</span>
+          </div>
+        ) : bildUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={ticket.ticket_image_url} alt="Ticket" className="w-full h-full object-cover" />
+          <img src={bildUrl} alt="Ticket" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <ImageOff size={18} className="text-muted-fg/30" />

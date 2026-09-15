@@ -43,6 +43,26 @@ const sekundaerKnopf =
  * Interessen kommen aus der aktuellen Kategorienachse (taxonomy.ts), damit
  * sie zu den Kategorien der Events passen.
  */
+/**
+ * Grund eines gescheiterten Kontotyp-Schritts in Worte fassen. Vorher endete
+ * jeder Fehler in "Das hat nicht geklappt" — am Handy liess sich so nichts
+ * nachvollziehen (gemeldet 16.09.2026). Unbekannte Fehler tragen ihren Code
+ * mit, damit ein Screenshot die Ursache zeigt.
+ */
+function kontotypFehlerText(err: unknown): string {
+  const e = (err ?? {}) as { code?: string; message?: string };
+  const code = String(e.code ?? '');
+  const meldung = String(e.message ?? '');
+  if (/load failed|failed to fetch|networkerror|network request failed|timed out/i.test(meldung)) {
+    return 'Keine Verbindung. Bitte prüfe dein Internet und versuche es erneut.';
+  }
+  if (code === 'SITZUNG' || code === 'KEINE_ZEILE' || code === 'PGRST301' || code === 'PGRST303' || /jwt/i.test(meldung)) {
+    return 'Deine Sitzung ist abgelaufen. Bitte tippe unten auf „Abmelden“, melde dich neu an und versuche es erneut.';
+  }
+  if (code === '22023' || /content moderation/i.test(meldung)) return MODERATION_BLOCKED_TEXT;
+  return `Das hat nicht geklappt. Bitte versuche es erneut.${code ? ` (Fehler ${code})` : ''}`;
+}
+
 export default function OnboardingPage() {
   const supabase = createClient();
   const { user, profile, organization, loading, signOut } = useAuth();
@@ -90,12 +110,21 @@ export default function OnboardingPage() {
     if (error && error.code !== '23505') throw mapModerationError(error);
   };
 
+  /** Sitzung einmal erneuern, hoechstens 4 s warten. true = danach angemeldet. */
+  const sitzungErneuern = async () => {
+    const ergebnis = await Promise.race([
+      supabase.auth.refreshSession().catch(() => null),
+      new Promise<null>((fertig) => setTimeout(() => fertig(null), 4000)),
+    ]);
+    return Boolean(ergebnis?.data?.session);
+  };
+
   const typWaehlen = async (gewaehlt: Kontotyp) => {
     if (!user || typSpeichert) return;
     setTypSpeichert(true);
     setTypFehler('');
-    try {
-      // Einmalige Wahl: nur schreiben, solange noch keiner gesetzt ist.
+    // Einmalige Wahl: nur schreiben, solange noch keiner gesetzt ist.
+    const schreibeTyp = async () => {
       const { data, error } = await supabase
         .from('profiles')
         .update({ user_type: gewaehlt })
@@ -104,12 +133,28 @@ export default function OnboardingPage() {
         .select('user_type')
         .maybeSingle();
       if (error) throw error;
-      let endgueltig = (data?.user_type as string | null | undefined) ?? null;
-      if (!endgueltig) {
-        const { data: aktuell } = await supabase.from('profiles').select('user_type').eq('id', user.id).maybeSingle();
-        endgueltig = (aktuell?.user_type as string | null | undefined) ?? null;
+      let gesetzt = (data?.user_type as string | null | undefined) ?? null;
+      if (!gesetzt) {
+        const { data: aktuell, error: lesefehler } = await supabase.from('profiles').select('user_type').eq('id', user.id).maybeSingle();
+        if (lesefehler) throw lesefehler;
+        gesetzt = (aktuell?.user_type as string | null | undefined) ?? null;
       }
-      if (!endgueltig) throw new Error('Kontotyp wurde nicht gespeichert');
+      return gesetzt;
+    };
+    try {
+      // SITZUNG ZUERST SICHERSTELLEN (gemeldet 16.09.2026, Registrierung am
+      // Handy). Ist die Sitzung im Browser weg (Tab im Hintergrund, Mail-App
+      // dazwischen), schickt supabase-js still den Anon-Schluessel: Das UPDATE
+      // aendert keine Zeile, und der Nutzer sah nur "Das hat nicht geklappt".
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) await sitzungErneuern();
+      let endgueltig = await schreibeTyp();
+      if (!endgueltig) {
+        // 0 Zeilen und nichts zu lesen: einmal erneuern und wiederholen.
+        if (!(await sitzungErneuern())) throw Object.assign(new Error('Sitzung abgelaufen'), { code: 'SITZUNG' });
+        endgueltig = await schreibeTyp();
+      }
+      if (!endgueltig) throw Object.assign(new Error('Kontotyp wurde nicht gespeichert'), { code: 'KEINE_ZEILE' });
       const effektiv: Kontotyp = endgueltig === 'organization' ? 'organization' : 'individual';
       if (effektiv === 'organization') {
         await sicherstellenOrganisation({ name: profile?.full_name?.trim() || 'Veranstalter' });
@@ -117,7 +162,7 @@ export default function OnboardingPage() {
       setTyp(effektiv);
     } catch (err) {
       console.warn('[onboarding] Kontotyp', err);
-      setTypFehler('Das hat nicht geklappt. Bitte versuche es erneut.');
+      setTypFehler(kontotypFehlerText(err));
     } finally {
       setTypSpeichert(false);
     }
@@ -409,14 +454,6 @@ function Einrichtung({
       // Profil laeuft wieder gegen die scharfe Pruefung.
       await enforceRemoteTextModeration(supabase, [anzeigename, name, bioText, ortText], 'sign_up');
 
-      // Freundschaftsanfragen sind eine Zugabe — scheitern sie, soll das die
-      // Einrichtung nicht aufhalten.
-      if (!istVeranstalter && angefragt.size > 0) {
-        const rows = [...angefragt].map((friendId) => ({ user_id: userId, friend_id: friendId, status: 'pending' }));
-        const { error: friendError } = await supabase.from('friendships').upsert(rows, { onConflict: 'user_id,friend_id' });
-        if (friendError) console.warn('[onboarding] Freundschaftsanfragen', friendError);
-      }
-
       const patch: Partial<Profile> = {
         full_name: anzeigename,
         username: name,
@@ -435,6 +472,16 @@ function Einrichtung({
       if (error) {
         if (isUsernameUniqueViolation(error)) throw new Error(USERNAME_TAKEN);
         throw mapModerationError(error);
+      }
+
+      // Freundschaftsanfragen ERST NACH dem Profil (gemeldet 16.09.2026): Vorher
+      // gingen sie raus, solange der Name noch leer war — der Empfaenger sah eine
+      // Anfrage ohne Namen, und die Mitteilung speicherte den leeren Namen.
+      // Weiter nur eine Zugabe: scheitern sie, haelt das die Einrichtung nicht auf.
+      if (!istVeranstalter && angefragt.size > 0) {
+        const rows = [...angefragt].map((friendId) => ({ user_id: userId, friend_id: friendId, status: 'pending' }));
+        const { error: friendError } = await supabase.from('friendships').upsert(rows, { onConflict: 'user_id,friend_id' });
+        if (friendError) console.warn('[onboarding] Freundschaftsanfragen', friendError);
       }
 
       if (istVeranstalter) {
